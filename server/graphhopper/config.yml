@@ -1,0 +1,55 @@
+graphhopper:
+
+  # OSM input file — bind-mounted from host via docker-compose.yml
+  datareader.file: /data/berlin.osm.pbf
+  # Graph cache directory — bind-mounted from host so import survives container restarts
+  graph.location: /data/graphhopper-cache
+
+  profiles:
+   - name: car
+     custom_model_files: [car.json]
+   - name: foot
+     custom_model_files: [foot.json, foot_elevation.json]
+   - name: bike
+     custom_model_files: [bike.json, bike_elevation.json]
+
+  profiles_ch:
+    - profile: car
+
+  profiles_lm: []
+
+  # road_environment added — required by bike.json and foot.json custom models in this image.
+  graph.encoded_values: |
+    car_access, car_average_speed, country, road_class, roundabout, max_speed,
+    foot_access, foot_average_speed, foot_priority, foot_road_access, hike_rating, average_slope,
+    bike_access, bike_average_speed, bike_priority, bike_road_access, bike_network, mtb_rating,
+    ferry_speed, road_environment
+
+  graph.elevation.provider: srtm
+
+  prepare.min_network_size: 200
+  prepare.subnetworks.threads: 1
+
+  routing.snap_preventions_default: tunnel, bridge, ferry
+  routing.non_ch.max_waypoint_distance: 1000000
+
+  import.osm.ignored_highways: ''
+
+  graph.dataaccess.default_type: RAM_STORE
+
+server:
+  application_connectors:
+  - type: http
+    port: 8989
+    max_request_header_size: 50k
+  request_log:
+      appenders: []
+  admin_connectors:
+  - type: http
+    port: 8990
+
+logging:
+  appenders:
+    - type: console
+      time_zone: UTC
+      log_format: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

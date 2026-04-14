@@ -1,0 +1,10 @@
+# Canonical Berlin OSM raw and derived data artifacts.
+# Keep the directory itself in Git, but ignore downloaded extracts and future local outputs.
+*
+!.gitignore
+!README.md
+
+# Explicitly document the main raw input and likely downstream artifacts.
+berlin.osm.pbf
+graphhopper/
+tiles/

@@ -1,0 +1,6 @@
+{
+  "service": "tiles-placeholder",
+  "status": "ok",
+  "port": 8080,
+  "message": "Deterministic tile stub response for local smoke tests."
+}

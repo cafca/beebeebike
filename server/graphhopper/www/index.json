@@ -1,0 +1,7 @@
+{
+  "service": "graphhopper-placeholder",
+  "status": "ok",
+  "port": 8989,
+  "fixture": "berlin.osm.pbf",
+  "message": "Deterministic GraphHopper stub response for local smoke tests."
+}

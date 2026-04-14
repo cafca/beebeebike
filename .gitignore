@@ -1,9 +1,11 @@
 # Local AI/tooling state
 .claude/
-.gsd/
+.agents/
+.gsd
 .gsd-id
 .bg-shell/
 .mcp.json
+skills-lock.json
 
 # Environment and local overrides
 .env
@@ -47,5 +49,4 @@ __pycache__/
 venv/
 
 # ── GSD baseline (auto-generated) ──
-.gsd
 vendor/

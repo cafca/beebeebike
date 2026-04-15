@@ -1,7 +1,6 @@
 import maplibregl from 'maplibre-gl';
 
-const TILES_URL = 'http://localhost:8080';
-const STYLE_URL = `${TILES_URL}/assets/styles/colorful/style.json`;
+const STYLE_URL = '/tiles/assets/styles/colorful/style.json';
 
 export function createMap(container) {
   const map = new maplibregl.Map({

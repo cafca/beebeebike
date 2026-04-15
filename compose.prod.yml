@@ -33,6 +33,8 @@ services:
   tiles:
     image: versatiles/versatiles-frontend:latest-alpine
     container_name: beebeebike-tiles
+    ports:
+      - "127.0.0.1:3847:8080"
     volumes:
       - ./data/tiles/berlin.versatiles:/tiles/berlin.versatiles:ro
     command: ["/app/versatiles", "server", "-s", "/app/frontend-dev.br.tar", "[osm]/tiles/berlin.versatiles"]
@@ -43,7 +45,7 @@ services:
     image: ghcr.io/cafca/beebeebike:latest
     container_name: beebeebike-backend
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3848:3000"
     environment:
       DATABASE_URL: postgres://beebeebike:beebeebike@db:5432/beebeebike
       GRAPHHOPPER_URL: http://graphhopper:8989

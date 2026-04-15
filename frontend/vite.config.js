@@ -7,6 +7,10 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': process.env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
+      '/tiles': {
+        target: 'http://localhost:8080',
+        rewrite: (path) => path.replace(/^\/tiles/, ''),
+      },
     },
   },
 });

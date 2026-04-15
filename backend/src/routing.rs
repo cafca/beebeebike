@@ -207,3 +207,120 @@ pub async fn get_route(
         time,
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rating_to_priority_known_values_at_full_weight() {
+        let cases = [
+            (-7, 0.29),
+            (-3, 0.56),
+            (-1, 0.83),
+            (1, 1.20),
+            (3, 1.80),
+            (7, 3.50),
+        ];
+        for (value, expected) in cases {
+            let result = rating_to_priority(value, 1.0);
+            assert!(
+                (result - expected).abs() < 1e-9,
+                "rating_to_priority({value}, 1.0) = {result}, expected {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn rating_to_priority_zero_weight_neutralizes() {
+        // weight=0.0 means base^0 = 1.0 for any rating
+        for value in [-7, -3, -1, 1, 3, 7] {
+            let result = rating_to_priority(value, 0.0);
+            assert!(
+                (result - 1.0).abs() < 1e-9,
+                "rating_to_priority({value}, 0.0) should be 1.0, got {result}"
+            );
+        }
+    }
+
+    #[test]
+    fn rating_to_priority_half_weight() {
+        // weight=0.5 → base^0.5 = sqrt(base)
+        let result = rating_to_priority(7, 0.5);
+        let expected = 3.5_f64.sqrt();
+        assert!(
+            (result - expected).abs() < 1e-9,
+            "rating_to_priority(7, 0.5) = {result}, expected {expected}"
+        );
+    }
+
+    #[test]
+    fn rating_to_priority_clamps_weight_above_one() {
+        let at_one = rating_to_priority(7, 1.0);
+        let above = rating_to_priority(7, 5.0);
+        assert!(
+            (at_one - above).abs() < 1e-9,
+            "weight > 1.0 should clamp to 1.0"
+        );
+    }
+
+    #[test]
+    fn rating_to_priority_clamps_negative_weight() {
+        let at_zero = rating_to_priority(7, 0.0);
+        let below = rating_to_priority(7, -3.0);
+        assert!(
+            (at_zero - below).abs() < 1e-9,
+            "weight < 0.0 should clamp to 0.0"
+        );
+    }
+
+    #[test]
+    fn rating_to_priority_unknown_value_returns_one() {
+        // Any value not in the match table should return 1.0
+        for value in [0, 2, -2, 5, 100, -100] {
+            let result = rating_to_priority(value, 1.0);
+            assert!(
+                (result - 1.0).abs() < 1e-9,
+                "rating_to_priority({value}, 1.0) should be 1.0, got {result}"
+            );
+        }
+    }
+
+    #[test]
+    fn negative_ratings_reduce_priority() {
+        for value in [-7, -3, -1] {
+            let result = rating_to_priority(value, 1.0);
+            assert!(
+                result < 1.0,
+                "negative rating {value} should produce priority < 1.0, got {result}"
+            );
+        }
+    }
+
+    #[test]
+    fn positive_ratings_increase_priority() {
+        for value in [1, 3, 7] {
+            let result = rating_to_priority(value, 1.0);
+            assert!(
+                result > 1.0,
+                "positive rating {value} should produce priority > 1.0, got {result}"
+            );
+        }
+    }
+
+    #[test]
+    fn priority_monotonically_increases_with_rating() {
+        let values = [-7, -3, -1, 1, 3, 7];
+        let priorities: Vec<f64> = values.iter().map(|&v| rating_to_priority(v, 1.0)).collect();
+        for i in 1..priorities.len() {
+            assert!(
+                priorities[i] > priorities[i - 1],
+                "priority for {} ({}) should be > priority for {} ({})",
+                values[i],
+                priorities[i],
+                values[i - 1],
+                priorities[i - 1]
+            );
+        }
+    }
+}

@@ -131,3 +131,83 @@ fn validate_location(body: &SaveLocationRequest) -> Result<(), AppError> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_request(label: &str, lng: f64, lat: f64) -> SaveLocationRequest {
+        SaveLocationRequest {
+            label: label.to_string(),
+            lng,
+            lat,
+        }
+    }
+
+    #[test]
+    fn valid_location() {
+        assert!(validate_location(&make_request("Home", 13.405, 52.52)).is_ok());
+    }
+
+    #[test]
+    fn empty_label_rejected() {
+        let err = validate_location(&make_request("", 13.405, 52.52)).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("label")));
+    }
+
+    #[test]
+    fn whitespace_only_label_rejected() {
+        let err = validate_location(&make_request("   ", 13.405, 52.52)).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("label")));
+    }
+
+    #[test]
+    fn nan_longitude_rejected() {
+        let err = validate_location(&make_request("Home", f64::NAN, 52.52)).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("finite")));
+    }
+
+    #[test]
+    fn nan_latitude_rejected() {
+        let err = validate_location(&make_request("Home", 13.405, f64::NAN)).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("finite")));
+    }
+
+    #[test]
+    fn infinity_rejected() {
+        let err = validate_location(&make_request("Home", f64::INFINITY, 52.52)).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("finite")));
+    }
+
+    #[test]
+    fn neg_infinity_rejected() {
+        let err =
+            validate_location(&make_request("Home", f64::NEG_INFINITY, 52.52)).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("finite")));
+    }
+
+    #[test]
+    fn longitude_out_of_range() {
+        let err = validate_location(&make_request("Home", 181.0, 52.52)).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("out of range")));
+
+        let err = validate_location(&make_request("Home", -181.0, 52.52)).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("out of range")));
+    }
+
+    #[test]
+    fn latitude_out_of_range() {
+        let err = validate_location(&make_request("Home", 13.405, 91.0)).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("out of range")));
+
+        let err = validate_location(&make_request("Home", 13.405, -91.0)).unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("out of range")));
+    }
+
+    #[test]
+    fn boundary_coordinates_accepted() {
+        assert!(validate_location(&make_request("Home", 180.0, 90.0)).is_ok());
+        assert!(validate_location(&make_request("Home", -180.0, -90.0)).is_ok());
+        assert!(validate_location(&make_request("Home", 0.0, 0.0)).is_ok());
+    }
+}

@@ -55,6 +55,43 @@ struct CountRow {
 }
 
 // ---------------------------------------------------------------------------
+// Validation helpers
+// ---------------------------------------------------------------------------
+
+const ALLOWED_VALUES: [i32; 7] = [-7, -3, -1, 0, 1, 3, 7];
+
+fn validate_rating_value(value: i32) -> Result<(), AppError> {
+    if !ALLOWED_VALUES.contains(&value) {
+        return Err(AppError::BadRequest(
+            "value must be one of: -7, -3, -1, 0, 1, 3, 7".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn parse_bbox(bbox: &str) -> Result<(f64, f64, f64, f64), AppError> {
+    let parts: Vec<&str> = bbox.split(',').collect();
+    if parts.len() != 4 {
+        return Err(AppError::BadRequest(
+            "bbox must be in the format: west,south,east,north".into(),
+        ));
+    }
+
+    let parse_coord = |s: &str| {
+        s.trim()
+            .parse::<f64>()
+            .map_err(|_| AppError::BadRequest(format!("invalid bbox coordinate: {s}")))
+    };
+
+    Ok((
+        parse_coord(parts[0])?,
+        parse_coord(parts[1])?,
+        parse_coord(parts[2])?,
+        parse_coord(parts[3])?,
+    ))
+}
+
+// ---------------------------------------------------------------------------
 // Handlers
 // ---------------------------------------------------------------------------
 
@@ -70,12 +107,7 @@ pub async fn paint(
 ) -> Result<Json<PaintResponse>, AppError> {
     let user_id: Uuid = require_auth(&state.db, &headers).await?;
 
-    // Validate value is in allowed set
-    if ![-7, -3, -1, 0, 1, 3, 7].contains(&body.value) {
-        return Err(AppError::BadRequest(
-            "value must be one of: -7, -3, -1, 0, 1, 3, 7".into(),
-        ));
-    }
+    validate_rating_value(body.value)?;
 
     let geometry_json = body.geometry.to_string();
 
@@ -173,24 +205,7 @@ pub async fn get_overlay(
 ) -> Result<Json<Value>, AppError> {
     let user_id: Uuid = require_auth(&state.db, &headers).await?;
 
-    // Parse bbox: "west,south,east,north"
-    let parts: Vec<&str> = params.bbox.split(',').collect();
-    if parts.len() != 4 {
-        return Err(AppError::BadRequest(
-            "bbox must be in the format: west,south,east,north".into(),
-        ));
-    }
-
-    let parse_coord = |s: &str| {
-        s.trim()
-            .parse::<f64>()
-            .map_err(|_| AppError::BadRequest(format!("invalid bbox coordinate: {s}")))
-    };
-
-    let west = parse_coord(parts[0])?;
-    let south = parse_coord(parts[1])?;
-    let east = parse_coord(parts[2])?;
-    let north = parse_coord(parts[3])?;
+    let (west, south, east, north) = parse_bbox(&params.bbox)?;
 
     let rows = sqlx::query_as::<_, RatedAreaRow>(
         r#"
@@ -225,4 +240,84 @@ pub async fn get_overlay(
         "type": "FeatureCollection",
         "features": features,
     })))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- validate_rating_value ------------------------------------------------
+
+    #[test]
+    fn valid_rating_values_accepted() {
+        for v in [-7, -3, -1, 0, 1, 3, 7] {
+            assert!(validate_rating_value(v).is_ok(), "value {v} should be valid");
+        }
+    }
+
+    #[test]
+    fn invalid_rating_values_rejected() {
+        for v in [-10, -5, -2, 2, 4, 5, 6, 8, 100] {
+            assert!(
+                validate_rating_value(v).is_err(),
+                "value {v} should be invalid"
+            );
+        }
+    }
+
+    #[test]
+    fn zero_is_valid_eraser() {
+        assert!(validate_rating_value(0).is_ok());
+    }
+
+    // -- parse_bbox -----------------------------------------------------------
+
+    #[test]
+    fn parse_bbox_valid() {
+        let (w, s, e, n) = parse_bbox("13.0,52.3,13.8,52.7").unwrap();
+        assert!((w - 13.0).abs() < 1e-9);
+        assert!((s - 52.3).abs() < 1e-9);
+        assert!((e - 13.8).abs() < 1e-9);
+        assert!((n - 52.7).abs() < 1e-9);
+    }
+
+    #[test]
+    fn parse_bbox_with_whitespace() {
+        let (w, s, e, n) = parse_bbox(" 13.0 , 52.3 , 13.8 , 52.7 ").unwrap();
+        assert!((w - 13.0).abs() < 1e-9);
+        assert!((n - 52.7).abs() < 1e-9);
+        let _ = (s, e); // suppress unused warnings
+    }
+
+    #[test]
+    fn parse_bbox_negative_coords() {
+        let (w, s, e, n) = parse_bbox("-74.0,-40.7,-73.9,-40.6").unwrap();
+        assert!(w < 0.0);
+        assert!(s < 0.0);
+        let _ = (e, n);
+    }
+
+    #[test]
+    fn parse_bbox_too_few_parts() {
+        let err = parse_bbox("13.0,52.3,13.8").unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("format")));
+    }
+
+    #[test]
+    fn parse_bbox_too_many_parts() {
+        let err = parse_bbox("13.0,52.3,13.8,52.7,99.0").unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("format")));
+    }
+
+    #[test]
+    fn parse_bbox_empty_string() {
+        let err = parse_bbox("").unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(_)));
+    }
+
+    #[test]
+    fn parse_bbox_non_numeric() {
+        let err = parse_bbox("abc,52.3,13.8,52.7").unwrap_err();
+        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("invalid bbox coordinate")));
+    }
 }

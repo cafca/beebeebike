@@ -6,8 +6,9 @@ services:
     environment:
       VITE_API_PROXY_TARGET: http://backend:3000
       VITE_TILES_PROXY_TARGET: http://tiles:8080
+      VITE_DEV_PORT: ${VITE_DEV_PORT:-5173}
     ports:
-      - "5173:5173"
+      - "${VITE_DEV_PORT:-5173}:${VITE_DEV_PORT:-5173}"
     volumes:
       - .:/workspace
       - frontend_node_modules:/workspace/frontend/node_modules

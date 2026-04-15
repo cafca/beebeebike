@@ -4,7 +4,8 @@
 
 <div class="overlay">
   <div class="modal">
-    <h2>Welcome to BeeByBike</h2>
+    <img class="route-preview" src="/assets/welcome-route.png" alt="BeeBeeBike route preview on a Berlin map" />
+    <h2>Welcome to BeeBeeBike</h2>
     <p>
       A bicycle routing app for Berlin that learns your preferences. Paint areas on the map
       to mark roads and neighbourhoods you love or want to avoid, then get custom bike routes
@@ -16,7 +17,7 @@
       <li>Get a bicycle route tailored to your preferences</li>
     </ol>
     <p><em>Sign up to access your custom map across devices!</em></p> 
-    <p class="muted">Your rated areas and any saved places are stored and processed on BeeByBike servers only. Message beebybike@vincentahrend.com to request data removal.</p>
+    <p class="muted">Your rated areas and any saved places are stored and processed on BeeBeeBike servers only. Message beebybike@vincentahrend.com to request data removal.</p>
     <button onclick={onclose}>Start exploring</button>
   </div>
 </div>
@@ -28,8 +29,17 @@
     z-index: 100;
   }
   .modal {
-    background: white; padding: 32px; border-radius: 12px; max-width: min(420px, calc(100vw - 32px));
+    background: white; padding: 24px; border-radius: 12px; max-width: min(520px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px); overflow: auto;
     box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+  .route-preview {
+    display: block;
+    width: 100%;
+    aspect-ratio: 5 / 3;
+    object-fit: cover;
+    border-radius: 8px;
+    margin: 0 0 20px;
   }
   h2 { margin: 0 0 12px; }
   p { margin: 0 0 16px; font-size: 14px; line-height: 1.5; color: #444; }
@@ -49,6 +59,7 @@
       max-width: 100%;
       border-radius: 16px 16px 0 0;
       padding: 24px 20px 32px;
+      max-height: calc(100vh - 24px);
     }
   }
 </style>

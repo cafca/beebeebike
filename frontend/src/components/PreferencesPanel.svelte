@@ -1,15 +1,30 @@
 <script>
-  import { preferences, formatRatingWeight, setRatingWeight } from '../lib/preferences.svelte.js';
+  import {
+    preferences,
+    formatDistanceInfluence,
+    formatRatingWeight,
+    setDistanceInfluence,
+    setRatingWeight,
+  } from '../lib/preferences.svelte.js';
   import { computeRoute, route } from '../lib/routing.svelte.js';
 
   let recomputeTimer;
 
-  function updateRatingWeight(event) {
-    setRatingWeight(event.currentTarget.value);
+  function queueRouteUpdate() {
     if (!route.origin || !route.destination) return;
 
     window.clearTimeout(recomputeTimer);
     recomputeTimer = window.setTimeout(() => computeRoute(), 220);
+  }
+
+  function updateRatingWeight(event) {
+    setRatingWeight(event.currentTarget.value);
+    queueRouteUpdate();
+  }
+
+  function updateDistanceInfluence(event) {
+    setDistanceInfluence(event.currentTarget.value);
+    queueRouteUpdate();
   }
 
   $effect(() => {
@@ -39,6 +54,26 @@
     <span>Off</span>
     <span>Full</span>
   </div>
+
+  <div class="preference-row preference-row-spaced">
+    <label for="distance-influence">Distance influence</label>
+    <span>{formatDistanceInfluence(preferences.distanceInfluence)}</span>
+  </div>
+
+  <input
+    id="distance-influence"
+    type="range"
+    min="0"
+    max="100"
+    step="5"
+    value={preferences.distanceInfluence}
+    oninput={updateDistanceInfluence}
+  />
+
+  <div class="scale-labels" aria-hidden="true">
+    <span>Flexible</span>
+    <span>Direct</span>
+  </div>
 </section>
 
 <style>
@@ -61,6 +96,9 @@
     gap: 16px;
     margin-bottom: 10px;
     font-size: 14px;
+  }
+  .preference-row-spaced {
+    margin-top: 16px;
   }
   .preference-row span {
     min-width: 44px;

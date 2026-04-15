@@ -33,7 +33,12 @@ export const api = {
     if (targetId !== null && targetId !== undefined) body.target_id = targetId;
     return request('PUT', '/api/ratings/paint', body);
   },
-  route: (origin, destination, rating_weight) =>
-    request('POST', '/api/route', { origin, destination, rating_weight }),
+  route: (origin, destination, rating_weight, distance_influence) =>
+    request('POST', '/api/route', {
+      origin,
+      destination,
+      rating_weight,
+      distance_influence,
+    }),
   geocode: (q) => request('GET', `/api/geocode?q=${encodeURIComponent(q)}`),
 };

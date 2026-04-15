@@ -1,38 +1,59 @@
 services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: ortschaft-db
+    environment:
+      POSTGRES_DB: ortschaft
+      POSTGRES_USER: ortschaft
+      POSTGRES_PASSWORD: ortschaft
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
   graphhopper:
     image: israelhikingmap/graphhopper:latest
     container_name: ortschaft-graphhopper
-    # Use the repo's pinned config which sets datareader.file, graph.location, encoded_values,
-    # and all profiles. The config is mounted read-only so it cannot be modified by the container.
     entrypoint:
       - "./graphhopper.sh"
       - "-c"
       - "/config/config.yml"
-      # -o overrides the default graph.location so the graph cache lands in the bind-mounted
-      # directory and survives container restarts. Without this flag graphhopper.sh sets
-      # -Ddw.graphhopper.graph.location=/data/default-gh which takes priority over the config.
       - "-o"
       - "/data/graphhopper-cache"
     ports:
       - "8989:8989"
     volumes:
-      # Runtime config — read-only
       - ./graphhopper/config.yml:/config/config.yml:ro
-      # OSM input — read-only; populated by ../scripts/download_berlin_osm.sh
       - ../data/osm/berlin/berlin.osm.pbf:/data/berlin.osm.pbf:ro
-      # Graph cache — writable; persists the import across container restarts
       - ../data/osm/berlin/graphhopper:/data/graphhopper-cache
     environment:
-      # Default JAVA_OPTS in the image is -Xmx1g -Xms1g; Berlin import is comfortable at 2g.
       JAVA_OPTS: "-Xmx2g -Xms512m"
     restart: unless-stopped
 
   tiles:
-    # Placeholder tile service — responds on 8080 with a deterministic stub payload.
-    # A real tile pipeline (e.g. tileserver-gl) will replace this in a later slice.
-    build:
-      context: ./tiles
+    image: versatiles/versatiles:latest
     container_name: ortschaft-tiles
     ports:
       - "8080:8080"
+    volumes:
+      - ../data/tiles/berlin.versatiles:/data/berlin.versatiles:ro
+    command: ["versatiles", "serve", "--port", "8080", "--host", "0.0.0.0", "/data/berlin.versatiles"]
     restart: unless-stopped
+
+  backend:
+    build: ../backend
+    container_name: ortschaft-backend
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://ortschaft:ortschaft@db:5432/ortschaft
+      GRAPHHOPPER_URL: http://graphhopper:8989
+      PHOTON_URL: https://photon.komoot.io
+    depends_on:
+      - db
+      - graphhopper
+    restart: unless-stopped
+
+volumes:
+  pgdata:

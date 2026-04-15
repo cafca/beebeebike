@@ -35,7 +35,6 @@ export async function createMap(container) {
     maxBounds: [[12.9, 52.2], [13.9, 52.8]],
   });
 
-  map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
   return map;
 }

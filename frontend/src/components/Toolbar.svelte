@@ -82,14 +82,30 @@
   </div>
 
   <div class="undo-redo-inline">
-    <button disabled={!brush.canUndo} onclick={undo} title="Undo (Ctrl+Z)">↩</button>
-    <button disabled={!brush.canRedo} onclick={redo} title="Redo (Ctrl+Shift+Z)">↪</button>
+    <button disabled={!brush.canUndo} onclick={undo} title="Undo (Ctrl+Z)">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M3 7h10a5 5 0 0 1 0 10H8"/><path d="M7 3l-4 4 4 4"/>
+      </svg>
+    </button>
+    <button disabled={!brush.canRedo} onclick={redo} title="Redo (Ctrl+Shift+Z)">
+      <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M21 7H11a5 5 0 0 0 0 10h5"/><path d="M17 3l4 4-4 4"/>
+      </svg>
+    </button>
   </div>
 </div>
 
 <div class="undo-redo-fab">
-  <button disabled={!brush.canUndo} onclick={undo} title="Undo (Ctrl+Z)">↩</button>
-  <button disabled={!brush.canRedo} onclick={redo} title="Redo (Ctrl+Shift+Z)">↪</button>
+  <button disabled={!brush.canUndo} onclick={undo} title="Undo (Ctrl+Z)">
+    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M3 7h10a5 5 0 0 1 0 10H8"/><path d="M7 3l-4 4 4 4"/>
+    </svg>
+  </button>
+  <button disabled={!brush.canRedo} onclick={redo} title="Redo (Ctrl+Shift+Z)">
+    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M21 7H11a5 5 0 0 0 0 10h5"/><path d="M17 3l4 4-4 4"/>
+    </svg>
+  </button>
 </div>
 
 <style>

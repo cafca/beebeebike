@@ -4,6 +4,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const fathomUrl = env.VITE_FATHOM_URL;
+  const devPort = Number(process.env.VITE_DEV_PORT || env.VITE_DEV_PORT || 5173);
 
   return {
   plugins: [
@@ -18,7 +19,7 @@ export default defineConfig(({ mode }) => {
     },
   ].filter(Boolean),
   server: {
-    port: 5173,
+    port: devPort,
     proxy: {
       '/api': process.env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
       '/tiles': {

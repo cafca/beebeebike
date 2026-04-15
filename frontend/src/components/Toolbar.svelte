@@ -27,7 +27,7 @@
 
 <div class="toolbar">
   <div class="instructions">
-    Hold command/control and drag to paint, or use the paint mode toggle.
+    Hold command/control and drag to paint,<br>or use the paint mode toggle.
   </div>
 
   <button
@@ -112,8 +112,10 @@
   .toolbar {
     position: absolute;
     bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 24px;
+    right: 24px;
+    margin: 0 auto;
+    width: fit-content;
     background: white;
     padding: 10px 12px;
     border-radius: 12px;
@@ -122,16 +124,17 @@
     display: flex;
     gap: 12px;
     align-items: center;
-    max-width: min(720px, calc(100vw - 24px));
   }
   .instructions {
-    max-width: 240px;
     color: #374151;
     font-size: 13px;
     line-height: 1.25;
+    min-width: 0;
+    flex-shrink: 0;
   }
   .color-strip {
     display: flex;
+    flex-shrink: 0;
   }
   .color-btn {
     position: relative;
@@ -161,6 +164,7 @@
   }
   .brush-controls {
     position: relative;
+    flex-shrink: 0;
   }
   .brush-size-preview {
     position: absolute;
@@ -223,15 +227,18 @@
     color: white;
   }
 
+  @media (max-width: 800px) {
+    .instructions {
+      display: none;
+    }
+  }
+
   @media (max-width: 640px) {
     .toolbar {
       padding: 6px;
       gap: 6px;
       bottom: 12px;
       max-width: calc(100vw - 16px);
-    }
-    .instructions {
-      display: none;
     }
     .color-btn {
       width: 40px;
@@ -245,7 +252,7 @@
       height: 40px;
       border: 2px solid transparent;
       border-radius: 6px 0 0 6px;
-      background: #9ca3af;
+      background: #e5e7eb;
     }
     .color-btn:first-child {
       border-radius: 0;

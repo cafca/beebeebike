@@ -1,6 +1,7 @@
 mod auth;
 mod config;
 mod errors;
+mod geocode;
 mod ratings;
 mod routing;
 
@@ -8,6 +9,7 @@ use axum::{routing::{get, post, put}, Router};
 use config::Config;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
+use tower_http::services::ServeDir;
 
 pub struct AppState {
     pub db: sqlx::PgPool,
@@ -53,6 +55,8 @@ async fn main() {
         .route("/api/ratings", get(ratings::get_overlay))
         .route("/api/ratings/paint", put(ratings::paint))
         .route("/api/route", post(routing::get_route))
+        .route("/api/geocode", get(geocode::geocode))
+        .fallback_service(ServeDir::new("../frontend/dist").append_index_html_on_directories(true))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")

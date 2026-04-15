@@ -33,7 +33,7 @@ mkdir -p "${OUTPUT_DIR}"
 if ! command -v versatiles >/dev/null 2>&1; then
   log "versatiles CLI not found. Using Docker to extract Berlin tiles..."
   docker run --rm -v "${OUTPUT_DIR}:/output" versatiles/versatiles:latest \
-    versatiles convert \
+    convert \
     --bbox "13.0,52.3,13.8,52.7" \
     "https://download.versatiles.org/osm.versatiles" \
     "/output/berlin.versatiles"

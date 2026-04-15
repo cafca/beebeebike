@@ -19,7 +19,7 @@ jobs:
         run: |
           mkdir -p data/tiles
           docker run --rm -v "$PWD/data/tiles:/output" versatiles/versatiles:latest \
-            versatiles convert \
+            convert \
             --bbox "13.0,52.3,13.8,52.7" \
             "https://download.versatiles.org/osm.versatiles" \
             "/output/berlin.versatiles"

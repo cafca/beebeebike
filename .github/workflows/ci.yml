@@ -87,6 +87,8 @@ jobs:
           push: true
           cache-from: type=gha,scope=backend-image
           cache-to: type=gha,mode=max,scope=backend-image
+          build-args: |
+            VITE_FATHOM_URL=${{ vars.VITE_FATHOM_URL }}
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}

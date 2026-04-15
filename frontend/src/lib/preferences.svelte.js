@@ -1,6 +1,6 @@
 const RATING_WEIGHT_STORAGE_KEY = 'beebeebike.ratingWeight';
 const DISTANCE_INFLUENCE_STORAGE_KEY = 'beebeebike.distanceInfluence';
-const DEFAULT_RATING_WEIGHT = 1;
+const DEFAULT_RATING_WEIGHT = 0.5;
 const DEFAULT_DISTANCE_INFLUENCE = 70;
 
 function clampRatingWeight(value) {

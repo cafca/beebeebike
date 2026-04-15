@@ -10,11 +10,18 @@ export default defineConfig(({ mode }) => {
     svelte(),
     fathomUrl && {
       name: 'inject-fathom',
-      transformIndexHtml: () => [{
-        tag: 'script',
-        attrs: { src: fathomUrl, defer: true },
-        injectTo: 'head',
-      }],
+      transformIndexHtml: () => [
+        {
+          tag: 'script',
+          attrs: { src: fathomUrl, defer: true },
+          injectTo: 'head',
+        },
+        {
+          tag: 'script',
+          children: 'window.fathom=window.fathom||{q:[]};',
+          injectTo: 'head-prepend',
+        },
+      ],
     },
   ].filter(Boolean),
   server: {

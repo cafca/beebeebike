@@ -1,5 +1,28 @@
 <script>
-  import { brush, ratingTools, undo, redo } from '../lib/brush.svelte.js';
+  import { brush, ratingTools, undo, redo, syncBrushSizePreview } from '../lib/brush.svelte.js';
+
+  let showSizePreview = $state(false);
+  let hidePreviewTimer;
+
+  let previewColor = $derived(
+    ratingTools.find(r => r.value === brush.value)?.color ?? '#22c55e'
+  );
+  let previewDiameter = $derived(Number(brush.size) * 2);
+
+  function showPreview() {
+    clearTimeout(hidePreviewTimer);
+    showSizePreview = true;
+  }
+
+  function hidePreviewSoon() {
+    clearTimeout(hidePreviewTimer);
+    hidePreviewTimer = setTimeout(() => showSizePreview = false, 700);
+  }
+
+  function handleBrushSizeInput() {
+    showPreview();
+    syncBrushSizePreview();
+  }
 </script>
 
 <div class="toolbar">
@@ -22,11 +45,25 @@
   </div>
 
   <div class="brush-controls">
+    {#if showSizePreview}
+      <div class="brush-size-preview" aria-hidden="true">
+        <div
+          class="brush-size-ring"
+          style="width: {previewDiameter}px; height: {previewDiameter}px; border-color: {previewColor};"
+        ></div>
+      </div>
+    {/if}
     <input
       type="range"
       min="5"
       max="80"
       bind:value={brush.size}
+      oninput={handleBrushSizeInput}
+      onpointerdown={showPreview}
+      onpointerup={hidePreviewSoon}
+      onpointercancel={hidePreviewSoon}
+      onfocus={showPreview}
+      onblur={() => showSizePreview = false}
       title="Brush size"
     />
   </div>
@@ -87,6 +124,27 @@
     border-color: white;
     box-shadow: 0 0 0 2px #333;
     z-index: 1;
+  }
+  .brush-controls {
+    position: relative;
+  }
+  .brush-size-preview {
+    position: absolute;
+    bottom: calc(100% + 16px);
+    left: 50%;
+    width: 168px;
+    height: 168px;
+    transform: translateX(-50%);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .brush-size-ring {
+    border: 2px solid;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.92), 0 2px 10px rgba(0,0,0,0.22);
   }
   .brush-controls input {
     width: 80px;

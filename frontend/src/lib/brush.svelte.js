@@ -32,7 +32,9 @@ let initialized = false;
 let currentCanvas = null;
 let dragPanWasEnabled = false;
 let modifierDown = false;
+let lastCursorLngLat = null;
 const listenerOptions = { capture: true };
+const emptyFeatureCollection = { type: 'FeatureCollection', features: [] };
 
 export function initBrush(map) {
   if (initialized && currentMap === map) {
@@ -64,11 +66,50 @@ export function initBrush(map) {
     });
   }
 
+  if (!map.getSource('brush-cursor')) {
+    map.addSource('brush-cursor', {
+      type: 'geojson',
+      data: emptyFeatureCollection,
+    });
+  }
+
+  if (!map.getLayer('brush-cursor-halo')) {
+    map.addLayer({
+      id: 'brush-cursor-halo',
+      type: 'circle',
+      source: 'brush-cursor',
+      paint: {
+        'circle-radius': brush.size,
+        'circle-color': 'rgba(255,255,255,0)',
+        'circle-stroke-color': '#ffffff',
+        'circle-stroke-width': 4,
+        'circle-stroke-opacity': 0.9,
+      },
+    });
+  }
+
+  if (!map.getLayer('brush-cursor-outline')) {
+    map.addLayer({
+      id: 'brush-cursor-outline',
+      type: 'circle',
+      source: 'brush-cursor',
+      paint: {
+        'circle-radius': brush.size,
+        'circle-color': 'rgba(255,255,255,0)',
+        'circle-stroke-color': currentTool().color,
+        'circle-stroke-width': 2,
+        'circle-stroke-opacity': 0.95,
+      },
+    });
+  }
+
   currentCanvas = map.getCanvas();
   currentCanvas.removeEventListener('mousedown', onMouseDown, listenerOptions);
   currentCanvas.removeEventListener('mousemove', onMouseMove, listenerOptions);
+  currentCanvas.removeEventListener('mouseleave', onMouseLeave, listenerOptions);
   currentCanvas.addEventListener('mousedown', onMouseDown, listenerOptions);
   currentCanvas.addEventListener('mousemove', onMouseMove, listenerOptions);
+  currentCanvas.addEventListener('mouseleave', onMouseLeave, listenerOptions);
   document.removeEventListener('mouseup', onMouseUp, listenerOptions);
   document.addEventListener('mouseup', onMouseUp, listenerOptions);
   document.addEventListener('keydown', onKeyDown);
@@ -77,6 +118,7 @@ export function initBrush(map) {
   initialized = true;
   syncCursor();
   syncPreviewPaint();
+  syncBrushCursorPaint();
 }
 
 export function destroyBrush() {
@@ -84,6 +126,7 @@ export function destroyBrush() {
     currentCanvas.style.cursor = '';
     currentCanvas.removeEventListener('mousedown', onMouseDown, listenerOptions);
     currentCanvas.removeEventListener('mousemove', onMouseMove, listenerOptions);
+    currentCanvas.removeEventListener('mouseleave', onMouseLeave, listenerOptions);
   }
   document.removeEventListener('mouseup', onMouseUp, listenerOptions);
   document.removeEventListener('keydown', onKeyDown);
@@ -91,6 +134,8 @@ export function destroyBrush() {
   painting = false;
   points = [];
   modifierDown = false;
+  lastCursorLngLat = null;
+  clearBrushCursor();
   restoreDragPan();
   initialized = false;
   currentCanvas = null;
@@ -105,19 +150,43 @@ function onMouseDown(e) {
   e.stopImmediatePropagation?.();
 
   painting = true;
-  points = [currentMap.unproject([e.offsetX, e.offsetY])];
+  lastCursorLngLat = currentMap.unproject([e.offsetX, e.offsetY]);
+  points = [lastCursorLngLat];
   dragPanWasEnabled = currentMap.dragPan.isEnabled();
   if (dragPanWasEnabled) currentMap.dragPan.disable();
   syncCursor();
+  updateBrushCursor(lastCursorLngLat);
 }
 
 function onMouseMove(e) {
-  if (!painting) return;
+  lastCursorLngLat = currentMap.unproject([e.offsetX, e.offsetY]);
+
+  if (!painting) {
+    const paintModifier = isPaintModifier(e);
+    modifierDown = paintModifier;
+    syncCursor();
+
+    if (paintModifier) {
+      updateBrushCursor(lastCursorLngLat);
+    } else {
+      clearBrushCursor();
+    }
+    return;
+  }
+
   e.preventDefault();
   e.stopPropagation();
   e.stopImmediatePropagation?.();
-  points.push(currentMap.unproject([e.offsetX, e.offsetY]));
+  points.push(lastCursorLngLat);
+  updateBrushCursor(lastCursorLngLat);
   updatePreview();
+}
+
+function onMouseLeave() {
+  if (!painting) {
+    lastCursorLngLat = null;
+    clearBrushCursor();
+  }
 }
 
 function onMouseUp(e) {
@@ -129,6 +198,11 @@ function onMouseUp(e) {
   suppressNextMapClick();
   restoreDragPan();
   syncCursor();
+  if (modifierDown && lastCursorLngLat) {
+    updateBrushCursor(lastCursorLngLat);
+  } else {
+    clearBrushCursor();
+  }
 
   if (points.length < 2) {
     clearPreview();
@@ -151,8 +225,8 @@ function buildPolygon() {
 
   const line = lineString(coords);
   const zoom = currentMap.getZoom();
-  // Convert brush pixel size to km based on zoom and latitude
-  const metersPerPixel = 40075016.686 * Math.cos(52.52 * Math.PI / 180) / Math.pow(2, zoom + 8);
+  const latitude = points.reduce((sum, point) => sum + point.lat, 0) / points.length;
+  const metersPerPixel = 40075016.686 * Math.cos(latitude * Math.PI / 180) / Math.pow(2, zoom + 9);
   const radiusKm = (brush.size * metersPerPixel) / 1000;
 
   const buffered = buffer(line, Math.max(radiusKm, 0.005), { units: 'kilometers' });
@@ -177,6 +251,28 @@ function clearPreview() {
   }
 }
 
+function updateBrushCursor(lngLat) {
+  if (!currentMap || !initialized || !currentMap.getSource('brush-cursor')) return;
+  syncBrushCursorPaint();
+  currentMap.getSource('brush-cursor').setData({
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'Point',
+        coordinates: [lngLat.lng, lngLat.lat],
+      },
+    }],
+  });
+}
+
+function clearBrushCursor() {
+  if (currentMap && initialized && currentMap.getSource('brush-cursor')) {
+    currentMap.getSource('brush-cursor').setData(emptyFeatureCollection);
+  }
+}
+
 function syncCursor() {
   if (!currentMap) return;
   const canvas = currentMap.getCanvas();
@@ -186,6 +282,13 @@ function syncCursor() {
 function syncPreviewPaint() {
   if (!currentMap || !currentMap.getLayer('brush-preview-fill')) return;
   currentMap.setPaintProperty('brush-preview-fill', 'fill-color', currentTool().color);
+}
+
+function syncBrushCursorPaint() {
+  if (!currentMap || !currentMap.getLayer('brush-cursor-outline')) return;
+  currentMap.setPaintProperty('brush-cursor-halo', 'circle-radius', Number(brush.size));
+  currentMap.setPaintProperty('brush-cursor-outline', 'circle-radius', Number(brush.size));
+  currentMap.setPaintProperty('brush-cursor-outline', 'circle-stroke-color', currentTool().color);
 }
 
 function currentTool() {
@@ -266,11 +369,13 @@ function onKeyDown(e) {
     const index = Number(e.key) - 1;
     brush.value = ratingTools[index].value;
     syncPreviewPaint();
+    syncBrushCursorPaint();
   }
 
   if (e.metaKey || e.ctrlKey || e.key === 'Meta' || e.key === 'Control') {
     modifierDown = true;
     syncCursor();
+    if (lastCursorLngLat) updateBrushCursor(lastCursorLngLat);
   }
 }
 
@@ -278,7 +383,13 @@ function onKeyUp(e) {
   if (!e.metaKey && !e.ctrlKey && (e.key === 'Meta' || e.key === 'Control')) {
     modifierDown = false;
     syncCursor();
+    clearBrushCursor();
   }
+}
+
+export function syncBrushSizePreview() {
+  syncBrushCursorPaint();
+  if ((modifierDown || painting) && lastCursorLngLat) updateBrushCursor(lastCursorLngLat);
 }
 
 function isEditableTarget(target) {

@@ -13,6 +13,35 @@ export function createMap(container) {
   });
 
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
+  initTrackpadGestures(map);
 
   return map;
+}
+
+function initTrackpadGestures(map) {
+  map.scrollZoom.disable();
+
+  const canvas = map.getCanvas();
+  canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation?.();
+
+    if (event.metaKey) return;
+
+    if (event.ctrlKey) {
+      const point = [event.offsetX, event.offsetY];
+      const zoomDelta = -event.deltaY * 0.01;
+      map.zoomTo(map.getZoom() + zoomDelta, {
+        around: map.unproject(point),
+        duration: 0,
+      });
+      return;
+    }
+
+    map.panBy([event.deltaX, event.deltaY], {
+      animate: false,
+      duration: 0,
+    });
+  }, { passive: false, capture: true });
 }

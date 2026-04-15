@@ -37,10 +37,9 @@
     title={brush.paintMode ? 'Exit paint mode' : 'Enter paint mode (draw with touch/click)'}
   >
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 19l7-7 3 3-7 7-3-3z"/>
-      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
-      <path d="M2 2l7.586 7.586"/>
-      <circle cx="11" cy="11" r="2"/>
+      <rect x="2" y="3" width="16" height="6" rx="1"/>
+      <path d="M18 6h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-9v4"/>
+      <path d="M11 16v5"/>
     </svg>
   </button>
 
@@ -82,10 +81,15 @@
     />
   </div>
 
-  <div class="undo-redo">
+  <div class="undo-redo-inline">
     <button disabled={!brush.canUndo} onclick={undo} title="Undo (Ctrl+Z)">↩</button>
     <button disabled={!brush.canRedo} onclick={redo} title="Redo (Ctrl+Shift+Z)">↪</button>
   </div>
+</div>
+
+<div class="undo-redo-fab">
+  <button disabled={!brush.canUndo} onclick={undo} title="Undo (Ctrl+Z)">↩</button>
+  <button disabled={!brush.canRedo} onclick={redo} title="Redo (Ctrl+Shift+Z)">↪</button>
 </div>
 
 <style>
@@ -163,11 +167,11 @@
   .brush-controls input {
     width: 80px;
   }
-  .undo-redo {
+  .undo-redo-inline {
     display: flex;
     gap: 4px;
   }
-  .undo-redo button {
+  .undo-redo-inline button {
     width: 32px;
     height: 32px;
     border: 1px solid #ddd;
@@ -176,9 +180,12 @@
     cursor: pointer;
     font-size: 16px;
   }
-  .undo-redo button:disabled {
+  .undo-redo-inline button:disabled {
     opacity: 0.3;
     cursor: default;
+  }
+  .undo-redo-fab {
+    display: none;
   }
   .paint-toggle {
     width: 40px;
@@ -192,7 +199,7 @@
     justify-content: center;
     color: #374151;
     flex-shrink: 0;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 0.05s, border-color 0.05s;
   }
   .paint-toggle.active {
     background: #2563eb;
@@ -202,26 +209,59 @@
 
   @media (max-width: 640px) {
     .toolbar {
-      flex-wrap: wrap;
-      justify-content: center;
-      padding: 8px;
-      gap: 8px;
+      padding: 6px;
+      gap: 6px;
       bottom: 12px;
+      max-width: calc(100vw - 16px);
     }
     .instructions {
       display: none;
     }
     .color-btn {
-      width: 44px;
-      height: 44px;
+      width: 40px;
+      height: 40px;
+    }
+    .color-btn span {
+      display: none;
     }
     .paint-toggle {
-      width: 44px;
-      height: 44px;
+      width: 40px;
+      height: 40px;
+      border: 2px solid transparent;
+      border-radius: 6px 0 0 6px;
+      background: #9ca3af;
     }
-    .undo-redo button {
-      width: 44px;
-      height: 44px;
+    .color-btn:first-child {
+      border-radius: 0;
+    }
+    .brush-controls {
+      display: none;
+    }
+    .undo-redo-inline {
+      display: none;
+    }
+    .undo-redo-fab {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: fixed;
+      bottom: 80px;
+      right: 12px;
+      z-index: 10;
+    }
+    .undo-redo-fab button {
+      width: 48px;
+      height: 48px;
+      border: 1px solid #ddd;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .undo-redo-fab button:disabled {
+      opacity: 0.3;
+      cursor: default;
     }
   }
 </style>

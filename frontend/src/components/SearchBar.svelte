@@ -176,8 +176,7 @@
 
 <style>
   .search-container {
-    position: absolute; top: 12px; left: 12px; z-index: 10;
-    width: min(340px, calc(100vw - 24px));
+    width: 340px;
   }
   .search-bar {
     background: white; border-radius: 8px; padding: 8px 12px;
@@ -259,6 +258,9 @@
   .result-btn:hover { background: #f0f4ff; }
 
   @media (max-width: 640px) {
+    .search-container {
+      width: 100%;
+    }
     .result-btn {
       padding: 14px 12px;
     }

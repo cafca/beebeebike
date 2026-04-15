@@ -4,6 +4,7 @@
   import Toolbar from './components/Toolbar.svelte';
   import SearchBar from './components/SearchBar.svelte';
   import RoutePanel from './components/RoutePanel.svelte';
+  import { untrack } from 'svelte';
   import { auth, checkSession, logout } from './lib/auth.svelte.js';
   import { loadHomeLocation, locations } from './lib/locations.svelte.js';
   import { initOverlay } from './lib/overlay.js';
@@ -23,9 +24,11 @@
 
   $effect(() => {
     if (map && auth.user) {
-      initOverlay(map);
-      initBrush(map);
-      initRouting(map);
+      untrack(() => {
+        initOverlay(map);
+        initBrush(map);
+        initRouting(map);
+      });
       return () => destroyBrush();
     }
   });
@@ -70,8 +73,10 @@
 <Map onload={handleMapLoad} />
 
 {#if auth.ready && auth.user}
-  <SearchBar />
-  <RoutePanel />
+  <div class="top-left-stack">
+    <SearchBar />
+    <RoutePanel />
+  </div>
   <div class="user-bar">
     <span>{userLabel}</span>
     {#if auth.user.account_type === 'anonymous'}
@@ -89,6 +94,16 @@
 {/if}
 
 <style>
+  .top-left-stack {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+  }
   .user-bar {
     position: absolute; top: 12px; right: 60px;
     background: white; padding: 8px 16px; border-radius: 8px;
@@ -100,6 +115,10 @@
   }
 
   @media (max-width: 640px) {
+    .top-left-stack {
+      flex-direction: column;
+      width: calc(100vw - 140px);
+    }
     .user-bar {
       right: 12px;
       padding: 6px 10px;

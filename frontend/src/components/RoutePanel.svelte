@@ -27,17 +27,10 @@
 
 <style>
   .route-panel {
-    position: absolute; top: 12px; left: 360px;
     background: white; padding: 10px 16px; border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     font-size: 14px; display: flex; gap: 4px;
+    white-space: nowrap;
   }
   .sep { color: #999; }
-
-  @media (max-width: 640px) {
-    .route-panel {
-      left: 12px;
-      top: 80px;
-    }
-  }
 </style>

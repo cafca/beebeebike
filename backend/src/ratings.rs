@@ -19,6 +19,7 @@ use crate::{auth::require_auth, errors::AppError, AppState};
 pub struct PaintRequest {
     pub geometry: Value,
     pub value: i32,
+    pub target_id: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -113,13 +114,57 @@ pub async fn paint(
 
     let mut tx = state.db.begin().await?;
 
-    // Step 1: Delete fully contained polygons and count them
+    if let Some(target_id) = body.target_id {
+        let result = if body.value == 0 {
+            sqlx::query(
+                r#"
+                DELETE FROM rated_areas
+                WHERE user_id = $1
+                  AND id = $2
+                "#,
+            )
+            .bind(user_id)
+            .bind(target_id)
+            .execute(&mut *tx)
+            .await?
+        } else {
+            sqlx::query(
+                r#"
+                UPDATE rated_areas
+                SET value = $3,
+                    updated_at = now()
+                WHERE user_id = $1
+                  AND id = $2
+                "#,
+            )
+            .bind(user_id)
+            .bind(target_id)
+            .bind(body.value)
+            .execute(&mut *tx)
+            .await?
+        };
+
+        let affected_count = result.rows_affected() as i64;
+        if affected_count == 0 {
+            return Err(AppError::NotFound);
+        }
+
+        tx.commit().await?;
+
+        return Ok(Json(PaintResponse {
+            created_id: None,
+            clipped_count: 0,
+            deleted_count: if body.value == 0 { affected_count } else { 0 },
+        }));
+    }
+
+    // Step 1: Delete fully covered polygons and count them
     let deleted_row = sqlx::query_as::<_, CountRow>(
         r#"
         WITH deleted AS (
             DELETE FROM rated_areas
             WHERE user_id = $1
-              AND ST_Contains(ST_SetSRID(ST_GeomFromGeoJSON($2), 4326), geometry)
+              AND ST_Covers(ST_SetSRID(ST_GeomFromGeoJSON($2), 4326), geometry)
             RETURNING 1
         )
         SELECT COUNT(*) AS count FROM deleted
@@ -230,7 +275,7 @@ pub async fn get_overlay(
             json!({
                 "type": "Feature",
                 "id": row.id,
-                "properties": { "value": row.value },
+                "properties": { "id": row.id, "value": row.value },
                 "geometry": geometry,
             })
         })

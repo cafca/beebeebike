@@ -28,7 +28,11 @@ export const api = {
   saveHomeLocation: (location) => request('PUT', '/api/locations/home', location),
   deleteHomeLocation: () => request('DELETE', '/api/locations/home'),
   getOverlay: (bbox) => request('GET', `/api/ratings?bbox=${bbox}`),
-  paint: (geometry, value) => request('PUT', '/api/ratings/paint', { geometry, value }),
+  paint: (geometry, value, targetId = null) => {
+    const body = { geometry, value };
+    if (targetId !== null && targetId !== undefined) body.target_id = targetId;
+    return request('PUT', '/api/ratings/paint', body);
+  },
   route: (origin, destination, rating_weight, distance_influence) =>
     request('POST', '/api/route', {
       origin,

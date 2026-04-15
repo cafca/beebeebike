@@ -251,7 +251,10 @@ mod tests {
     #[test]
     fn valid_rating_values_accepted() {
         for v in [-7, -3, -1, 0, 1, 3, 7] {
-            assert!(validate_rating_value(v).is_ok(), "value {v} should be valid");
+            assert!(
+                validate_rating_value(v).is_ok(),
+                "value {v} should be valid"
+            );
         }
     }
 
@@ -318,6 +321,8 @@ mod tests {
     #[test]
     fn parse_bbox_non_numeric() {
         let err = parse_bbox("abc,52.3,13.8,52.7").unwrap_err();
-        assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("invalid bbox coordinate")));
+        assert!(
+            matches!(err, AppError::BadRequest(msg) if msg.contains("invalid bbox coordinate"))
+        );
     }
 }

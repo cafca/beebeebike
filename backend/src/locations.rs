@@ -181,8 +181,7 @@ mod tests {
 
     #[test]
     fn neg_infinity_rejected() {
-        let err =
-            validate_location(&make_request("Home", f64::NEG_INFINITY, 52.52)).unwrap_err();
+        let err = validate_location(&make_request("Home", f64::NEG_INFINITY, 52.52)).unwrap_err();
         assert!(matches!(err, AppError::BadRequest(msg) if msg.contains("finite")));
     }
 

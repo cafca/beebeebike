@@ -411,20 +411,14 @@ mod tests {
     fn extract_session_empty_value() {
         let mut headers = HeaderMap::new();
         headers.insert("cookie", "session=".parse().unwrap());
-        assert_eq!(
-            extract_session_from_headers(&headers),
-            Some("".to_string())
-        );
+        assert_eq!(extract_session_from_headers(&headers), Some("".to_string()));
     }
 
     #[test]
     fn extract_session_with_uuid_value() {
         let mut headers = HeaderMap::new();
         let uuid = "550e8400-e29b-41d4-a716-446655440000";
-        headers.insert(
-            "cookie",
-            format!("session={uuid}").parse().unwrap(),
-        );
+        headers.insert("cookie", format!("session={uuid}").parse().unwrap());
         assert_eq!(
             extract_session_from_headers(&headers),
             Some(uuid.to_string())

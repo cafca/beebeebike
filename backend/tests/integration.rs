@@ -42,10 +42,7 @@ async fn setup() -> Option<TestServer> {
         .execute(&db)
         .await
         .unwrap();
-    sqlx::query("DELETE FROM users")
-        .execute(&db)
-        .await
-        .unwrap();
+    sqlx::query("DELETE FROM users").execute(&db).await.unwrap();
 
     let config = Config {
         database_url: db_url,
@@ -189,10 +186,7 @@ async fn register_upgrade_from_anonymous() {
 
     // Get the anonymous user's ID
     let (hname, hval) = with_session(&session);
-    let me_resp = server
-        .get("/api/auth/me")
-        .add_header(hname, hval)
-        .await;
+    let me_resp = server.get("/api/auth/me").add_header(hname, hval).await;
     let anon_id = me_resp.json::<Value>()["id"].as_str().unwrap().to_string();
 
     // Upgrade to registered
@@ -319,10 +313,7 @@ async fn login_and_logout() {
 
     // Session should no longer work
     let (hname, hval) = with_session(&session);
-    let resp = server
-        .get("/api/auth/me")
-        .add_header(hname, hval)
-        .await;
+    let resp = server.get("/api/auth/me").add_header(hname, hval).await;
     resp.assert_status(StatusCode::UNAUTHORIZED);
 }
 
@@ -391,10 +382,7 @@ async fn me_with_invalid_session_is_unauthorized() {
         HeaderName::from_static("cookie"),
         "session=bogus-session-id",
     );
-    let resp = server
-        .get("/api/auth/me")
-        .add_header(hname, hval)
-        .await;
+    let resp = server.get("/api/auth/me").add_header(hname, hval).await;
     resp.assert_status(StatusCode::UNAUTHORIZED);
 }
 

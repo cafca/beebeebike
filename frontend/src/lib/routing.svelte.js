@@ -28,15 +28,36 @@ export function initRouting(map) {
     });
   }
 
+  if (!map.getLayer('route-line-casing')) {
+    map.addLayer({
+      id: 'route-line-casing',
+      type: 'line',
+      source: 'route',
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': 9,
+        'line-opacity': 0.9,
+      },
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round',
+      },
+    });
+  }
+
   if (!map.getLayer('route-line')) {
     map.addLayer({
       id: 'route-line',
       type: 'line',
       source: 'route',
       paint: {
-        'line-color': '#2563eb',
+        'line-color': '#155e75',
         'line-width': 5,
-        'line-opacity': 0.8,
+        'line-opacity': 0.95,
+      },
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round',
       },
     });
   }

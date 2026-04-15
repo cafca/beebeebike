@@ -6,11 +6,35 @@
   let map = $state();
 
   $effect(() => {
-    if (container && !map) {
-      map = createMap(container);
-      map.on('load', () => onload?.(map));
-      return () => map?.remove();
-    }
+    if (!container) return;
+
+    let disposed = false;
+    let mountedMap;
+
+    createMap(container)
+      .then((createdMap) => {
+        if (disposed) {
+          createdMap.remove();
+          return;
+        }
+
+        mountedMap = createdMap;
+        map = createdMap;
+        if (createdMap.loaded()) {
+          onload?.(createdMap);
+        } else {
+          createdMap.once('load', () => onload?.(createdMap));
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to initialize map:', error);
+      });
+
+    return () => {
+      disposed = true;
+      mountedMap?.remove();
+      map = undefined;
+    };
   });
 </script>
 

@@ -8,7 +8,7 @@ export default defineConfig({
     proxy: {
       '/api': process.env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
       '/tiles': {
-        target: process.env.VITE_TILES_PROXY_TARGET || 'http://localhost:8080',
+        target: process.env.VITE_TILES_PROXY_TARGET || process.env.VITE_TILE_PROXY_TARGET || 'http://localhost:8080',
         rewrite: (path) => path.replace(/^\/tiles/, ''),
       },
     },

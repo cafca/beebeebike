@@ -98,4 +98,13 @@
   .user-bar button {
     background: none; border: none; color: #2563eb; cursor: pointer;
   }
+
+  @media (max-width: 640px) {
+    .user-bar {
+      right: 12px;
+      padding: 6px 10px;
+      gap: 8px;
+      font-size: 12px;
+    }
+  }
 </style>

@@ -1,5 +1,5 @@
 <script>
-  import { brush, ratingTools, undo, redo, syncBrushSizePreview } from '../lib/brush.svelte.js';
+  import { brush, ratingTools, undo, redo, syncBrushSizePreview, togglePaintMode } from '../lib/brush.svelte.js';
 
   let showSizePreview = $state(false);
   let hidePreviewTimer;
@@ -27,8 +27,22 @@
 
 <div class="toolbar">
   <div class="instructions">
-    Drag while holding command / control to paint where you like or dislike biking.
+    Hold command/control and drag to paint, or use the paint mode toggle.
   </div>
+
+  <button
+    class="paint-toggle"
+    class:active={brush.paintMode}
+    onclick={togglePaintMode}
+    title={brush.paintMode ? 'Exit paint mode' : 'Enter paint mode (draw with touch/click)'}
+  >
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+      <path d="M2 2l7.586 7.586"/>
+      <circle cx="11" cy="11" r="2"/>
+    </svg>
+  </button>
 
   <div class="color-strip">
     {#each ratingTools as r, i}
@@ -166,15 +180,48 @@
     opacity: 0.3;
     cursor: default;
   }
+  .paint-toggle {
+    width: 40px;
+    height: 40px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #374151;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .paint-toggle.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: white;
+  }
 
-  @media (max-width: 620px) {
+  @media (max-width: 640px) {
     .toolbar {
       flex-wrap: wrap;
       justify-content: center;
+      padding: 8px;
+      gap: 8px;
+      bottom: 12px;
     }
     .instructions {
-      max-width: 100%;
-      text-align: center;
+      display: none;
+    }
+    .color-btn {
+      width: 44px;
+      height: 44px;
+    }
+    .paint-toggle {
+      width: 44px;
+      height: 44px;
+    }
+    .undo-redo button {
+      width: 44px;
+      height: 44px;
     }
   }
 </style>

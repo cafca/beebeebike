@@ -21,6 +21,7 @@ export const brush = $state({
   size: 30,
   canUndo: false,
   canRedo: false,
+  paintMode: false,
 });
 
 const undoStack = [];
@@ -104,14 +105,14 @@ export function initBrush(map) {
   }
 
   currentCanvas = map.getCanvas();
-  currentCanvas.removeEventListener('mousedown', onMouseDown, listenerOptions);
-  currentCanvas.removeEventListener('mousemove', onMouseMove, listenerOptions);
-  currentCanvas.removeEventListener('mouseleave', onMouseLeave, listenerOptions);
-  currentCanvas.addEventListener('mousedown', onMouseDown, listenerOptions);
-  currentCanvas.addEventListener('mousemove', onMouseMove, listenerOptions);
-  currentCanvas.addEventListener('mouseleave', onMouseLeave, listenerOptions);
-  document.removeEventListener('mouseup', onMouseUp, listenerOptions);
-  document.addEventListener('mouseup', onMouseUp, listenerOptions);
+  currentCanvas.removeEventListener('pointerdown', onPointerDown, listenerOptions);
+  currentCanvas.removeEventListener('pointermove', onPointerMove, listenerOptions);
+  currentCanvas.removeEventListener('pointerleave', onPointerLeave, listenerOptions);
+  currentCanvas.addEventListener('pointerdown', onPointerDown, listenerOptions);
+  currentCanvas.addEventListener('pointermove', onPointerMove, listenerOptions);
+  currentCanvas.addEventListener('pointerleave', onPointerLeave, listenerOptions);
+  document.removeEventListener('pointerup', onPointerUp, listenerOptions);
+  document.addEventListener('pointerup', onPointerUp, listenerOptions);
   document.addEventListener('keydown', onKeyDown);
   document.addEventListener('keyup', onKeyUp);
 
@@ -124,13 +125,18 @@ export function initBrush(map) {
 export function destroyBrush() {
   if (currentCanvas) {
     currentCanvas.style.cursor = '';
-    currentCanvas.removeEventListener('mousedown', onMouseDown, listenerOptions);
-    currentCanvas.removeEventListener('mousemove', onMouseMove, listenerOptions);
-    currentCanvas.removeEventListener('mouseleave', onMouseLeave, listenerOptions);
+    currentCanvas.style.touchAction = '';
+    currentCanvas.removeEventListener('pointerdown', onPointerDown, listenerOptions);
+    currentCanvas.removeEventListener('pointermove', onPointerMove, listenerOptions);
+    currentCanvas.removeEventListener('pointerleave', onPointerLeave, listenerOptions);
   }
-  document.removeEventListener('mouseup', onMouseUp, listenerOptions);
+  document.removeEventListener('pointerup', onPointerUp, listenerOptions);
   document.removeEventListener('keydown', onKeyDown);
   document.removeEventListener('keyup', onKeyUp);
+  if (brush.paintMode && currentMap) {
+    currentMap.dragPan.enable();
+  }
+  brush.paintMode = false;
   painting = false;
   points = [];
   modifierDown = false;
@@ -142,7 +148,7 @@ export function destroyBrush() {
   currentMap = null;
 }
 
-function onMouseDown(e) {
+function onPointerDown(e) {
   if (!isPaintModifier(e)) return;
   if (e.button !== 0) return;
   e.preventDefault();
@@ -152,13 +158,15 @@ function onMouseDown(e) {
   painting = true;
   lastCursorLngLat = currentMap.unproject([e.offsetX, e.offsetY]);
   points = [lastCursorLngLat];
-  dragPanWasEnabled = currentMap.dragPan.isEnabled();
-  if (dragPanWasEnabled) currentMap.dragPan.disable();
+  if (!brush.paintMode) {
+    dragPanWasEnabled = currentMap.dragPan.isEnabled();
+    if (dragPanWasEnabled) currentMap.dragPan.disable();
+  }
   syncCursor();
   updateBrushCursor(lastCursorLngLat);
 }
 
-function onMouseMove(e) {
+function onPointerMove(e) {
   lastCursorLngLat = currentMap.unproject([e.offsetX, e.offsetY]);
 
   if (!painting) {
@@ -182,14 +190,14 @@ function onMouseMove(e) {
   updatePreview();
 }
 
-function onMouseLeave() {
+function onPointerLeave() {
   if (!painting) {
     lastCursorLngLat = null;
     clearBrushCursor();
   }
 }
 
-function onMouseUp(e) {
+function onPointerUp(e) {
   if (!painting) return;
   e?.preventDefault();
   e?.stopPropagation();
@@ -198,7 +206,7 @@ function onMouseUp(e) {
   suppressNextMapClick();
   restoreDragPan();
   syncCursor();
-  if (modifierDown && lastCursorLngLat) {
+  if ((modifierDown || brush.paintMode) && lastCursorLngLat) {
     updateBrushCursor(lastCursorLngLat);
   } else {
     clearBrushCursor();
@@ -276,7 +284,7 @@ function clearBrushCursor() {
 function syncCursor() {
   if (!currentMap) return;
   const canvas = currentMap.getCanvas();
-  canvas.style.cursor = painting || modifierDown ? 'crosshair' : '';
+  canvas.style.cursor = painting || modifierDown || brush.paintMode ? 'crosshair' : '';
 }
 
 function syncPreviewPaint() {
@@ -296,14 +304,29 @@ function currentTool() {
 }
 
 function restoreDragPan() {
+  if (brush.paintMode) return;
   if (currentMap && dragPanWasEnabled && !currentMap.dragPan.isEnabled()) {
     currentMap.dragPan.enable();
   }
   dragPanWasEnabled = false;
 }
 
+export function togglePaintMode() {
+  brush.paintMode = !brush.paintMode;
+  if (currentMap) {
+    if (brush.paintMode) {
+      currentMap.dragPan.disable();
+      currentMap.getCanvas().style.touchAction = 'none';
+    } else {
+      currentMap.dragPan.enable();
+      currentMap.getCanvas().style.touchAction = '';
+    }
+  }
+  syncCursor();
+}
+
 function isPaintModifier(e) {
-  return e.metaKey || e.ctrlKey;
+  return e.metaKey || e.ctrlKey || brush.paintMode;
 }
 
 async function submitPaint(geometry, value) {

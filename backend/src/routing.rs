@@ -14,6 +14,7 @@ use crate::{auth::require_auth, errors::AppError, AppState};
 pub struct RouteRequest {
     pub origin: [f64; 2],      // [lng, lat]
     pub destination: [f64; 2], // [lng, lat]
+    pub rating_weight: Option<f64>,
 }
 
 #[derive(Serialize)]
@@ -39,19 +40,21 @@ struct RatedAreaRow {
 // ---------------------------------------------------------------------------
 
 /// Map a rating value and weight to a GraphHopper priority multiplier.
-/// Base values: -7 → 0.05, -3 → 0.3, -1 → 0.7, 1 → 1.3, 3 → 2.0, 7 → 3.0
-/// Weight is applied as: 1.0 + (base - 1.0) * weight
+/// Base values are intentionally non-linear: the light colors nudge, the
+/// middle colors pull, and the strongest colors should materially reshape
+/// routes. Weight is applied as an exponent so 0.0 neutralizes every rating
+/// and 1.0 preserves the full table.
 fn rating_to_priority(value: i16, weight: f64) -> f64 {
-    let base = match value {
-        -7 => 0.05,
-        -3 => 0.3,
-        -1 => 0.7,
-        1 => 1.3,
-        3 => 2.0,
-        7 => 3.0,
+    let base: f64 = match value {
+        -7 => 0.29,
+        -3 => 0.56,
+        -1 => 0.83,
+        1 => 1.20,
+        3 => 1.80,
+        7 => 3.50,
         _ => 1.0,
     };
-    1.0 + (base - 1.0) * weight
+    base.powf(weight.clamp(0.0, 1.0))
 }
 
 // ---------------------------------------------------------------------------
@@ -72,6 +75,10 @@ pub async fn get_route(
 
     let [orig_lng, orig_lat] = body.origin;
     let [dest_lng, dest_lat] = body.destination;
+    let rating_weight = body
+        .rating_weight
+        .unwrap_or(state.config.rating_weight)
+        .clamp(0.0, 1.0);
 
     // Build bounding box around origin+destination with ~2km margin (0.02 degrees)
     const MARGIN: f64 = 0.02;
@@ -117,7 +124,7 @@ pub async fn get_route(
             let geometry: Value = serde_json::from_str(&row.geometry)
                 .map_err(|e| AppError::Internal(format!("failed to parse area geometry: {e}")))?;
 
-            let multiplier = rating_to_priority(row.value, state.config.rating_weight);
+            let multiplier = rating_to_priority(row.value, rating_weight);
 
             priority_statements.push(json!({
                 "if": format!("in_{}", area_id),

@@ -2,6 +2,7 @@ import maplibregl from 'maplibre-gl';
 import { api } from './api.js';
 import { locations, routePointFromLocation } from './locations.svelte.js';
 import { shouldSuppressMapClick } from './paintGesture.js';
+import { preferences } from './preferences.svelte.js';
 
 export const route = $state({
   origin: null,      // { lng, lat, name }
@@ -78,7 +79,8 @@ export async function computeRoute() {
   try {
     const data = await api.route(
       [route.origin.lng, route.origin.lat],
-      [route.destination.lng, route.destination.lat]
+      [route.destination.lng, route.destination.lat],
+      preferences.ratingWeight
     );
     route.data = data;
 

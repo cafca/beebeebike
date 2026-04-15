@@ -93,7 +93,8 @@ export async function computeRoute({ fitBounds = true } = {}) {
     const data = await api.route(
       [route.origin.lng, route.origin.lat],
       [route.destination.lng, route.destination.lat],
-      preferences.ratingWeight
+      preferences.ratingWeight,
+      preferences.distanceInfluence
     );
     route.data = data;
 

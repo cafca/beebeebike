@@ -10,6 +10,8 @@
   import { initRouting } from './lib/routing.svelte.js';
 
   let map = $state(null);
+  let authModalMode = $state('login');
+  let showAuthModal = $state(false);
 
   checkSession();
 
@@ -25,20 +27,38 @@
       return () => destroyBrush();
     }
   });
+
+  function openAuth(mode) {
+    authModalMode = mode;
+    showAuthModal = true;
+  }
+
+  let userLabel = $derived(
+    auth.user?.account_type === 'anonymous'
+      ? 'Guest'
+      : (auth.user?.display_name || auth.user?.email || 'Guest')
+  );
 </script>
 
 <Map onload={handleMapLoad} />
 
-{#if auth.user}
+{#if auth.ready && auth.user}
   <SearchBar />
   <RoutePanel />
   <div class="user-bar">
-    <span>{auth.user.display_name || auth.user.email}</span>
-    <button onclick={logout}>Log out</button>
+    <span>{userLabel}</span>
+    {#if auth.user.account_type === 'anonymous'}
+      <button onclick={() => openAuth('register')}>Sign up</button>
+      <button onclick={() => openAuth('login')}>Log in</button>
+    {:else}
+      <button onclick={logout}>Log out</button>
+    {/if}
   </div>
   <Toolbar />
-{:else}
-  <AuthModal />
+{/if}
+
+{#if showAuthModal}
+  <AuthModal initialMode={authModalMode} onclose={() => showAuthModal = false} />
 {/if}
 
 <style>

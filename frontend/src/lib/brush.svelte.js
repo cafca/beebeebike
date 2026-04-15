@@ -28,12 +28,14 @@ const undoStack = [];
 const redoStack = [];
 let painting = false;
 let points = [];
+let lastPointerPixel = null;
 let currentMap = null;
 let initialized = false;
 let currentCanvas = null;
 let dragPanWasEnabled = false;
 let modifierDown = false;
 let lastCursorLngLat = null;
+let hoveringOverRecolorTarget = false;
 const listenerOptions = { capture: true };
 const emptyFeatureCollection = { type: 'FeatureCollection', features: [] };
 
@@ -157,6 +159,7 @@ function onPointerDown(e) {
 
   painting = true;
   lastCursorLngLat = currentMap.unproject([e.offsetX, e.offsetY]);
+  lastPointerPixel = [e.offsetX, e.offsetY];
   points = [lastCursorLngLat];
   if (!brush.paintMode) {
     dragPanWasEnabled = currentMap.dragPan.isEnabled();
@@ -172,13 +175,23 @@ function onPointerMove(e) {
   if (!painting) {
     const paintModifier = isPaintModifier(e);
     modifierDown = paintModifier;
-    syncCursor();
 
     if (paintModifier) {
-      updateBrushCursor(lastCursorLngLat);
+      const pixel = [e.offsetX, e.offsetY];
+      const features = currentMap.queryRenderedFeatures(pixel, { layers: ['ratings-fill'] });
+      hoveringOverRecolorTarget = features.length > 0 &&
+        features[0].properties?.value !== undefined &&
+        features[0].properties.value !== brush.value;
+      if (hoveringOverRecolorTarget) {
+        clearBrushCursor();
+      } else {
+        updateBrushCursor(lastCursorLngLat);
+      }
     } else {
+      hoveringOverRecolorTarget = false;
       clearBrushCursor();
     }
+    syncCursor();
     return;
   }
 
@@ -193,7 +206,9 @@ function onPointerMove(e) {
 function onPointerLeave() {
   if (!painting) {
     lastCursorLngLat = null;
+    hoveringOverRecolorTarget = false;
     clearBrushCursor();
+    syncCursor();
   }
 }
 
@@ -214,6 +229,16 @@ function onPointerUp(e) {
 
   if (points.length < 2) {
     clearPreview();
+    if (lastPointerPixel) {
+      const features = currentMap.queryRenderedFeatures(lastPointerPixel, { layers: ['ratings-fill'] });
+      if (features.length > 0) {
+        const feature = features[0];
+        const featureValue = feature.properties?.value;
+        if (featureValue !== undefined && featureValue !== brush.value) {
+          submitPaint(feature.geometry, brush.value);
+        }
+      }
+    }
     return;
   }
 
@@ -284,7 +309,23 @@ function clearBrushCursor() {
 function syncCursor() {
   if (!currentMap) return;
   const canvas = currentMap.getCanvas();
-  canvas.style.cursor = painting || modifierDown || brush.paintMode ? 'crosshair' : '';
+  if (painting) {
+    canvas.style.cursor = 'crosshair';
+  } else if ((modifierDown || brush.paintMode) && hoveringOverRecolorTarget) {
+    canvas.style.cursor = createBucketCursor(currentTool().color);
+  } else if (modifierDown || brush.paintMode) {
+    canvas.style.cursor = 'crosshair';
+  } else {
+    canvas.style.cursor = '';
+  }
+}
+
+function createBucketCursor(color) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+    <path fill="#111" stroke="#fff" stroke-width="0.8" d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15c-.59.56-.59 1.53 0 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21z"/>
+    <path fill="${color}" stroke="#fff" stroke-width="0.8" d="M19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/>
+  </svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 19 17, pointer`;
 }
 
 function syncPreviewPaint() {

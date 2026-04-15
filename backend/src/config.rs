@@ -15,7 +15,7 @@ impl Config {
     pub fn from_env() -> Self {
         Self {
             database_url: env::var("DATABASE_URL").unwrap_or_else(|_| {
-                "postgres://ortschaft:ortschaft@localhost:5432/ortschaft".into()
+                "postgres://beebeebike:beebeebike@localhost:5432/beebeebike".into()
             }),
             graphhopper_url: env::var("GRAPHHOPPER_URL")
                 .unwrap_or_else(|_| "http://localhost:8989".into()),

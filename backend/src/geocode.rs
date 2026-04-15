@@ -28,7 +28,7 @@ pub async fn geocode(
     let resp = state
         .http_client
         .get(&url)
-        .header("User-Agent", "Ortschaft/0.1 (bicycle routing app)")
+        .header("User-Agent", "beebeebike/0.1 (bicycle routing app)")
         .send()
         .await
         .map_err(|e| AppError::Internal(format!("Photon request failed: {e}")))?;

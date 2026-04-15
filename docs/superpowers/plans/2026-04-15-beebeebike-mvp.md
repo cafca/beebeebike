@@ -1,4 +1,4 @@
-# Ortschaft MVP Implementation Plan
+# beebeebike MVP Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -13,7 +13,7 @@
 ## File Structure
 
 ```
-ortschaft/
+beebeebike/
 ├── backend/
 │   ├── Cargo.toml
 │   ├── Dockerfile
@@ -65,10 +65,10 @@ ortschaft/
 
 ### Task 1: Clean Up Old Code and Scaffold Backend
 
-Remove `or-cli/` and `or-domain/` (if present). Create the Axum backend crate with a health check endpoint.
+Remove `bbb-cli/` and `bbb-domain/` (if present). Create the Axum backend crate with a health check endpoint.
 
 **Files:**
-- Delete: `or-cli/` directory
+- Delete: `bbb-cli/` directory
 - Create: `backend/Cargo.toml`
 - Create: `backend/src/main.rs`
 - Create: `backend/src/config.rs`
@@ -78,9 +78,9 @@ Remove `or-cli/` and `or-domain/` (if present). Create the Axum backend crate wi
 - [ ] **Step 1: Remove old code**
 
 ```bash
-rm -rf or-cli/
-# Also remove or-domain/ if it exists
-rm -rf or-domain/
+rm -rf bbb-cli/
+# Also remove bbb-domain/ if it exists
+rm -rf bbb-domain/
 ```
 
 - [ ] **Step 2: Create backend Cargo.toml**
@@ -88,7 +88,7 @@ rm -rf or-domain/
 Create `backend/Cargo.toml`:
 ```toml
 [package]
-name = "ortschaft-backend"
+name = "beebeebike-backend"
 version = "0.1.0"
 edition = "2021"
 
@@ -131,7 +131,7 @@ impl Config {
     pub fn from_env() -> Self {
         Self {
             database_url: env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "postgres://ortschaft:ortschaft@localhost:5432/ortschaft".into()),
+                .unwrap_or_else(|_| "postgres://beebeebike:beebeebike@localhost:5432/beebeebike".into()),
             graphhopper_url: env::var("GRAPHHOPPER_URL")
                 .unwrap_or_else(|_| "http://localhost:8989".into()),
             photon_url: env::var("PHOTON_URL")
@@ -208,7 +208,7 @@ async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "ortschaft_backend=debug,tower_http=debug".into()),
+                .unwrap_or_else(|_| "beebeebike_backend=debug,tower_http=debug".into()),
         )
         .init();
 
@@ -266,8 +266,8 @@ RUN cargo build --release
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/target/release/ortschaft-backend /usr/local/bin/
-CMD ["ortschaft-backend"]
+COPY --from=builder /app/target/release/beebeebike-backend /usr/local/bin/
+CMD ["beebeebike-backend"]
 ```
 
 - [ ] **Step 8: Verify it compiles**
@@ -279,8 +279,8 @@ cd backend && cargo check
 - [ ] **Step 9: Commit**
 
 ```bash
-git add backend/ && git rm -rf or-cli/
-git commit -m "Scaffold Axum backend with health check, remove old or-cli"
+git add backend/ && git rm -rf bbb-cli/
+git commit -m "Scaffold Axum backend with health check, remove old bbb-cli"
 ```
 
 ---
@@ -358,11 +358,11 @@ Replace `server/docker-compose.yml` entirely:
 services:
   db:
     image: postgis/postgis:16-3.4
-    container_name: ortschaft-db
+    container_name: beebeebike-db
     environment:
-      POSTGRES_DB: ortschaft
-      POSTGRES_USER: ortschaft
-      POSTGRES_PASSWORD: ortschaft
+      POSTGRES_DB: beebeebike
+      POSTGRES_USER: beebeebike
+      POSTGRES_PASSWORD: beebeebike
     ports:
       - "5432:5432"
     volumes:
@@ -371,7 +371,7 @@ services:
 
   graphhopper:
     image: israelhikingmap/graphhopper:latest
-    container_name: ortschaft-graphhopper
+    container_name: beebeebike-graphhopper
     entrypoint:
       - "./graphhopper.sh"
       - "-c"
@@ -390,7 +390,7 @@ services:
 
   tiles:
     image: versatiles/versatiles:latest
-    container_name: ortschaft-tiles
+    container_name: beebeebike-tiles
     ports:
       - "8080:8080"
     volumes:
@@ -400,11 +400,11 @@ services:
 
   backend:
     build: ../backend
-    container_name: ortschaft-backend
+    container_name: beebeebike-backend
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgres://ortschaft:ortschaft@db:5432/ortschaft
+      DATABASE_URL: postgres://beebeebike:beebeebike@db:5432/beebeebike
       GRAPHHOPPER_URL: http://graphhopper:8989
       PHOTON_URL: https://photon.komoot.io
     depends_on:
@@ -1174,7 +1174,7 @@ pub async fn geocode(
     let resp = state
         .http_client
         .get(&url)
-        .header("User-Agent", "Ortschaft/0.1 (bicycle routing app)")
+        .header("User-Agent", "beebeebike/0.1 (bicycle routing app)")
         .send()
         .await
         .map_err(|e| AppError::Internal(format!("Photon request failed: {e}")))?;
@@ -1292,7 +1292,7 @@ Replace `frontend/index.html`:
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ortschaft</title>
+  <title>beebeebike</title>
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -2466,7 +2466,7 @@ cd server && docker compose up -d
 sleep 5
 
 # Run backend (outside Docker for dev)
-cd backend && DATABASE_URL=postgres://ortschaft:ortschaft@localhost:5432/ortschaft cargo run &
+cd backend && DATABASE_URL=postgres://beebeebike:beebeebike@localhost:5432/beebeebike cargo run &
 
 # Run frontend dev server
 cd frontend && npm run dev &
@@ -2539,7 +2539,7 @@ Create/update root `.gitignore`:
 ```gitignore
 # Rust
 backend/target/
-or-cli/target/
+bbb-cli/target/
 
 # Frontend
 frontend/node_modules/

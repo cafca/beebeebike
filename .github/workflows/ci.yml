@@ -99,6 +99,6 @@ jobs:
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
-            cd ~/ortschaft
+            cd ~/beebeebike
             docker compose -f compose.prod.yml pull backend
             docker compose -f compose.prod.yml up -d backend

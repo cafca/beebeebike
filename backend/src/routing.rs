@@ -15,6 +15,7 @@ pub struct RouteRequest {
     pub origin: [f64; 2],      // [lng, lat]
     pub destination: [f64; 2], // [lng, lat]
     pub rating_weight: Option<f64>,
+    pub distance_influence: Option<f64>,
 }
 
 #[derive(Serialize)]
@@ -79,6 +80,10 @@ pub async fn get_route(
         .rating_weight
         .unwrap_or(state.config.rating_weight)
         .clamp(0.0, 1.0);
+    let distance_influence = body
+        .distance_influence
+        .unwrap_or(state.config.distance_influence)
+        .clamp(0.0, 100.0);
 
     // Build bounding box around origin+destination with ~2km margin (0.02 degrees)
     const MARGIN: f64 = 0.02;
@@ -114,45 +119,48 @@ pub async fn get_route(
         "points_encoded": false,
     });
 
-    if !rows.is_empty() {
-        // Build priority statements and area features
-        let mut priority_statements: Vec<Value> = Vec::new();
-        let mut features: Vec<Value> = Vec::new();
+    let mut priority_statements: Vec<Value> = Vec::new();
+    let mut features: Vec<Value> = Vec::new();
 
-        for row in &rows {
-            let area_id = format!("area_{}", row.id);
-            let geometry: Value = serde_json::from_str(&row.geometry)
-                .map_err(|e| AppError::Internal(format!("failed to parse area geometry: {e}")))?;
+    for row in &rows {
+        let area_id = format!("area_{}", row.id);
+        let geometry: Value = serde_json::from_str(&row.geometry)
+            .map_err(|e| AppError::Internal(format!("failed to parse area geometry: {e}")))?;
 
-            let multiplier = rating_to_priority(row.value, rating_weight);
+        let multiplier = rating_to_priority(row.value, rating_weight);
 
-            priority_statements.push(json!({
-                "if": format!("in_{}", area_id),
-                "multiply_by": multiplier.to_string(),
-            }));
+        priority_statements.push(json!({
+            "if": format!("in_{}", area_id),
+            "multiply_by": multiplier.to_string(),
+        }));
 
-            features.push(json!({
-                "type": "Feature",
-                "id": area_id,
-                "properties": {},
-                "geometry": geometry,
-            }));
-        }
+        features.push(json!({
+            "type": "Feature",
+            "id": area_id,
+            "properties": {},
+            "geometry": geometry,
+        }));
+    }
 
-        let gh_obj = gh_request.as_object_mut().unwrap();
-        gh_obj.insert("ch.disable".to_string(), json!(true));
-        gh_obj.insert(
-            "custom_model".to_string(),
+    let mut custom_model = json!({
+        "distance_influence": distance_influence,
+    });
+
+    if !priority_statements.is_empty() {
+        let custom_model_obj = custom_model.as_object_mut().unwrap();
+        custom_model_obj.insert("priority".to_string(), json!(priority_statements));
+        custom_model_obj.insert(
+            "areas".to_string(),
             json!({
-                "priority": priority_statements,
-                "distance_influence": state.config.distance_influence,
-                "areas": {
-                    "type": "FeatureCollection",
-                    "features": features,
-                },
+                "type": "FeatureCollection",
+                "features": features,
             }),
         );
     }
+
+    let gh_obj = gh_request.as_object_mut().unwrap();
+    gh_obj.insert("ch.disable".to_string(), json!(true));
+    gh_obj.insert("custom_model".to_string(), custom_model);
 
     // POST to GraphHopper
     let gh_url = format!("{}/route", state.config.graphhopper_url);

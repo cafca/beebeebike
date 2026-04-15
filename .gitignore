@@ -1,6 +1,7 @@
 # Local AI/tooling state
 .claude/
 .agents/
+CLAUDE.local.md
 .gsd
 .gsd-id
 .bg-shell/

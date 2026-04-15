@@ -95,14 +95,12 @@ async fn create_session(db: &PgPool, user_id: Uuid) -> Result<String, AppError> 
     let session_id = Uuid::new_v4().to_string();
     let expires_at: DateTime<Utc> = Utc::now() + Duration::seconds(2_592_000); // 30 days
 
-    sqlx::query(
-        "INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)",
-    )
-    .bind(&session_id)
-    .bind(user_id)
-    .bind(expires_at)
-    .execute(db)
-    .await?;
+    sqlx::query("INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)")
+        .bind(&session_id)
+        .bind(user_id)
+        .bind(expires_at)
+        .execute(db)
+        .await?;
 
     Ok(session_id)
 }

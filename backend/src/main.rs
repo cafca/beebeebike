@@ -5,7 +5,10 @@ mod geocode;
 mod ratings;
 mod routing;
 
-use axum::{routing::{get, post, put}, Router};
+use axum::{
+    routing::{get, post, put},
+    Router,
+};
 use config::Config;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
@@ -60,7 +63,12 @@ async fn main() {
         .route("/api/route", post(routing::get_route))
         .route("/api/geocode", get(geocode::geocode))
         .fallback_service(ServeDir::new(static_dir).append_index_html_on_directories(true))
-        .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
+        )
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(&listen_addr)

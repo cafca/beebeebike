@@ -31,7 +31,7 @@ pub struct RouteResponse {
 struct RatedAreaRow {
     pub id: i64,
     pub geometry: String,
-    pub value: i32,
+    pub value: i16,
 }
 
 // ---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ struct RatedAreaRow {
 /// Map a rating value and weight to a GraphHopper priority multiplier.
 /// Base values: -7 → 0.05, -3 → 0.3, -1 → 0.7, 1 → 1.3, 3 → 2.0, 7 → 3.0
 /// Weight is applied as: 1.0 + (base - 1.0) * weight
-fn rating_to_priority(value: i32, weight: f64) -> f64 {
+fn rating_to_priority(value: i16, weight: f64) -> f64 {
     let base = match value {
         -7 => 0.05,
         -3 => 0.3,

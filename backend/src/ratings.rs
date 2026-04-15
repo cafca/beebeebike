@@ -41,7 +41,7 @@ pub struct BboxQuery {
 struct RatedAreaRow {
     pub id: i64,
     pub geometry: String,
-    pub value: i32,
+    pub value: i16,
 }
 
 #[derive(FromRow)]

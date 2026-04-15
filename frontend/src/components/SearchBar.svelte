@@ -7,6 +7,10 @@
   let debounceTimer;
   let settingField = $state('origin');
 
+  $effect(() => {
+    settingField = route.origin ? 'destination' : 'origin';
+  });
+
   function onInput() {
     clearTimeout(debounceTimer);
     if (query.length < 2) { results = []; return; }
@@ -23,7 +27,9 @@
   }
 
   function formatName(props) {
-    const parts = [props.name, props.street, props.city].filter(Boolean);
+    const streetLine = [props.street, props.housenumber].filter(Boolean).join(' ').trim();
+    const locality = props.city || props.district || props.locality;
+    const parts = [props.name, streetLine, locality].filter(Boolean);
     return parts.join(', ') || 'Unknown';
   }
 

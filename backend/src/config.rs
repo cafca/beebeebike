@@ -5,6 +5,7 @@ pub struct Config {
     pub graphhopper_url: String,
     pub photon_url: String,
     pub listen_addr: String,
+    pub static_dir: String,
     pub rating_weight: f64,
     pub distance_influence: f64,
     pub max_areas_per_request: usize,
@@ -21,6 +22,8 @@ impl Config {
                 .unwrap_or_else(|_| "https://photon.komoot.io".into()),
             listen_addr: env::var("LISTEN_ADDR")
                 .unwrap_or_else(|_| "0.0.0.0:3000".into()),
+            static_dir: env::var("STATIC_DIR")
+                .unwrap_or_else(|_| "../frontend/dist".into()),
             rating_weight: env::var("RATING_WEIGHT")
                 .ok().and_then(|v| v.parse().ok()).unwrap_or(1.0),
             distance_influence: env::var("DISTANCE_INFLUENCE")

@@ -1,0 +1,9 @@
+.git
+.DS_Store
+.bg-shell
+.claude
+data
+docs
+backend/target
+frontend/dist
+frontend/node_modules

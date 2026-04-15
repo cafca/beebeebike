@@ -1,0 +1,17 @@
+services:
+  frontend:
+    image: node:22-bookworm
+    working_dir: /workspace/frontend
+    command: ["sh", "-c", "npm ci && npm run dev -- --host 0.0.0.0"]
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:3000
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/workspace
+      - frontend_node_modules:/workspace/frontend/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  frontend_node_modules:

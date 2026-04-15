@@ -24,9 +24,9 @@ services:
     ports:
       - "8989:8989"
     volumes:
-      - ./graphhopper/config.yml:/config/config.yml:ro
-      - ../data/osm/berlin/berlin.osm.pbf:/data/berlin.osm.pbf:ro
-      - ../data/osm/berlin/graphhopper:/data/graphhopper-cache
+      - ./server/graphhopper/config.yml:/config/config.yml:ro
+      - ./data/osm/berlin/berlin.osm.pbf:/data/berlin.osm.pbf:ro
+      - ./data/osm/berlin/graphhopper:/data/graphhopper-cache
     environment:
       JAVA_OPTS: "-Xmx2g -Xms512m"
     restart: unless-stopped
@@ -37,13 +37,13 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ../data/tiles/berlin.versatiles:/tiles/berlin.versatiles:ro
+      - ./data/tiles/berlin.versatiles:/tiles/berlin.versatiles:ro
     command: ["/app/versatiles", "server", "-s", "/app/frontend-dev.br.tar", "[osm]/tiles/berlin.versatiles"]
     restart: unless-stopped
 
   backend:
     build:
-      context: ..
+      context: .
       dockerfile: backend/Dockerfile
     container_name: ortschaft-backend
     ports:

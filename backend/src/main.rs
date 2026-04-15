@@ -29,6 +29,8 @@ async fn main() {
 
     dotenvy::dotenv().ok();
     let config = Config::from_env();
+    let listen_addr = config.listen_addr.clone();
+    let static_dir = config.static_dir.clone();
 
     let db = PgPoolOptions::new()
         .max_connections(10)
@@ -57,11 +59,11 @@ async fn main() {
         .route("/api/ratings/paint", put(ratings::paint))
         .route("/api/route", post(routing::get_route))
         .route("/api/geocode", get(geocode::geocode))
-        .fallback_service(ServeDir::new("../frontend/dist").append_index_html_on_directories(true))
+        .fallback_service(ServeDir::new(static_dir).append_index_html_on_directories(true))
         .layer(CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any))
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+    let listener = tokio::net::TcpListener::bind(&listen_addr)
         .await
         .expect("Failed to bind");
 

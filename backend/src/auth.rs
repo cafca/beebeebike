@@ -36,8 +36,9 @@ pub struct LoginRequest {
 #[derive(Serialize)]
 pub struct UserResponse {
     pub id: Uuid,
-    pub email: String,
+    pub email: Option<String>,
     pub display_name: String,
+    pub account_type: String,
 }
 
 // ---------------------------------------------------------------------------
@@ -50,13 +51,15 @@ struct UserRow {
     email: String,
     password_hash: String,
     display_name: String,
+    account_type: String,
 }
 
 #[derive(FromRow)]
 struct UserRowNoHash {
     id: Uuid,
-    email: String,
+    email: Option<String>,
     display_name: String,
+    account_type: String,
 }
 
 #[derive(FromRow)]
@@ -105,6 +108,39 @@ async fn create_session(db: &PgPool, user_id: Uuid) -> Result<String, AppError> 
     Ok(session_id)
 }
 
+async fn optional_session_user(db: &PgPool, headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
+    let Some(session_id) = extract_session_from_headers(headers) else {
+        return Ok(None);
+    };
+
+    let row = sqlx::query_as::<_, SessionRow>(
+        "SELECT user_id FROM sessions WHERE id = $1 AND expires_at > now()",
+    )
+    .bind(&session_id)
+    .fetch_optional(db)
+    .await?;
+
+    Ok(row.map(|row| row.user_id))
+}
+
+fn user_response(user: UserRowNoHash) -> UserResponse {
+    UserResponse {
+        id: user.id,
+        email: user.email,
+        display_name: user.display_name,
+        account_type: user.account_type,
+    }
+}
+
+fn user_response_with_hash(user: UserRow) -> UserResponse {
+    UserResponse {
+        id: user.id,
+        email: Some(user.email),
+        display_name: user.display_name,
+        account_type: user.account_type,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Public helper used by other modules
 // ---------------------------------------------------------------------------
@@ -131,6 +167,7 @@ pub async fn require_auth(db: &PgPool, headers: &HeaderMap) -> Result<Uuid, AppE
 
 pub async fn register(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
     Json(body): Json<RegisterRequest>,
 ) -> Result<Response, AppError> {
     // Validate inputs
@@ -153,38 +190,64 @@ pub async fn register(
 
     let display_name = body.display_name.unwrap_or_default();
 
-    // Insert user and return created row
-    let user = sqlx::query_as::<_, UserRow>(
-        r#"
-        INSERT INTO users (email, password_hash, display_name)
-        VALUES ($1, $2, $3)
-        RETURNING id, email, password_hash, display_name
-        "#,
-    )
-    .bind(&body.email)
-    .bind(&password_hash)
-    .bind(&display_name)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        // Postgres unique-violation error code: 23505
-        if let sqlx::Error::Database(ref db_err) = e {
-            if db_err.code().as_deref() == Some("23505") {
-                return AppError::BadRequest("email already registered".into());
-            }
+    let existing_user_id = optional_session_user(&state.db, &headers).await?;
+
+    let user = if let Some(user_id) = existing_user_id {
+        let current = sqlx::query_as::<_, UserRowNoHash>(
+            "SELECT id, email, display_name, account_type FROM users WHERE id = $1",
+        )
+        .bind(user_id)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
+        if current.account_type != "anonymous" {
+            return Err(AppError::BadRequest(
+                "current account is already registered".into(),
+            ));
         }
-        AppError::from(e)
-    })?;
 
-    let session_id = create_session(&state.db, user.id).await?;
-
-    let user_json = UserResponse {
-        id: user.id,
-        email: user.email,
-        display_name: user.display_name,
+        sqlx::query_as::<_, UserRow>(
+            r#"
+            UPDATE users
+            SET email = $1,
+                password_hash = $2,
+                display_name = $3,
+                account_type = 'registered'
+            WHERE id = $4
+            RETURNING id, email, password_hash, display_name, account_type
+            "#,
+        )
+        .bind(&body.email)
+        .bind(&password_hash)
+        .bind(&display_name)
+        .bind(user_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(map_unique_email_error)?
+    } else {
+        sqlx::query_as::<_, UserRow>(
+            r#"
+            INSERT INTO users (email, password_hash, display_name, account_type)
+            VALUES ($1, $2, $3, 'registered')
+            RETURNING id, email, password_hash, display_name, account_type
+            "#,
+        )
+        .bind(&body.email)
+        .bind(&password_hash)
+        .bind(&display_name)
+        .fetch_one(&state.db)
+        .await
+        .map_err(map_unique_email_error)?
     };
 
-    let mut response = Json(user_json).into_response();
+    sqlx::query("DELETE FROM sessions WHERE user_id = $1")
+        .bind(user.id)
+        .execute(&state.db)
+        .await?;
+    let session_id = create_session(&state.db, user.id).await?;
+
+    let mut response = Json(user_response_with_hash(user)).into_response();
     response
         .headers_mut()
         .insert("Set-Cookie", session_cookie(&session_id));
@@ -197,7 +260,12 @@ pub async fn login(
 ) -> Result<Response, AppError> {
     // Look up user
     let user = sqlx::query_as::<_, UserRow>(
-        "SELECT id, email, password_hash, display_name FROM users WHERE email = $1",
+        r#"
+        SELECT id, email, password_hash, display_name, account_type
+        FROM users
+        WHERE email = $1
+          AND account_type = 'registered'
+        "#,
     )
     .bind(&body.email)
     .fetch_optional(&state.db)
@@ -213,13 +281,42 @@ pub async fn login(
 
     let session_id = create_session(&state.db, user.id).await?;
 
-    let user_json = UserResponse {
-        id: user.id,
-        email: user.email,
-        display_name: user.display_name,
-    };
+    let mut response = Json(user_response_with_hash(user)).into_response();
+    response
+        .headers_mut()
+        .insert("Set-Cookie", session_cookie(&session_id));
+    Ok(response)
+}
 
-    let mut response = Json(user_json).into_response();
+pub async fn anonymous(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    if let Some(user_id) = optional_session_user(&state.db, &headers).await? {
+        let user = sqlx::query_as::<_, UserRowNoHash>(
+            "SELECT id, email, display_name, account_type FROM users WHERE id = $1",
+        )
+        .bind(user_id)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
+        return Ok(Json(user_response(user)).into_response());
+    }
+
+    let user = sqlx::query_as::<_, UserRowNoHash>(
+        r#"
+        INSERT INTO users (display_name, account_type)
+        VALUES ('', 'anonymous')
+        RETURNING id, email, display_name, account_type
+        "#,
+    )
+    .fetch_one(&state.db)
+    .await?;
+
+    let session_id = create_session(&state.db, user.id).await?;
+
+    let mut response = Json(user_response(user)).into_response();
     response
         .headers_mut()
         .insert("Set-Cookie", session_cookie(&session_id));
@@ -251,16 +348,21 @@ pub async fn me(
     let user_id = require_auth(&state.db, &headers).await?;
 
     let user = sqlx::query_as::<_, UserRowNoHash>(
-        "SELECT id, email, display_name FROM users WHERE id = $1",
+        "SELECT id, email, display_name, account_type FROM users WHERE id = $1",
     )
     .bind(user_id)
     .fetch_optional(&state.db)
     .await?
     .ok_or(AppError::Unauthorized)?;
 
-    Ok(Json(UserResponse {
-        id: user.id,
-        email: user.email,
-        display_name: user.display_name,
-    }))
+    Ok(Json(user_response(user)))
+}
+
+fn map_unique_email_error(e: sqlx::Error) -> AppError {
+    if let sqlx::Error::Database(ref db_err) = e {
+        if db_err.code().as_deref() == Some("23505") {
+            return AppError::BadRequest("email already registered".into());
+        }
+    }
+    AppError::from(e)
 }

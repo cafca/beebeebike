@@ -8,14 +8,18 @@ async function request(method, path, body) {
   const resp = await fetch(path, opts);
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: resp.statusText }));
-    throw new Error(err.error || resp.statusText);
+    const error = new Error(err.error || resp.statusText);
+    error.status = resp.status;
+    throw error;
   }
+  if (resp.status === 204) return null;
   return resp.json();
 }
 
 export const api = {
   register: (email, password, display_name) =>
     request('POST', '/api/auth/register', { email, password, display_name }),
+  anonymous: () => request('POST', '/api/auth/anonymous'),
   login: (email, password) =>
     request('POST', '/api/auth/login', { email, password }),
   logout: () => request('POST', '/api/auth/logout'),

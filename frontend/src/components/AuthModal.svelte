@@ -1,6 +1,7 @@
 <script>
   import { login, register } from '../lib/auth.svelte.js';
-  // login/register update auth.user via the shared auth object
+
+  let { initialMode = 'login', onclose = () => {} } = $props();
 
   let mode = $state('login');
   let email = $state('');
@@ -8,6 +9,10 @@
   let displayName = $state('');
   let error = $state('');
   let loading = $state(false);
+
+  $effect(() => {
+    mode = initialMode;
+  });
 
   async function handleSubmit() {
     error = '';
@@ -18,6 +23,7 @@
       } else {
         await register(email, password, displayName);
       }
+      onclose();
     } catch (e) {
       error = e.message;
     } finally {
@@ -28,6 +34,7 @@
 
 <div class="overlay">
   <div class="modal">
+    <button class="close" type="button" onclick={onclose} title="Close">&times;</button>
     <h2>{mode === 'login' ? 'Log In' : 'Sign Up'}</h2>
 
     <form onsubmit={e => { e.preventDefault(); handleSubmit(); }}>
@@ -61,8 +68,14 @@
     z-index: 100;
   }
   .modal {
+    position: relative;
     background: white; padding: 32px; border-radius: 12px; min-width: 320px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  }
+  .close {
+    position: absolute; top: 10px; right: 10px;
+    width: 28px; height: 28px; border: none; border-radius: 6px;
+    background: white; cursor: pointer; font-size: 20px; line-height: 1;
   }
   h2 { margin-bottom: 16px; }
   form { display: flex; flex-direction: column; gap: 12px; }

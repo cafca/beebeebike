@@ -1,230 +1,314 @@
-# Ortschaft — MVP Plan
+# Ortschaft — Web App MVP
 
-A bicycle routing application for Berlin, targeting macOS and iOS. This document covers phase 1 only: the MVP. Phase 2 (on-device routing, navigation) is out of scope here.
+A personal bicycle routing app for Berlin. Each user builds their own map of road segment ratings — streets they love, streets they avoid. When they request a route, the routing engine incorporates those personal ratings to find the best path *for them*.
 
 ---
 
 ## What the MVP Does
 
-A user opens the app and sees a map of Berlin. A sidebar contains filters for routing preferences. The user types a location name into a search box to set the route start, repeats for the route end, and the route appears on the map. Adjusting any filter recalculates the route. Tapping or clicking two points on the map is an alternative way to set start and end.
+A user opens the web app and sees a map of Berlin. They sign up, and start painting their personal preference map: click any road segment and rate it on a 7-point scale (-7, -3, -1, 0, +1, +3, +7). Rate an entire computed route at once. Over time, the map fills with color — green for streets they enjoy, red for streets they want to avoid.
 
-Nothing else. No navigation, no GPS following, no turn instructions, no voice, no offline routing.
+When the user requests a route, the backend folds their personal ratings into the routing cost function. A segment rated -7 becomes expensive to traverse; a segment rated +7 becomes cheap. The route bends around the user's dislikes and toward their favorites. Unrated segments use GraphHopper's default bicycle cost.
+
+The developer controls a set of tuning parameters that govern how strongly personal ratings influence routing relative to GraphHopper's base cost factors (distance, elevation, road class, cycling infrastructure). These parameters are server-side configuration, not exposed to end users.
 
 ---
 
 ## Fixed Decisions
 
-- **Targets:** macOS and iOS, sharing a Rust core via UniFFI. Android is a far-future possibility; no Apple-specific types cross the FFI boundary.
-- **Map rendering:** MapLibre Native with vector tiles.
-- **Tile delivery:** Berlin OSM extract processed into a PMTiles bundle, served over HTTPS from a self-hosted server.
-- **Routing engine:** GraphHopper, accessed by the apps over HTTP. Runs in Docker locally during development and on a public server for any non-local use. The server is part of this project.
-- **Geocoding:** Photon's public instance at `photon.komoot.io`, an OSM-based geocoder built specifically for autocomplete. Per Photon's usage policy, the implementation must set a descriptive `User-Agent` identifying this project and respect their fair-use guidance (consider self-hosting if usage grows). The geocoding interface treats the backend as swappable, but Photon is the only implementation in the MVP.
-- **Shared core language:** Rust, exposed to Swift via UniFFI.
-- **Persistence:** SQLite, owned and operated by the Rust core. The platform passes a file path (or an in-memory sentinel) at startup; everything else is core-side.
-- **Development scope:** Berlin only.
+- **Platform:** Web only. No native apps, no FFI, no UniFFI.
+- **Backend:** Rust (Axum), serving both the API and the frontend static assets.
+- **Frontend:** Lightweight SPA. Vanilla JS or a minimal framework (Svelte preferred for ergonomics). MapLibre GL JS for the map.
+- **Database:** PostgreSQL with PostGIS. Multi-user from day one.
+- **Authentication:** Email + password to start.
+- **Map rendering:** MapLibre GL JS with vector tiles.
+- **Tile delivery:** Berlin OSM extract processed into PMTiles, served by the backend or a static file server in the compose stack.
+- **Routing engine:** GraphHopper, running in the existing Docker Compose setup. Accessed server-side by the Rust backend — the browser never talks to GraphHopper directly.
+- **Geocoding:** Photon (public instance at `photon.komoot.io`), called server-side by the Rust backend.
+- **Development:** Everything runs via `docker-compose up`. The Rust backend, PostgreSQL, and GraphHopper all live in the compose file. Hot-reload for the frontend during development.
+- **Scope:** Berlin only.
 
-Phase 2 will replace GraphHopper with an on-device routing engine written in Rust, eliminating the routing server. The MVP must keep that swap mechanical, but no phase 2 code is written now.
+---
+
+## Data Model
+
+### Users
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | PK |
+| `email` | text | unique, indexed |
+| `password_hash` | text | argon2 |
+| `display_name` | text | |
+| `created_at` | timestamptz | |
+
+### Segments
+
+Road segments derived from OSM ways. Each segment is a contiguous piece of road between two intersections.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint | PK, derived from OSM way ID + segment index |
+| `osm_way_id` | bigint | indexed |
+| `geometry` | geometry(LineString, 4326) | PostGIS |
+| `name` | text | street name if available |
+| `road_class` | text | e.g. `cycleway`, `residential`, `primary` |
+
+Segments are imported from the same Berlin OSM extract that feeds GraphHopper. A one-time import script populates this table.
+
+### Ratings
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint | PK |
+| `user_id` | uuid | FK users, indexed |
+| `segment_id` | bigint | FK segments, indexed |
+| `value` | smallint | one of: -7, -3, -1, 0, 1, 3, 7 |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
+
+Unique constraint on `(user_id, segment_id)` — one active rating per user per segment. Updating replaces.
+
+### Routing Config (server-side, not a DB table)
+
+Developer-tunable parameters that control how personal ratings blend into routing cost. Stored as a config file or environment variables, not in the database. Examples:
+
+| Parameter | Meaning |
+|---|---|
+| `rating_weight` | Overall influence of personal ratings vs. GraphHopper base cost (0.0 = ratings ignored, 1.0 = ratings dominate) |
+| `unrated_penalty` | Cost bias for segments the user hasn't rated (0.0 = neutral, positive = mildly discourage unknown roads) |
+| `distance_weight` | How much raw distance matters relative to other factors |
+| `elevation_weight` | How much elevation gain matters |
+| `infra_weight` | How much cycling infrastructure (bike lanes, cycleways) matters |
+
+These are knobs for the developer to tune the routing heuristic. They are **not** exposed to users. The exact set will evolve as routing behavior is tested on real Berlin road networks.
 
 ---
 
 ## Components
 
-### Server (this project, deployable)
+### Rust Backend (Axum)
 
-A single deployable bundle running on a public host. Contains:
+The single server process. Responsibilities:
 
-- **GraphHopper** in Docker, configured for Berlin bicycle routing with a custom model that exposes the four MVP preference weights.
-- **A tile server** (Caddy or nginx) serving the Berlin PMTiles file over HTTPS with range request support.
-- **A reverse proxy** terminating TLS and routing to the two services.
+- **Auth:** Registration, login, session management (cookie-based sessions stored in PostgreSQL).
+- **Personalized routing:** Accepts route requests from the frontend, loads the user's segment ratings, translates them into GraphHopper Custom Model cost adjustments, calls GraphHopper, and returns GeoJSON. The frontend never talks to GraphHopper directly.
+- **Geocoding proxy:** Accepts search queries, calls Photon, returns results. Sets the project `User-Agent`.
+- **Ratings API:** CRUD for user ratings on segments. Validates the rating value is in the allowed set. Supports single-segment upsert, bulk upsert (for route rating), and paint upsert (brush stroke geometry, returns all affected segments).
+- **Segment lookup:** Given a click location (lat/lng), find the nearest segment using PostGIS `ST_DWithin` / `ST_Distance`.
+- **Personal overlay:** Serves the logged-in user's segment ratings as GeoJSON for the map overlay. Each user sees their own map, not an aggregate.
+- **Routing config:** Reads developer-tunable parameters that control how ratings blend into routing cost. Not exposed to end users.
+- **Static file serving:** Serves the built frontend assets.
 
-Geocoding is not part of the server stack — the apps call Photon's public instance directly. The server hosts only what the project itself produces (routing graph, tiles). If MVP usage ever outgrows Photon's public instance, self-hosting Photon on this same server is the escape hatch; Photon is much lighter than Nominatim and fits comfortably alongside GraphHopper.
+### Frontend (SPA)
 
-The same compose file runs on a developer laptop and on the production host. Hostnames and TLS differ; nothing else does. The repository contains the compose file, the configuration, and a deployment script.
+A single-page application. Key interactions:
 
-### OSM Data Pipeline
+- **Map:** MapLibre GL JS. Pan, zoom, click. The user's personal rating overlay rendered as a colored layer — their map, nobody else's.
+- **Search:** Autocomplete search box. Debounced calls to the backend geocoding proxy.
+- **Routing:** Click or search to set origin and destination. Route is computed using the user's personal ratings and renders on the map. The route visibly prefers green segments and avoids red ones.
+- **Segment rating:** Click a road segment on the map. A compact popup appears showing the segment name and the user's current rating (if any). Seven buttons in a row: -7 -3 -1 0 +1 +3 +7. No labels, only color coding- dark red, intense red, light red, blue, light green, intense green, emerald green. No margin between color buttons. One tap to rate. The popup closes or updates immediately.
+- **Paint Brush Rating** Switch from segment rating to paint brush with a toggle switch. Paint large areas with a single color / rating. Defaults to light green (+1). Brush size adjustable roughly 5px - 80px equivalent.
+- **Route rating:** After computing a route, a "Rate this route" button appears. Clicking it applies the chosen rating to every segment in the route. A confirmation shows how many segments will be rated.
+- **Rating history:** A simple list view of the user's past ratings with links back to the map location.
 
-A small set of scripts that take a Berlin `.osm.pbf` and produce the artifacts the server needs: the GraphHopper graph cache and the PMTiles bundle. Runs on demand, not continuously. One command from raw extract to deployable artifacts.
+### Database (PostgreSQL + PostGIS)
 
-The Rust preprocessor is **not** part of the MVP. It will be the entry point for phase 2. Don't build it now.
+Runs in Docker Compose. Schema managed by migrations in the Rust backend (using `sqlx` or `refinery`).
 
-### Shared Core (Rust + UniFFI)
+### GraphHopper
 
-The application logic shared between iOS and macOS. Owns:
+Existing setup, unchanged. Berlin bicycle routing. The Rust backend calls it over the Docker network.
 
-- The preference model (four weights, versioned, extensible).
-- The routing engine interface and its one implementation, the GraphHopper HTTP client.
-- The geocoding interface and its one implementation.
-- The route model.
-- Persistence: SQLite database opened by the core at a path supplied by the platform. Stores recent searches and the current preference profile.
+### Tile Server
 
-Does not own: rendering, network reachability detection, file paths, anything UI.
-
-### iOS and macOS Apps
-
-Thin SwiftUI apps over the shared core. Same Swift package consumed by both. UI differs in interaction model (tap vs. click, sheet vs. sidebar) but not in behavior. Each app passes a platform-appropriate database path to the core at startup; the core handles everything else.
-
----
-
-## Interfaces
-
-Three seams in the MVP. Each exists for a concrete reason; if a seam can't justify itself, it doesn't exist yet.
-
-### Routing Engine Interface
-
-The most important seam. Exists so phase 2 can replace GraphHopper with an embedded engine by writing one new implementation.
-
-The interface accepts a route request (origin, destination, preference weights) and returns a list of routes. The list is length 1 in the MVP but the shape exists from day one so adding alternatives later doesn't change the contract. Each route carries its coordinate sequence, total distance, and estimated time.
-
-The contract is designed with the maneuver list in mind — phase 2 will add it — but the MVP does not include it in running code. Keep the route model in a shape where adding a maneuver list later is a field addition, not a redesign.
-
-The interface must also tolerate a synchronous, in-process implementation. Don't bake HTTP assumptions into method signatures, timeouts, or error types.
-
-### Geocoding Interface
-
-Exists because the geocoding backend will likely change at least once (Photon public → self-hosted Photon → on-device index in phase 2) and because tests need a fake. The MVP implementation calls Photon's public instance.
-
-The interface exposes two methods, distinguished because they have different semantics:
-
-- A **suggest** method for autocomplete: takes a partial query string and returns a small list of likely completions, each with a display label and coordinates. Called as the user types, debounced on the UI side. Photon is designed for this and the public instance permits it within fair use.
-- A **resolve** method for explicit submission: takes a full query string and returns full result objects. Called when the user picks a suggestion or presses Enter without picking one.
-
-Both methods return the same result type. The split exists so that future implementations (a local on-device index, a hybrid client) can optimize the two paths independently — suggest needs to be fast and approximate, resolve needs to be precise.
-
-The Rust implementation sets a descriptive `User-Agent` header identifying this project, configured once when the geocoding client is constructed and impossible to omit per-call.
-
-### Persistence
-
-SQLite, owned and operated entirely by the Rust core. The Swift side's only responsibility is to pass a path string at startup: either a platform-appropriate file path (iOS sandbox, macOS application support directory) or a sentinel meaning "in-memory" for tests. The Rust core opens or creates the database, runs migrations, and owns the schema. There is no callback interface and no Swift-side database code.
-
-Stores recent searches and the current preference profile. Nothing else in the MVP.
-
-### Tile Source
-
-Not a shared-core interface. MapLibre handles tile fetching directly, configured on the Swift side with the URL of the tile server. The MVP has no second tile source implementation and no shared-core involvement in tile delivery, so there is nothing to abstract.
+Existing setup. Serves Berlin vector tiles to MapLibre in the browser.
 
 ---
 
-## Preference Model
+## UX: Rating Flow
 
-A versioned set of named weights. Each weight has a stable identifier, a value in [0.0, 1.0], and metadata (label, description, default) used by the UI to render a generic control. The UI does not name specific weights in layout code; it iterates over whatever the model provides.
+The rating interaction must be fast and low-friction. The user is building a personal map over time — it should feel like painting, not filling out forms.
 
-The MVP weights:
+### Two Rating Modes
 
-| Identifier | Meaning |
-|---|---|
-| `traffic_light_penalty` | Penalize routes with many traffic light stops |
-| `unpaved_surface_penalty` | Penalize unpaved or rough surfaces |
-| `main_road_avoidance` | Avoid high-traffic roads |
-| `cycling_infra_preference` | Prefer dedicated cycling infrastructure |
+The user switches between modes via a toggle in the toolbar.
 
-Mapping these to GraphHopper's Custom Model lives entirely in the GraphHopper adapter. The mapping will be approximate — GraphHopper's Custom Model operates on pre-derived attributes, not arbitrary OSM tag queries. Verify the four weights are expressible in milestone 2 and document gaps explicitly.
+**Segment click mode (default).** Click a segment on the map. A compact popup appears anchored to the click point, showing the segment name and the user's current rating (if any). Seven color buttons in a tight row — no labels, no margins between them: dark red, intense red, light red, blue (neutral), light green, intense green, emerald green. One tap to rate. The popup closes immediately. Two interactions total: click to identify, click to rate.
 
-The model is versioned. When weights are added in the future, missing fields in saved profiles fall back to defaults.
+**Paint brush mode.** The cursor becomes a brush. The user selects a rating value from the same 7-color strip (defaults to +1, light green). Then they click-drag across the map, and every segment the brush touches gets that rating. Brush size is adjustable, roughly 5px to 80px equivalent on screen. This is for covering large areas fast — "I know this whole neighborhood is fine" or "avoid everything along this corridor."
+
+### Design Goals
+
+1. **Immediate feedback.** After rating (click or paint), the segment color on the map updates within the same frame. No spinner, no "saving..." state. Optimistic update, reconcile in background.
+2. **No modals, no forms.** The click popup is a small floating panel. The paint brush has no popup at all — just drag and color appears.
+3. **Undo by re-rating.** Rating neutral (blue, 0) effectively removes a rating. Clicking or painting a different value replaces the previous one. No separate delete action.
+4. **Route bulk-rating.** When a route is displayed, the user can rate the entire route at once. This is a convenience — each segment still gets its own rating row. A toast confirms "Rated 23 segments +3" and the map updates.
+5. **Color is the language.** No numeric labels on the buttons. The scale communicates through color intensity alone:
+
+| Value | Color | Meaning |
+|---|---|---|
+| -7 | Dark red | Dangerous / never ride here |
+| -3 | Intense red | Unpleasant / avoid if possible |
+| -1 | Light red | Slightly below average |
+| 0 | Blue | Neutral / no opinion |
+| +1 | Light green | Slightly above average |
+| +3 | Intense green | Pleasant / prefer this street |
+| +7 | Emerald green | Excellent / go out of my way for this |
+
+6. **Auth required.** You must be logged in to see the map overlay and to rate. The map without login shows a plain Berlin map — there is nothing to show anonymously since ratings are personal.
+
+### Building the Personal Map
+
+The core experience loop:
+
+- A new user's map is blank — all segments are unstyled.
+- They ride their usual routes, then come home and paint the segments they know. Switch to paint brush, pick green, drag over familiar streets. Switch to click mode for individual segments they feel strongly about. The map fills with color fast.
+- When they request a route, they see it bending toward their green segments and away from red ones. This reinforces the value of rating: the more you paint, the better your routes get.
+- Over time, their map becomes a complete picture of their Berlin cycling preferences — a personal infrastructure opinion they can act on every day.
+
+---
+
+## Map Overlay
+
+Each logged-in user sees their own personal overlay. Segments are colored by the user's rating on a continuous red-to-green gradient. Unrated segments are unstyled (transparent). The overlay is a MapLibre layer sourced from a GeoJSON endpoint on the backend that filters by the authenticated user.
+
+The overlay is fetched per-viewport on map move. Since it's per-user data (not a shared aggregate), pre-rendering tiles doesn't help — the data is different for every user. The query is fast: a spatial join between the viewport bounding box and the user's ratings, indexed on `(user_id, segment_id)` with a spatial index on segment geometry.
+
+For users with many ratings (thousands of segments), the response may grow. Mitigation: simplify geometries at low zoom levels, paginate or cluster at city-wide zoom.
 
 ---
 
 ## Data Flow
 
-A single flow for the MVP: request a route.
+### Rating a segment (click mode)
 
-1. User sets origin and destination, either by typing into the search box (geocoding interface returns coordinates) or by tapping the map.
-2. UI calls the shared core with origin, destination, and the current preference weights.
-3. Shared core builds a route request and calls the routing engine interface.
-4. The GraphHopper adapter serializes the request to GraphHopper's Custom Model JSON, sends it over HTTP, deserializes the response into the route model.
-5. Shared core returns the route to the UI.
-6. UI converts the coordinate sequence to a GeoJSON LineString and adds it to MapLibre.
+1. User clicks the map.
+2. Frontend sends click coordinates to `GET /api/segments/nearest?lat=X&lng=Y`.
+3. Backend queries PostGIS for the nearest segment within a threshold. Returns segment info and the user's existing rating (if any).
+4. Frontend shows the rating popup with segment info and the 7-color strip, highlighting the current rating.
+5. User clicks a color button.
+6. Frontend sends `PUT /api/ratings` with `{ segment_id, value }`.
+7. Backend upserts the rating.
+8. Frontend optimistically updates the segment color on the map and closes the popup.
 
-Changing a preference weight repeats steps 2–6. There is no shared state between requests; each request carries its full parameter set.
+### Painting segments (brush mode)
+
+1. User switches to paint brush mode and selects a rating value (default: +1).
+2. User clicks and drags across the map.
+3. Frontend continuously converts the brush stroke into a buffered geometry (a corridor around the drag path, width determined by brush size).
+4. On mouse-up (or periodically during a long drag), frontend sends `PUT /api/ratings/paint` with `{ geometry: <GeoJSON polygon of the brush stroke>, value }`.
+5. Backend queries PostGIS for all segments that intersect the brush geometry (`ST_Intersects`).
+6. Backend upserts ratings for all matched segments.
+7. Backend returns the list of affected segment IDs.
+8. Frontend optimistically colors segments during the drag (using client-side spatial approximation) and reconciles with the server response.
+
+The brush stroke geometry is computed client-side as a buffered LineString along the drag path. The buffer radius maps from the brush size in screen pixels to meters at the current zoom level. At low zoom (city-wide), a small brush covers many segments; at high zoom (street-level), it covers few. This feels natural.
+
+### Rating a route
+
+1. User has a route displayed (computed via search or map clicks).
+2. User clicks "Rate this route" and selects a value from the 7-color strip.
+3. Frontend sends `PUT /api/ratings/bulk` with `{ segment_ids: [...], value }`.
+4. Backend upserts ratings for all segments.
+5. Frontend updates all affected segment colors.
+
+### Requesting a personalized route
+
+1. User sets origin and destination via search or map click.
+2. Frontend sends `POST /api/route` with `{ origin, destination }`.
+3. Backend loads the user's segment ratings that are geographically relevant (within a bounding box around origin/destination, with margin).
+4. Backend builds a GraphHopper Custom Model request that encodes the user's ratings as cost adjustments — rated segments get speed or priority overrides proportional to their rating value, scaled by the developer-tuned `rating_weight` parameter.
+5. Backend calls GraphHopper with the custom model, gets the route geometry.
+6. Backend matches the route geometry to segments in the database (for the "rate this route" feature).
+7. Backend returns `{ geometry, segments: [...], distance, duration }`.
+8. Frontend renders the route and enables the bulk-rating button.
+
+### How ratings influence routing
+
+GraphHopper's Custom Model allows per-request cost adjustments via `priority` statements that match road attributes. The backend translates user ratings into these statements:
+
+- A segment rated +7 gets a high priority multiplier (cheaper to traverse).
+- A segment rated -7 gets a near-zero priority multiplier (very expensive to traverse).
+- Unrated segments keep GraphHopper's default bicycle cost.
+
+The exact mapping from rating values to priority multipliers is controlled by the developer-tuned routing config. The non-linear rating scale (-7, -3, -1, 0, +1, +3, +7) maps to non-linear cost adjustments — a -7 rating should make a segment nearly impassable, not just slightly more expensive.
+
+**Limitation:** GraphHopper's Custom Model matches on road attributes (road class, surface type, etc.), not on individual OSM way IDs directly. To target specific user-rated segments, the backend may need to use waypoint avoidance/preference hints, or encode ratings into a per-request cost matrix. The exact mechanism needs validation against GraphHopper's API during milestone 2. If Custom Model alone can't express per-segment costs, alternatives include:
+
+- Using GraphHopper's flexible routing mode with a custom weighting
+- A thin routing post-processor that re-ranks alternative routes by user rating overlap
+- Contributing a per-edge cost override feature upstream
+
+This is the hardest technical risk in the MVP and must be spiked early.
 
 ---
 
 ## Build Order
 
-Six milestones. Each produces something runnable.
+### Milestone 0 — Dev Environment + Routing Spike
 
-### Milestone 0 — Toolchain
+Docker Compose runs PostgreSQL (with PostGIS), GraphHopper, and the tile server. The Rust backend compiles, starts, connects to PostgreSQL, runs migrations, and serves a health check endpoint. A "hello world" HTML page is served as a static asset.
 
-Both apps build and launch to a blank screen. The Rust core compiles and a trivial UniFFI call works from both iOS and macOS. The compose file exists with stub services. A Berlin OSM extract download script is committed.
+**Critical spike:** Validate that GraphHopper can express per-segment cost overrides driven by user ratings. Test the Custom Model API with hand-crafted requests that penalize or reward specific road segments. Document what works and what doesn't. If Custom Model can't do it, identify the alternative approach before proceeding. This spike gates the entire project — don't build the rating UI until the routing integration is proven.
 
-The reason this is a milestone: Rust + UniFFI cross-compilation for Apple targets has real setup cost. Prove it works before writing logic. Test one async call too, not just a synchronous hello world — async across UniFFI is where the rough edges live, and every interesting MVP call is async.
+### Milestone 1 — Map + Segments + Rating
 
-### Milestone 1 — Map Renders Berlin
+The frontend shows a MapLibre map of Berlin with vector tiles from the compose stack. The segment import script loads Berlin road segments into PostgreSQL. Auth works (registration + login). Both rating modes work: click a segment to see the popup and pick a color, or switch to paint brush and drag across streets. The personal color overlay updates in real time. This is the painting loop — click or drag, see the map fill with color.
 
-Both apps show a MapLibre map of Berlin, fetching tiles from the local compose stack. Pan and zoom work. No routing.
+### Milestone 2 — Personalized Routing
 
-This validates the tile pipeline (PBF → PMTiles → tile server → MapLibre) and surfaces any MapLibre Native macOS issues before the UI is built on top.
+Search box with autocomplete (Photon via backend proxy). Route computation through the backend, with the user's personal ratings folded into GraphHopper's cost model. The route visibly responds to the user's ratings — a heavily downvoted street gets routed around. Bulk route rating works. This is the payoff — the personal map becomes actionable.
 
-### Milestone 2 — GraphHopper Answers
+### Milestone 3 — Polish + Deploy
 
-The GraphHopper container loads the Berlin bicycle graph and responds to a hand-crafted `curl` request with a valid route. The four MVP preference weights are tested against GraphHopper's Custom Model and confirmed expressible. A sample response JSON is committed to the repository as a test fixture.
-
-No app integration in this milestone. The point is to validate the engine and capture a fixture before any code consumes it.
-
-### Milestone 3 — First Route on Map
-
-The app makes a hardcoded routing call through the routing engine interface to the GraphHopper adapter, gets back a route, and renders it on the map. Origin and destination are constants in code.
-
-This is the moment the routing engine interface stops being a sketch and becomes load-bearing. Build it, use it, then trust it.
-
-### Milestone 4 — Search and Click to Set Endpoints
-
-A search box accepts a place name. As the user types, the geocoding interface's suggest method is called (debounced) and a dropdown of completions appears. Selecting a completion sets the origin or destination. Pressing Enter without picking a suggestion calls the resolve method and uses the top result. Tapping or clicking the map sets endpoints as an alternative. The route updates whenever either endpoint changes.
-
-Debouncing the suggest calls (e.g. 150ms after the last keystroke) keeps request rates reasonable on Photon's public instance and is good UX regardless. The debounce lives in the UI layer — the geocoding interface itself is stateless.
-
-The preference model exists with default values but is not yet exposed in the UI.
-
-### Milestone 5 — Preference Sidebar
-
-A sidebar (macOS) or sheet (iOS) shows a generic control for each weight in the preference model. Adjusting any weight triggers a new routing request and updates the route on screen. The preference profile and recent searches persist across app launches via SQLite.
-
-This milestone completes the MVP scope.
-
-### Milestone 6 — Production Deployment
-
-The compose stack runs on the public server with TLS. The apps point at the production URL by configuration. A deployment script in the repository takes the artifacts from the data pipeline and pushes them to the server.
-
-Not strictly user-facing, but it's the difference between "works on my laptop" and "I can use it on a phone away from my desk." Worth a dedicated milestone because deployment work expands to fill whatever time it's given.
+Rating history view. Mobile-responsive layout. Error handling. Rate limiting. Developer routing config is tunable without redeployment (env vars or config file reload). The compose stack runs on a public server with TLS. Deployment script committed.
 
 ---
 
-## Testing and Experimentation
+## Docker Compose (Development)
 
-Two practices matter for the MVP, both in service of iterating on routing behavior.
+Extends the existing compose file with:
 
-**Request logging.** The GraphHopper adapter logs every request (full preference set, origin, destination) and every response (geometry, total cost) to a structured local file. Any prior request can be replayed against modified weights and the results compared. Cheap to build, immediately useful.
+```yaml
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: ortschaft
+      POSTGRES_USER: ortschaft
+      POSTGRES_PASSWORD: ortschaft
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
-**A regression set.** A small committed list of (origin, destination) pairs with the routes they currently produce. After changing the preference-to-GraphHopper translation or adjusting weight defaults, re-run the set and eyeball the diffs. Not automated pass/fail — just a way to notice when a change moves routes you weren't expecting it to move.
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://ortschaft:ortschaft@db:5432/ortschaft
+      GRAPHHOPPER_URL: http://graphhopper:8989
+      PHOTON_URL: https://photon.komoot.io
+    depends_on:
+      - db
+      - graphhopper
 
-Unit tests cover the preference-to-GraphHopper translation (using the committed sample response fixture) and the preference model's version migration logic. UI is not unit-tested.
+  # graphhopper and tiles services unchanged from existing compose
 
-A route comparison tool — submit one request with N parameter sets in parallel, render all routes on one map — is valuable but not MVP-critical. It can come after milestone 5 if the MVP work is moving and the team wants to tune weights faster.
+volumes:
+  pgdata:
+```
 
 ---
 
-## What's Deferred to Phase 2
+## Testing
 
-For clarity, the following are explicitly out of scope for the MVP. The MVP architecture must not preclude them, but no code is written for them now.
-
-- On-device routing engine (the Rust preprocessor, the Cap'n Proto graph format, the embedded routing implementation).
-- On-device geocoding, built from the same Berlin OSM extract as the routing graph. With the preprocessor in place for routing, producing a small local search index (street names, POIs, addresses) is a natural extension and would eliminate the geocoding network dependency entirely. The geocoding interface is already shaped for this swap.
-- Maneuver lists, turn instructions, the navigation state machine, location streaming, off-route detection, rerouting.
-- Voice guidance.
-- Offline tile bundles or any on-device tile cache management beyond what MapLibre provides for free.
-- Multi-city support.
-- Saved routes, route history beyond recent searches, route export.
-- Elevation data and gradient-aware routing.
-
----
-
-## Risks
-
-**UniFFI async maturity.** Async across the FFI boundary is the single thing most likely to cause real friction. Verify at milestone 0 with a real async call.
-
-**GraphHopper Custom Model expressiveness.** GraphHopper's Custom Model operates on a fixed set of pre-derived attributes. If the four MVP weights cannot be cleanly expressed, the adapter needs workarounds or the weights need rethinking. Verify at milestone 2 before any UI consumes them.
-
-**MapLibre Native macOS maturity.** Less exercised than iOS. Verify at milestone 1.
-
-**Photon usage and fair use.** Photon's public instance is generous but expects callers to be reasonable: descriptive `User-Agent`, debounced suggest calls, and self-hosting if usage grows beyond casual. The User-Agent and debounce are enforced by the geocoding implementation and the search box UI respectively. If MVP usage ever outgrows the public instance, self-hosting Photon on the project's existing server is the escape hatch — the geocoding interface already permits this swap. Verify Photon's current terms at `photon.komoot.io` before milestone 4 in case anything has changed.
-
-**Server operational burden.** Running a public GraphHopper + tile + geocoding stack means caring about uptime, certificate renewal, and OSM data refresh. The MVP keeps this minimal but it is real work. Phase 2 eliminates it; the discomfort is temporary and bounded.
+- **Backend integration tests:** Use a test PostgreSQL database (separate container or testcontainers). Test the rating flow end-to-end: create user, rate segment, verify personal overlay returns only that user's data.
+- **Personalized routing tests:** Create a user with known segment ratings, request a route, verify the route avoids heavily downvoted segments. Compare against the same route with no ratings.
+- **Segment lookup tests:** Verify PostGIS nearest-segment queries return correct results for known coordinates.
+- **API tests:** HTTP-level tests for all endpoints, including auth guards and user isolation (user A cannot see user B's ratings).
+- **Frontend:** Manual testing against the dev compose stack. No frontend unit tests in the MVP.
+- **Routing config tests:** Verify that changing developer-tunable parameters (rating_weight, etc.) produces measurably different routes for the same user ratings.
+- **Regression routes:** A committed list of (origin, destination, user_ratings) tuples. After changing the rating-to-cost translation or tuning parameters, re-run and compare. Not automated pass/fail — just a way to notice when routes shift unexpectedly.

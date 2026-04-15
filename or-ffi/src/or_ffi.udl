@@ -1,3 +1,0 @@
-namespace or_ffi {
-    string sync_echo(string input);
-};

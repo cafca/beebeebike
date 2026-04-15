@@ -48,5 +48,9 @@ __pycache__/
 .venv/
 venv/
 
+# Data files (large, downloaded)
+data/osm/
+data/tiles/
+
 # ── GSD baseline (auto-generated) ──
 vendor/

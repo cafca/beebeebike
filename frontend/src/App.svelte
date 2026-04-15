@@ -2,9 +2,12 @@
   import Map from './components/Map.svelte';
   import AuthModal from './components/AuthModal.svelte';
   import Toolbar from './components/Toolbar.svelte';
+  import SearchBar from './components/SearchBar.svelte';
+  import RoutePanel from './components/RoutePanel.svelte';
   import { auth, checkSession, logout } from './lib/auth.svelte.js';
   import { initOverlay } from './lib/overlay.js';
   import { initBrush, destroyBrush } from './lib/brush.svelte.js';
+  import { initRouting } from './lib/routing.svelte.js';
 
   let map = $state(null);
 
@@ -18,6 +21,7 @@
     if (map && auth.user) {
       initOverlay(map);
       initBrush(map);
+      initRouting(map);
       return () => destroyBrush();
     }
   });
@@ -26,6 +30,8 @@
 <Map onload={handleMapLoad} />
 
 {#if auth.user}
+  <SearchBar />
+  <RoutePanel />
   <div class="user-bar">
     <span>{auth.user.display_name || auth.user.email}</span>
     <button onclick={logout}>Log out</button>

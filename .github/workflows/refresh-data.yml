@@ -1,0 +1,65 @@
+name: Refresh map data
+
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+jobs:
+  build-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Berlin OSM extract
+        run: |
+          mkdir -p data/osm/berlin
+          curl -fSL -o data/osm/berlin/berlin.osm.pbf \
+            https://download.geofabrik.de/europe/germany/berlin-latest.osm.pbf
+
+      - name: Generate Berlin vector tiles
+        run: |
+          mkdir -p data/tiles
+          docker run --rm -v "$PWD/data/tiles:/output" versatiles/versatiles:latest \
+            versatiles convert \
+            --bbox "13.0,52.3,13.8,52.7" \
+            "https://download.versatiles.org/osm.versatiles" \
+            "/output/berlin.versatiles"
+
+      - name: Upload data artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: map-data
+          path: |
+            data/osm/berlin/berlin.osm.pbf
+            data/tiles/berlin.versatiles
+          retention-days: 1
+
+  deploy-data:
+    needs: build-data
+    if: vars.DEPLOY_HOST != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download data artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: map-data
+          path: data
+
+      - name: Upload data to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "data/osm/berlin/berlin.osm.pbf,data/tiles/berlin.versatiles"
+          target: ~/beebeebike
+
+      - name: Restart services with new data
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd ~/beebeebike
+            rm -rf data/osm/berlin/graphhopper/
+            docker compose -f compose.prod.yml restart graphhopper tiles

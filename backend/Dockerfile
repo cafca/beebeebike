@@ -5,6 +5,7 @@ WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 COPY frontend ./
+ARG VITE_FATHOM_URL
 RUN npm run build
 
 FROM rust:1.94-bookworm AS backend-builder

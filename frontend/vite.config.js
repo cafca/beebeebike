@@ -11,15 +11,19 @@ export default defineConfig(({ mode }) => {
     fathomUrl && {
       name: 'inject-fathom',
       transformIndexHtml: () => [
+        // Pre-init: window.fathom as a queuing function so calls before
+        // tracker.js loads are buffered and replayed once it runs.
         {
           tag: 'script',
-          attrs: { src: fathomUrl, defer: true },
-          injectTo: 'head',
-        },
-        {
-          tag: 'script',
-          children: 'window.fathom=window.fathom||{q:[]};',
+          children: "window.fathom=window.fathom||function(){(window.fathom.q=window.fathom.q||[]).push(arguments)};fathom('trackPageview');",
           injectTo: 'head-prepend',
+        },
+        // id="fathom-script" is required: tracker.js uses it to auto-discover
+        // the /collect endpoint URL. async (not defer) matches the IIFE pattern.
+        {
+          tag: 'script',
+          attrs: { src: fathomUrl, id: 'fathom-script', async: true },
+          injectTo: 'head',
         },
       ],
     },

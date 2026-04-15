@@ -6,13 +6,13 @@ import { suppressNextMapClick } from './paintGesture.js';
 import { computeRoute, route } from './routing.svelte.js';
 
 export const ratingTools = [
-  { value: -7, color: '#991b1b' },
-  { value: -3, color: '#dc2626' },
-  { value: -1, color: '#fca5a5' },
+  { value: -7, color: '#c0392b' },
+  { value: -3, color: '#e74c3c' },
+  { value: -1, color: '#f1948a' },
   { value: 0,  color: '#6b7280' },
-  { value: 1,  color: '#86efac' },
-  { value: 3,  color: '#22c55e' },
-  { value: 7,  color: '#059669' },
+  { value: 1,  color: '#76d7c4' },
+  { value: 3,  color: '#1abc9c' },
+  { value: 7,  color: '#0e6655' },
 ];
 
 // Shared reactive state

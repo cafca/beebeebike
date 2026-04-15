@@ -240,8 +240,8 @@
     padding: 4px 68px 4px 0;
   }
   .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .origin-dot { background: #22c55e; }
-  .dest-dot { background: #ef4444; }
+  .origin-dot { background: #f1c40f; }
+  .dest-dot { background: #2980b9; }
   .clear-btn {
     font-size: 18px;
     line-height: 1;

@@ -11,7 +11,7 @@
   import { loadHomeLocation, locations } from './lib/locations.svelte.js';
   import { initOverlay } from './lib/overlay.js';
   import { initBrush, destroyBrush } from './lib/brush.svelte.js';
-  import { applyStartAtHome, centerOnHome, clearRoute, initRouting, syncHomeMarker } from './lib/routing.svelte.js';
+  import { applyStartAtHome, centerOnHome, clearRoute, initRouting, route, syncHomeMarker, syncRouteMarkers } from './lib/routing.svelte.js';
 
   let map = $state(null);
   let authModalMode = $state('login');
@@ -82,6 +82,13 @@
     if (!map) return;
     syncHomeMarker();
     applyStartAtHome();
+  });
+
+  $effect(() => {
+    route.origin;
+    route.destination;
+    if (!map) return;
+    syncRouteMarkers();
   });
 
   function openAuth(mode) {

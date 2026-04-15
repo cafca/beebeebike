@@ -1,12 +1,12 @@
 import { api } from './api.js';
 
 const COLORS = {
-  '-7': '#991b1b', // dark red
-  '-3': '#dc2626', // intense red
-  '-1': '#fca5a5', // light red
-  '1':  '#86efac', // light green
-  '3':  '#22c55e', // intense green
-  '7':  '#059669', // emerald green
+  '-7': '#c0392b', // dark red
+  '-3': '#e74c3c', // medium red
+  '-1': '#f1948a', // pale red
+  '1':  '#76d7c4', // pale teal
+  '3':  '#1abc9c', // teal
+  '7':  '#0e6655', // dark teal
 };
 
 let initialized = false;

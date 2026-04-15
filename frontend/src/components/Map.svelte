@@ -1,4 +1,5 @@
 <script>
+  import { untrack } from 'svelte';
   import { createMap } from '../lib/map.js';
 
   let { onload, center, zoom } = $props();
@@ -10,8 +11,10 @@
 
     let disposed = false;
     let mountedMap;
+    const initialCenter = untrack(() => center);
+    const initialZoom = untrack(() => zoom);
 
-    createMap(container, { center, zoom })
+    createMap(container, { center: initialCenter, zoom: initialZoom })
       .then((createdMap) => {
         if (disposed) {
           createdMap.remove();

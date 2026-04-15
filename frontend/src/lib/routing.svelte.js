@@ -14,6 +14,8 @@ export const route = $state({
 let currentMap = null;
 let initialized = false;
 let homeMarker = null;
+let originMarker = null;
+let destMarker = null;
 let pendingRouteClick = null;
 
 const SINGLE_CLICK_DELAY_MS = 250;
@@ -72,10 +74,10 @@ export function initRouting(map) {
   syncHomeMarker();
 }
 
-export async function computeRoute() {
+export async function computeRoute({ fitBounds = true } = {}) {
   if (!route.origin || !route.destination) return;
 
-  if (currentMap) {
+  if (fitBounds && currentMap) {
     const bounds = new maplibregl.LngLatBounds();
     bounds.extend([route.origin.lng, route.origin.lat]);
     bounds.extend([route.destination.lng, route.destination.lat]);
@@ -117,6 +119,7 @@ export function clearRoute() {
     ? routePointFromLocation(locations.home)
     : null;
   clearRouteGeometry();
+  syncRouteMarkers();
 }
 
 export function centerOnHome(map) {
@@ -153,6 +156,66 @@ export function syncHomeMarker() {
   homeMarker
     .setLngLat([locations.home.lng, locations.home.lat])
     .addTo(currentMap);
+}
+
+export function syncRouteMarkers() {
+  if (!currentMap) return;
+
+  // Origin marker — skip if origin is the home location (home marker covers it)
+  if (route.origin && route.origin.savedLocationName !== 'home') {
+    if (!originMarker) {
+      originMarker = new maplibregl.Marker({
+        element: createRouteMarkerElement('#f1c40f', 'Origin'),
+        anchor: 'bottom',
+        draggable: true,
+      });
+      originMarker.on('dragend', () => {
+        const { lng, lat } = originMarker.getLngLat();
+        route.origin = { lng, lat, name: `${lat.toFixed(5)}, ${lng.toFixed(5)}` };
+        if (route.destination) computeRoute({ fitBounds: false });
+      });
+    }
+    originMarker.setLngLat([route.origin.lng, route.origin.lat]).addTo(currentMap);
+  } else {
+    originMarker?.remove();
+    originMarker = null;
+  }
+
+  // Destination marker
+  if (route.destination) {
+    if (!destMarker) {
+      destMarker = new maplibregl.Marker({
+        element: createRouteMarkerElement('#2980b9', 'Destination'),
+        anchor: 'bottom',
+        draggable: true,
+      });
+      destMarker.on('dragend', () => {
+        const { lng, lat } = destMarker.getLngLat();
+        route.destination = { lng, lat, name: `${lat.toFixed(5)}, ${lng.toFixed(5)}` };
+        computeRoute({ fitBounds: false });
+      });
+    }
+    destMarker.setLngLat([route.destination.lng, route.destination.lat]).addTo(currentMap);
+  } else {
+    destMarker?.remove();
+    destMarker = null;
+  }
+}
+
+function createRouteMarkerElement(color, label) {
+  const el = document.createElement('div');
+  el.setAttribute('aria-label', label);
+  el.title = label;
+  el.style.width = '30px';
+  el.style.height = '38px';
+  el.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.28))';
+  el.innerHTML = `
+    <svg viewBox="0 0 30 38" width="30" height="38" role="img" aria-hidden="true">
+      <path fill="${color}" stroke="rgba(0,0,0,0.25)" stroke-width="1" d="M15 37c0 0 11-13 11-22C26 8.925 21.075 4 15 4S4 8.925 4 15c0 9 11 22 11 22Z"/>
+      <circle cx="15" cy="15" r="5" fill="white" fill-opacity="0.9"/>
+    </svg>
+  `;
+  return el;
 }
 
 function clearRouteGeometry() {

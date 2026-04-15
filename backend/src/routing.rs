@@ -40,22 +40,20 @@ struct RatedAreaRow {
 // Rating-to-priority mapping
 // ---------------------------------------------------------------------------
 
-/// Map a rating value and weight to a GraphHopper priority multiplier.
-/// Base values are intentionally non-linear: the light colors nudge, the
-/// middle colors pull, and the strongest colors should materially reshape
-/// routes. Weight is applied as an exponent so 0.0 neutralizes every rating
-/// and 1.0 preserves the full table.
-fn rating_to_priority(value: i16, weight: f64) -> f64 {
-    let base: f64 = match value {
-        -7 => 0.29,
-        -3 => 0.56,
-        -1 => 0.83,
-        1 => 1.20,
-        3 => 1.80,
-        7 => 3.50,
-        _ => 1.0,
+const RATING_UNIT_PRIORITY_FACTOR: f64 = 1.72;
+
+/// Map a signed rating value and user preference strength to a GraphHopper
+/// priority multiplier. Ratings are interpreted as effect units: +3 is three
+/// times as strong as +1 in log-priority space, while -3 is the equivalent
+/// avoidance strength. The preference slider scales that signed effect after
+/// the rating magnitude is applied.
+fn rating_to_priority(value: i16, preference_strength: f64) -> f64 {
+    let rating_effect = match value {
+        -7 | -3 | -1 | 0 | 1 | 3 | 7 => value as f64,
+        _ => 0.0,
     };
-    base.powf(weight.clamp(0.0, 1.0))
+
+    RATING_UNIT_PRIORITY_FACTOR.powf(rating_effect * preference_strength.clamp(0.0, 1.0))
 }
 
 fn resolve_distance_influence(requested: Option<f64>, default: f64) -> f64 {
@@ -222,23 +220,31 @@ pub async fn get_route(
 mod tests {
     use super::*;
 
+    fn assert_close(actual: f64, expected: f64) {
+        assert!(
+            (actual - expected).abs() < 1e-12,
+            "expected {actual} to be close to {expected}"
+        );
+    }
+
     #[test]
-    fn rating_to_priority_known_values_at_full_weight() {
-        let cases = [
-            (-7, 0.29),
-            (-3, 0.56),
-            (-1, 0.83),
-            (1, 1.20),
-            (3, 1.80),
-            (7, 3.50),
-        ];
-        for (value, expected) in cases {
-            let result = rating_to_priority(value, 1.0);
-            assert!(
-                (result - expected).abs() < 1e-9,
-                "rating_to_priority({value}, 1.0) = {result}, expected {expected}"
-            );
-        }
+    fn rating_values_are_signed_effect_units() {
+        assert_close(
+            rating_to_priority(1, 1.0).powi(3),
+            rating_to_priority(3, 1.0),
+        );
+        assert_close(
+            rating_to_priority(1, 1.0).powi(7),
+            rating_to_priority(7, 1.0),
+        );
+        assert_close(
+            rating_to_priority(-1, 1.0).powi(3),
+            rating_to_priority(-3, 1.0),
+        );
+        assert_close(
+            rating_to_priority(1, 1.0) * rating_to_priority(-1, 1.0),
+            1.0,
+        );
     }
 
     #[test]
@@ -255,12 +261,20 @@ mod tests {
 
     #[test]
     fn rating_to_priority_half_weight() {
-        // weight=0.5 → base^0.5 = sqrt(base)
         let result = rating_to_priority(7, 0.5);
-        let expected = 3.5_f64.sqrt();
-        assert!(
-            (result - expected).abs() < 1e-9,
-            "rating_to_priority(7, 0.5) = {result}, expected {expected}"
+        let expected = RATING_UNIT_PRIORITY_FACTOR.powf(7.0 * 0.5);
+        assert_close(result, expected);
+    }
+
+    #[test]
+    fn preference_strength_scales_rating_effect_after_magnitude() {
+        assert_close(
+            rating_to_priority(7, 0.5),
+            RATING_UNIT_PRIORITY_FACTOR.powf(7.0 * 0.5),
+        );
+        assert_close(
+            rating_to_priority(-3, 0.25),
+            RATING_UNIT_PRIORITY_FACTOR.powf(-3.0 * 0.25),
         );
     }
 

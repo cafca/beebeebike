@@ -26,7 +26,7 @@ impl Config {
             rating_weight: env::var("RATING_WEIGHT")
                 .ok()
                 .and_then(|v| v.parse().ok())
-                .unwrap_or(1.0),
+                .unwrap_or(0.5),
             distance_influence: env::var("DISTANCE_INFLUENCE")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -89,7 +89,7 @@ mod tests {
         assert_eq!(config.graphhopper_url, "http://localhost:8989");
         assert_eq!(config.photon_url, "https://photon.komoot.io");
         assert_eq!(config.listen_addr, "0.0.0.0:3000");
-        assert!((config.rating_weight - 1.0).abs() < 1e-9);
+        assert!((config.rating_weight - 0.5).abs() < 1e-9);
         assert!((config.distance_influence - 70.0).abs() < 1e-9);
         assert_eq!(config.max_areas_per_request, 200);
     }
@@ -124,7 +124,7 @@ mod tests {
             ],
             || {
                 let config = Config::from_env();
-                assert!((config.rating_weight - 1.0).abs() < 1e-9);
+                assert!((config.rating_weight - 0.5).abs() < 1e-9);
                 assert_eq!(config.max_areas_per_request, 200);
             },
         );

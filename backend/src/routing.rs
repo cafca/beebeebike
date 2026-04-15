@@ -58,6 +58,10 @@ fn rating_to_priority(value: i16, weight: f64) -> f64 {
     base.powf(weight.clamp(0.0, 1.0))
 }
 
+fn resolve_distance_influence(requested: Option<f64>, default: f64) -> f64 {
+    requested.unwrap_or(default).clamp(0.0, 100.0)
+}
+
 // ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
@@ -80,10 +84,8 @@ pub async fn get_route(
         .rating_weight
         .unwrap_or(state.config.rating_weight)
         .clamp(0.0, 1.0);
-    let distance_influence = body
-        .distance_influence
-        .unwrap_or(state.config.distance_influence)
-        .clamp(0.0, 100.0);
+    let distance_influence =
+        resolve_distance_influence(body.distance_influence, state.config.distance_influence);
 
     // Build bounding box around origin+destination with ~2km margin (0.02 degrees)
     const MARGIN: f64 = 0.02;
@@ -330,5 +332,13 @@ mod tests {
                 priorities[i - 1]
             );
         }
+    }
+
+    #[test]
+    fn distance_influence_uses_request_or_default_and_clamps() {
+        assert!((resolve_distance_influence(Some(70.0), 25.0) - 70.0).abs() < 1e-9);
+        assert!((resolve_distance_influence(None, 70.0) - 70.0).abs() < 1e-9);
+        assert!((resolve_distance_influence(Some(-10.0), 70.0) - 0.0).abs() < 1e-9);
+        assert!((resolve_distance_influence(Some(130.0), 70.0) - 100.0).abs() < 1e-9);
     }
 }

@@ -15,8 +15,16 @@ use serde_json::{json, Value};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use uuid::Uuid;
+use wiremock::{
+    matchers::{body_partial_json, method, path},
+    Mock, MockServer, ResponseTemplate,
+};
 
 async fn setup() -> Option<TestServer> {
+    setup_with_graphhopper_url("http://localhost:0".into()).await
+}
+
+async fn setup_with_graphhopper_url(graphhopper_url: String) -> Option<TestServer> {
     let db_url = match std::env::var("TEST_DATABASE_URL") {
         Ok(url) => url,
         Err(_) => return None,
@@ -35,7 +43,7 @@ async fn setup() -> Option<TestServer> {
 
     let config = Config {
         database_url: db_url,
-        graphhopper_url: "http://localhost:0".into(),
+        graphhopper_url,
         photon_url: "http://localhost:0".into(),
         listen_addr: "127.0.0.1:0".into(),
         static_dir: "/nonexistent".into(),
@@ -742,6 +750,64 @@ async fn get_overlay_invalid_bbox() {
         .add_header(hname, hval)
         .await;
     resp.assert_status(StatusCode::BAD_REQUEST);
+}
+
+// ---------------------------------------------------------------------------
+// Routing
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn route_forwards_distance_influence_to_graphhopper() {
+    if std::env::var("TEST_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let graphhopper = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/route"))
+        .and(body_partial_json(json!({
+            "custom_model": {
+                "distance_influence": 42.0
+            }
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "paths": [{
+                "points": {
+                    "type": "LineString",
+                    "coordinates": [[13.405, 52.52], [13.45, 52.51]]
+                },
+                "distance": 1234.5,
+                "time": 678000.0
+            }]
+        })))
+        .expect(1)
+        .mount(&graphhopper)
+        .await;
+
+    let Some(server) = setup_with_graphhopper_url(graphhopper.uri()).await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+    let (hname, hval) = with_session(&session);
+
+    let resp = server
+        .post("/api/route")
+        .add_header(hname, hval)
+        .json(&json!({
+            "origin": [13.405, 52.52],
+            "destination": [13.45, 52.51],
+            "rating_weight": 1.0,
+            "distance_influence": 42.0
+        }))
+        .await;
+
+    resp.assert_status_ok();
+    let body: Value = resp.json();
+    assert_eq!(body["distance"], 1234.5);
+    assert_eq!(body["time"], 678000.0);
+    assert_eq!(body["geometry"]["type"], "LineString");
+
+    graphhopper.verify().await;
 }
 
 // ---------------------------------------------------------------------------

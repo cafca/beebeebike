@@ -308,6 +308,11 @@
     .search-container {
       width: 100%;
     }
+    .search-bar {
+      background: none;
+      box-shadow: none;
+      border-radius: 8px 8px 0 0;
+    }
     .result-btn {
       padding: 14px 12px;
     }

@@ -1,13 +1,14 @@
 import { api } from './api.js';
 
 // Shared reactive state, wrapped in an object so property mutation is valid.
-export const auth = $state({ user: null, ready: false });
+export const auth = $state({ user: null, ready: false, isNewSession: false });
 
 export async function checkSession() {
   try {
     auth.user = await api.me();
   } catch {
     try {
+      auth.isNewSession = true;
       auth.user = await api.anonymous();
     } catch (e) {
       console.error('Failed to start anonymous session:', e);

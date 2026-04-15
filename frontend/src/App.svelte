@@ -9,14 +9,28 @@
   import { loadHomeLocation, locations } from './lib/locations.svelte.js';
   import { initOverlay } from './lib/overlay.js';
   import { initBrush, destroyBrush } from './lib/brush.svelte.js';
-  import { applyStartAtHome, clearRoute, initRouting, syncHomeMarker } from './lib/routing.svelte.js';
+  import { applyStartAtHome, centerOnHome, clearRoute, initRouting, syncHomeMarker } from './lib/routing.svelte.js';
 
   let map = $state(null);
   let authModalMode = $state('login');
   let loadedLocationsForUser = $state(null);
   let showAuthModal = $state(false);
+  let initialHomeLoaded = $state(false);
 
-  checkSession();
+  checkSession().then(() => {
+    if (auth.user) {
+      loadHomeLocation()
+        .then(() => { initialHomeLoaded = true; })
+        .catch(() => { initialHomeLoaded = true; });
+    } else {
+      initialHomeLoaded = true;
+    }
+  });
+
+  let mapCenter = $derived(
+    locations.home ? [locations.home.lng, locations.home.lat] : null
+  );
+  let mapZoom = $derived(locations.home ? 14 : undefined);
 
   function handleMapLoad(m) {
     map = m;
@@ -35,19 +49,29 @@
 
   $effect(() => {
     const userId = auth.user?.id;
-    if (!userId) {
+    if (!userId || !map) {
       loadedLocationsForUser = null;
       return;
     }
     if (loadedLocationsForUser === userId) return;
 
+    const isFirstUser = loadedLocationsForUser === null;
     loadedLocationsForUser = userId;
-    loadHomeLocation()
-      .then(() => {
-        syncHomeMarker();
-        clearRoute();
-      })
-      .catch((e) => console.error('Failed to load home location:', e));
+
+    if (isFirstUser && initialHomeLoaded) {
+      // Initial page load — home was pre-loaded and map already centered
+      syncHomeMarker();
+      clearRoute();
+    } else {
+      // User switched (login/logout) — reload home and jump to it
+      loadHomeLocation()
+        .then(() => {
+          syncHomeMarker();
+          clearRoute();
+          centerOnHome(map);
+        })
+        .catch((e) => console.error('Failed to load home location:', e));
+    }
   });
 
   $effect(() => {
@@ -70,7 +94,9 @@
   );
 </script>
 
-<Map onload={handleMapLoad} />
+{#if initialHomeLoaded}
+  <Map onload={handleMapLoad} center={mapCenter} zoom={mapZoom} />
+{/if}
 
 {#if auth.ready && auth.user}
   <div class="top-left-stack">

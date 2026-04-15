@@ -1,7 +1,7 @@
 <script>
   import { createMap } from '../lib/map.js';
 
-  let { onload } = $props();
+  let { onload, center, zoom } = $props();
   let container = $state();
   let map = $state();
 
@@ -11,7 +11,7 @@
     let disposed = false;
     let mountedMap;
 
-    createMap(container)
+    createMap(container, { center, zoom })
       .then((createdMap) => {
         if (disposed) {
           createdMap.remove();

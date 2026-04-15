@@ -577,6 +577,69 @@ async fn paint_eraser_creates_no_area() {
 }
 
 #[tokio::test]
+async fn paint_eraser_deletes_target_feature_even_with_clipped_geometry() {
+    let Some(server) = setup().await else {
+        return;
+    };
+
+    let session = create_anonymous(&server).await;
+
+    let painted_polygon = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.4, 52.5], [13.41, 52.5], [13.41, 52.51], [13.4, 52.51], [13.4, 52.5]]]
+    });
+
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": painted_polygon, "value": 3 }))
+        .await
+        .assert_status_ok();
+
+    let (hname, hval) = with_session(&session);
+    let resp = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await;
+    resp.assert_status_ok();
+
+    let body: Value = resp.json();
+    let features = body["features"].as_array().unwrap();
+    assert_eq!(features.len(), 1);
+    let target_id = features[0]["id"].as_i64().unwrap();
+
+    // Command-click fill acts on an existing rendered feature. The rendered
+    // geometry can be clipped or simplified, so the backend must use the
+    // clicked feature id to delete the whole rated area.
+    let rendered_feature_geometry = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.4, 52.5], [13.405, 52.5], [13.405, 52.51], [13.4, 52.51], [13.4, 52.5]]]
+    });
+
+    let (hname, hval) = with_session(&session);
+    let resp = server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": rendered_feature_geometry, "value": 0, "target_id": target_id }))
+        .await;
+    resp.assert_status_ok();
+
+    let body: Value = resp.json();
+    assert!(body["created_id"].is_null());
+
+    let (hname, hval) = with_session(&session);
+    let resp = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await;
+    resp.assert_status_ok();
+
+    let body: Value = resp.json();
+    assert_eq!(body["features"].as_array().unwrap().len(), 0);
+}
+
+#[tokio::test]
 async fn paint_rejects_invalid_value() {
     let Some(server) = setup().await else {
         return;

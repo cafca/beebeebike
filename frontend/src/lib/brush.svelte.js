@@ -235,7 +235,7 @@ function onPointerUp(e) {
         const feature = features[0];
         const featureValue = feature.properties?.value;
         if (featureValue !== undefined && featureValue !== brush.value) {
-          submitPaint(feature.geometry, brush.value);
+          submitPaint(feature.geometry, brush.value, featureAreaId(feature));
         }
       }
     }
@@ -370,9 +370,15 @@ function isPaintModifier(e) {
   return e.metaKey || e.ctrlKey || brush.paintMode;
 }
 
-async function submitPaint(geometry, value) {
+function featureAreaId(feature) {
+  const rawId = feature?.id ?? feature?.properties?.id;
+  const id = Number(rawId);
+  return Number.isFinite(id) ? id : null;
+}
+
+async function submitPaint(geometry, value, targetId = null) {
   try {
-    const result = await api.paint(geometry, value);
+    const result = await api.paint(geometry, value, targetId);
     undoStack.push({ geometry, value, result });
     redoStack.length = 0;
     brush.canUndo = undoStack.length > 0;

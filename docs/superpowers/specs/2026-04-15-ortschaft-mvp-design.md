@@ -1,6 +1,6 @@
 # Ortschaft MVP Design
 
-Personal bicycle routing app for Berlin. Users rate road segments, routing engine uses ratings to find personalized routes.
+Personal bicycle routing app for Berlin. Users paint rated areas on the map — streets they love in green, streets they avoid in red. The routing engine uses these painted areas to find personalized routes.
 
 ## Decisions
 
@@ -10,10 +10,13 @@ Personal bicycle routing app for Berlin. Users rate road segments, routing engin
 | Backend | Rust (Axum), single `backend/` crate |
 | Database | PostgreSQL 16 + PostGIS via sqlx (compile-time checked queries, migrations) |
 | Tiles | VersaTiles (`versatiles/versatiles:latest`), Berlin extract from download.versatiles.org |
-| Routing | GraphHopper (existing Docker setup), Custom Model API for per-segment cost |
+| Routing | GraphHopper (existing Docker setup), Custom Model API with polygon areas |
 | Geocoding | Photon (photon.komoot.io), proxied server-side |
 | Auth | Email + password, argon2, cookie sessions in PostgreSQL |
 | Dev env | docker-compose: PostgreSQL, GraphHopper, VersaTiles, Rust backend |
+| Rating model | Polygon-based (not segment-based). Paint brush only, no click-to-rate segments. |
+| Overlap | Paint overwrites — new polygons clip existing ones. Non-overlapping coverage. |
+| Undo/redo | Session-based. Undo stack resets on browser close. |
 
 ## Architecture
 
@@ -23,59 +26,115 @@ Browser (Svelte SPA + MapLibre)
   v
 Rust Backend (Axum, port 3000)
   |--- serves frontend static assets
-  |--- /api/auth/*         (register, login, logout)
-  |--- /api/segments/nearest  (PostGIS nearest-segment lookup)
-  |--- /api/ratings/*      (CRUD, bulk, paint)
-  |--- /api/ratings/overlay (GeoJSON per-user overlay, viewport-filtered)
-  |--- /api/route           (personalized routing via GraphHopper)
+  |--- /api/auth/*           (register, login, logout)
+  |--- /api/ratings          (GET: user's rated polygons, viewport-filtered)
+  |--- /api/ratings/paint    (PUT: upsert painted polygon, clips overlaps)
+  |--- /api/ratings/undo     (POST: revert last paint stroke server-side)
+  |--- /api/route            (personalized routing via GraphHopper)
   |--- /api/geocode          (Photon proxy)
   |
-  +---> PostgreSQL + PostGIS (segments, users, ratings, sessions)
+  +---> PostgreSQL + PostGIS (users, rated_areas, sessions)
   +---> GraphHopper (route computation)
 
 VersaTiles (port 8080) -- serves vector tiles directly to browser
 ```
 
-The browser talks to two services: the Axum backend (API + static assets) and VersaTiles (map tiles). Everything else is server-side.
-
 ## Data Model
 
-Exactly as specified in IDEA.md:
+### users
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| email | text | unique, indexed |
+| password_hash | text | argon2 |
+| display_name | text | |
+| created_at | timestamptz | |
 
-- **users**: id (uuid), email, password_hash (argon2), display_name, created_at
-- **segments**: id (bigint), osm_way_id, geometry (LineString 4326), name, road_class
-- **ratings**: id, user_id (FK), segment_id (FK), value (-7/-3/-1/0/+1/+3/+7), created_at, updated_at
-- **sessions**: sid, user_id (FK), data, expires_at
+### rated_areas
+| Column | Type | Notes |
+|---|---|---|
+| id | bigserial | PK |
+| user_id | uuid | FK users, indexed |
+| geometry | geometry(Polygon, 4326) | PostGIS, spatial index |
+| value | smallint | -7, -3, -1, +1, +3, +7 (no 0 — neutral erases) |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
-Unique constraint on (user_id, segment_id) for ratings.
+No overlaps within a single user's data. When a new polygon is painted:
+1. Find all existing polygons that intersect the new one
+2. Clip them: `ST_Difference(existing.geometry, new.geometry)`
+3. Delete any that become empty after clipping
+4. Insert the new polygon (unless value is 0, in which case just clip — erase mode)
 
-## Segment Import
+### sessions
+| Column | Type | Notes |
+|---|---|---|
+| id | text | PK, random token |
+| user_id | uuid | FK users |
+| expires_at | timestamptz | |
 
-One-time script that reads the Berlin OSM PBF and inserts road segments into PostgreSQL. Segments are road pieces between intersections. Uses the same extract that feeds GraphHopper.
+## Paint Interaction
 
-Implementation: Rust binary or script using the `osmpbf` crate to parse the PBF, extract ways tagged as roads/cycleways, split at intersections, and insert via sqlx.
+One mode only: paint brush. The user selects a rating value from a 7-color strip (defaults to +1), then click-drags to paint. Brush size adjustable (~5px to ~80px screen equivalent).
+
+The brush stroke is a buffered LineString — the frontend computes a polygon corridor around the drag path, width based on brush size and zoom level. On mouse-up, the polygon is sent to the backend.
+
+**Color strip**: dark red (-7), intense red (-3), light red (-1), light green (+1), intense green (+3), emerald green (+7). Plus an eraser tool that paints 0 (clips existing polygons without creating a new one).
+
+**Undo/redo**: Session-based stack in the frontend. Each paint stroke records the before/after state of affected polygons. Undo restores the previous state via the same paint API. Stack resets on page close. Ctrl+Z / Ctrl+Shift+Z keybindings.
+
+**Immediate feedback**: Optimistic update — the polygon appears on the map immediately during/after the drag. Server reconciliation happens in the background.
 
 ## Routing Integration
 
-GraphHopper Custom Model API allows per-request cost adjustments via `priority` statements. The backend:
+GraphHopper Custom Model supports `areas` — GeoJSON polygon features that become conditions in priority statements. This maps perfectly to rated_areas.
 
-1. Loads user's ratings in the geographic area around origin/destination
-2. Maps ratings to GraphHopper priority multipliers (non-linear: -7 -> near-zero priority, +7 -> high priority)
-3. Sends Custom Model request to GraphHopper
-4. Returns route geometry + matched segment IDs
+The backend:
+1. Receives route request with origin + destination
+2. Loads user's rated_areas in a bounding box around the route corridor (with margin)
+3. Converts each rated_area into a GeoJSON Feature with a unique `id`
+4. Builds priority statements: `{ "if": "in_<area_id>", "multiply_by": <factor> }`
+5. Rating-to-priority mapping (non-linear):
+   - -7 → multiply_by 0.05 (nearly impassable)
+   - -3 → multiply_by 0.3
+   - -1 → multiply_by 0.7
+   - +1 → multiply_by 1.3
+   - +3 → multiply_by 2.0
+   - +7 → multiply_by 3.0
+6. Sends Custom Model request with `ch.disable: true`
+7. Returns route GeoJSON to frontend
 
-**Known risk:** Custom Model matches on road attributes, not individual way IDs. The spike must validate whether `area` conditions with per-segment geometries work, or if an alternative approach is needed.
+Request structure:
+```json
+{
+  "points": [[13.38, 52.52], [13.41, 52.50]],
+  "profile": "bike",
+  "ch.disable": true,
+  "custom_model": {
+    "priority": [
+      { "if": "in_area_1", "multiply_by": "0.05" },
+      { "if": "in_area_42", "multiply_by": "2.0" }
+    ],
+    "distance_influence": 70,
+    "areas": {
+      "type": "FeatureCollection",
+      "features": [
+        { "type": "Feature", "id": "area_1", "properties": {}, "geometry": { "type": "Polygon", "coordinates": [...] } },
+        { "type": "Feature", "id": "area_42", "properties": {}, "geometry": { "type": "Polygon", "coordinates": [...] } }
+      ]
+    }
+  }
+}
+```
 
-## Frontend Components
+**Limits**: GraphHopper has practical limits on custom model size. For users with many rated areas, the backend should simplify geometries and potentially merge adjacent same-rated polygons before sending.
 
-- **Map**: MapLibre GL JS, full-screen, Berlin-centered
-- **Rating overlay**: GeoJSON layer from `/api/ratings/overlay`, colored red-to-green per rating value, fetched per-viewport
-- **Segment click mode** (default): Click segment -> popup with 7-color strip -> one tap to rate
-- **Paint brush mode**: Toggle switch, select rating, click-drag to paint segments. Brush sends buffered geometry to `/api/ratings/paint`
-- **Search**: Autocomplete search box, debounced Photon queries via backend
-- **Routing**: Click/search to set origin+destination, route rendered on map, "Rate this route" bulk action
-- **Auth**: Login/register forms, minimal UI
-- **Rating history**: Simple list view with map links
+## Developer Routing Config
+
+Server-side config (env vars or config file):
+- `rating_weight`: overall influence scaling (0.0-1.0), applied as exponent to priority multipliers
+- `distance_influence`: passed to GraphHopper, controls preference for shorter routes (default 70)
+- `max_areas_per_request`: cap on number of areas sent to GraphHopper (default 200)
 
 ## Tile Setup
 
@@ -84,19 +143,18 @@ VersaTiles serves Berlin vector tiles:
 - Docker service serves the file on port 8080
 - MapLibre configured to use VersaTiles style + tile endpoints
 
-## Developer Routing Config
+## Removed from MVP
 
-Server-side config file (not in DB, not user-facing):
-- `rating_weight`: influence of ratings vs base cost (0.0-1.0)
-- `unrated_penalty`: cost bias for unrated segments
-- `distance_weight`, `elevation_weight`, `infra_weight`
-
-Read from config file or env vars, hot-reloadable.
+- Segment-based ratings (replaced by polygon ratings)
+- Click-to-rate individual segments
+- Route bulk-rating ("rate this route")
+- Rating history view
+- Persistent undo (undo is session-only)
 
 ## Testing Strategy
 
 - Backend integration tests with test PostgreSQL (sqlx test fixtures)
-- API tests for all endpoints including auth guards and user isolation
-- PostGIS spatial query tests with known coordinates
-- Routing tests: known ratings -> verify route avoidance/preference
+- API tests: auth guards, user isolation, polygon clipping correctness
+- PostGIS spatial tests: overlap clipping produces correct geometries
+- Routing tests: rated areas produce different routes vs. unrated
 - Frontend: manual testing against dev compose stack

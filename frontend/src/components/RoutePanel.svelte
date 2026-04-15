@@ -33,4 +33,11 @@
     font-size: 14px; display: flex; gap: 4px;
   }
   .sep { color: #999; }
+
+  @media (max-width: 640px) {
+    .route-panel {
+      left: 12px;
+      top: 80px;
+    }
+  }
 </style>

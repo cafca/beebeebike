@@ -2,6 +2,7 @@ mod auth;
 mod config;
 mod errors;
 mod ratings;
+mod routing;
 
 use axum::{routing::{get, post, put}, Router};
 use config::Config;
@@ -51,6 +52,7 @@ async fn main() {
         .route("/api/auth/me", get(auth::me))
         .route("/api/ratings", get(ratings::get_overlay))
         .route("/api/ratings/paint", put(ratings::paint))
+        .route("/api/route", post(routing::get_route))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")

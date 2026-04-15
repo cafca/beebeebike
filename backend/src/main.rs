@@ -1,8 +1,9 @@
 mod auth;
 mod config;
 mod errors;
+mod ratings;
 
-use axum::{routing::{get, post}, Router};
+use axum::{routing::{get, post, put}, Router};
 use config::Config;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
@@ -48,6 +49,8 @@ async fn main() {
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/auth/me", get(auth::me))
+        .route("/api/ratings", get(ratings::get_overlay))
+        .route("/api/ratings/paint", put(ratings::paint))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")

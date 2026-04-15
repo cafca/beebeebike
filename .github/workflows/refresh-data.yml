@@ -61,5 +61,5 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd ~/beebeebike
-            rm -rf data/osm/berlin/graphhopper/
+            docker run --rm -v "$PWD/data/osm/berlin:/data" alpine rm -rf /data/graphhopper
             docker compose -f compose.prod.yml restart graphhopper tiles

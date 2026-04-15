@@ -4,6 +4,9 @@
 //! Or via docker compose which sets the env automatically.
 //!
 //! Skipped when TEST_DATABASE_URL is not set.
+//!
+//! Each test creates its own anonymous user so tests are isolated and can
+//! run in parallel without interfering with each other.
 
 use axum::http::{HeaderName, HeaderValue, StatusCode};
 use axum_test::TestServer;
@@ -11,6 +14,7 @@ use beebeebike_backend::{build_router, config::Config, AppState};
 use serde_json::{json, Value};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
+use uuid::Uuid;
 
 async fn setup() -> Option<TestServer> {
     let db_url = match std::env::var("TEST_DATABASE_URL") {
@@ -28,21 +32,6 @@ async fn setup() -> Option<TestServer> {
         .run(&db)
         .await
         .expect("failed to run migrations");
-
-    // Clean up test data from prior runs
-    sqlx::query("DELETE FROM sessions")
-        .execute(&db)
-        .await
-        .unwrap();
-    sqlx::query("DELETE FROM rated_areas")
-        .execute(&db)
-        .await
-        .unwrap();
-    sqlx::query("DELETE FROM user_locations")
-        .execute(&db)
-        .await
-        .unwrap();
-    sqlx::query("DELETE FROM users").execute(&db).await.unwrap();
 
     let config = Config {
         database_url: db_url,
@@ -63,6 +52,11 @@ async fn setup() -> Option<TestServer> {
 
     let app = build_router(state);
     Some(TestServer::new(app))
+}
+
+/// Generate a unique email for test isolation.
+fn unique_email(prefix: &str) -> String {
+    format!("{}+{}@test.example.com", prefix, Uuid::new_v4())
 }
 
 fn cookie_header(name: HeaderName, value: &str) -> (HeaderName, HeaderValue) {
@@ -160,10 +154,11 @@ async fn register_new_user() {
         return;
     };
 
+    let email = unique_email("register");
     let resp = server
         .post("/api/auth/register")
         .json(&json!({
-            "email": "test@example.com",
+            "email": email,
             "password": "password123",
             "display_name": "Tester"
         }))
@@ -172,7 +167,7 @@ async fn register_new_user() {
 
     let body: Value = resp.json();
     assert_eq!(body["account_type"], "registered");
-    assert_eq!(body["email"], "test@example.com");
+    assert_eq!(body["email"], email);
     assert_eq!(body["display_name"], "Tester");
 }
 
@@ -190,12 +185,13 @@ async fn register_upgrade_from_anonymous() {
     let anon_id = me_resp.json::<Value>()["id"].as_str().unwrap().to_string();
 
     // Upgrade to registered
+    let email = unique_email("upgrade");
     let (hname, hval) = with_session(&session);
     let resp = server
         .post("/api/auth/register")
         .add_header(hname, hval)
         .json(&json!({
-            "email": "upgraded@example.com",
+            "email": email,
             "password": "password123"
         }))
         .await;
@@ -203,7 +199,7 @@ async fn register_upgrade_from_anonymous() {
 
     let body: Value = resp.json();
     assert_eq!(body["account_type"], "registered");
-    assert_eq!(body["email"], "upgraded@example.com");
+    assert_eq!(body["email"], email);
     // Same user ID — upgraded in place
     assert_eq!(body["id"], anon_id);
 }
@@ -217,7 +213,7 @@ async fn register_rejects_short_password() {
     let resp = server
         .post("/api/auth/register")
         .json(&json!({
-            "email": "test2@example.com",
+            "email": unique_email("shortpw"),
             "password": "short"
         }))
         .await;
@@ -246,10 +242,11 @@ async fn register_rejects_duplicate_email() {
         return;
     };
 
+    let email = unique_email("dupe");
     server
         .post("/api/auth/register")
         .json(&json!({
-            "email": "dupe@example.com",
+            "email": email,
             "password": "password123"
         }))
         .await
@@ -258,7 +255,7 @@ async fn register_rejects_duplicate_email() {
     let resp = server
         .post("/api/auth/register")
         .json(&json!({
-            "email": "dupe@example.com",
+            "email": email,
             "password": "password123"
         }))
         .await;
@@ -279,11 +276,13 @@ async fn login_and_logout() {
         return;
     };
 
+    let email = unique_email("login");
+
     // Register first
     server
         .post("/api/auth/register")
         .json(&json!({
-            "email": "login_test@example.com",
+            "email": email,
             "password": "password123"
         }))
         .await
@@ -293,7 +292,7 @@ async fn login_and_logout() {
     let resp = server
         .post("/api/auth/login")
         .json(&json!({
-            "email": "login_test@example.com",
+            "email": email,
             "password": "password123"
         }))
         .await;
@@ -301,7 +300,7 @@ async fn login_and_logout() {
 
     let session = extract_session_cookie(&resp);
     let body: Value = resp.json();
-    assert_eq!(body["email"], "login_test@example.com");
+    assert_eq!(body["email"], email);
 
     // Logout
     let (hname, hval) = with_session(&session);
@@ -323,10 +322,11 @@ async fn login_wrong_password() {
         return;
     };
 
+    let email = unique_email("wrongpw");
     server
         .post("/api/auth/register")
         .json(&json!({
-            "email": "wrongpw@example.com",
+            "email": email,
             "password": "password123"
         }))
         .await
@@ -335,7 +335,7 @@ async fn login_wrong_password() {
     let resp = server
         .post("/api/auth/login")
         .json(&json!({
-            "email": "wrongpw@example.com",
+            "email": email,
             "password": "wrongpassword"
         }))
         .await;
@@ -351,7 +351,7 @@ async fn login_nonexistent_user() {
     let resp = server
         .post("/api/auth/login")
         .json(&json!({
-            "email": "nobody@example.com",
+            "email": unique_email("nobody"),
             "password": "password123"
         }))
         .await;

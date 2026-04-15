@@ -13,6 +13,9 @@ export const route = $state({
 let currentMap = null;
 let initialized = false;
 let homeMarker = null;
+let pendingRouteClick = null;
+
+const SINGLE_CLICK_DELAY_MS = 250;
 
 export function initRouting(map) {
   if (initialized && currentMap === map) return;
@@ -39,7 +42,9 @@ export function initRouting(map) {
   }
 
   map.off('click', handleMapClick);
+  map.off('dblclick', handleMapDoubleClick);
   map.on('click', handleMapClick);
+  map.on('dblclick', handleMapDoubleClick);
 
   initialized = true;
   syncHomeMarker();
@@ -135,12 +140,39 @@ function createHomeMarkerElement() {
 
 function handleMapClick(event) {
   if (shouldSuppressMapClick()) return;
+  if (event.originalEvent?.detail > 1) return;
+
+  scheduleRouteClick({
+    lng: event.lngLat.lng,
+    lat: event.lngLat.lat,
+  });
+}
+
+function handleMapDoubleClick() {
+  cancelPendingRouteClick();
+}
+
+function scheduleRouteClick(lngLat) {
+  cancelPendingRouteClick();
+  pendingRouteClick = window.setTimeout(() => {
+    pendingRouteClick = null;
+    setRoutePoint(lngLat);
+  }, SINGLE_CLICK_DELAY_MS);
+}
+
+function cancelPendingRouteClick() {
+  if (!pendingRouteClick) return;
+  window.clearTimeout(pendingRouteClick);
+  pendingRouteClick = null;
+}
+
+function setRoutePoint(lngLat) {
   if (route.data) return;
 
   const point = {
-    lng: event.lngLat.lng,
-    lat: event.lngLat.lat,
-    name: `Pinned point (${event.lngLat.lat.toFixed(5)}, ${event.lngLat.lng.toFixed(5)})`,
+    lng: lngLat.lng,
+    lat: lngLat.lat,
+    name: `Pinned point (${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)})`,
   };
 
   if (locations.startAtHome && locations.home && !route.origin) {

@@ -21,3 +21,7 @@ geojson = "0.24"
 geo = "0.29"
 dotenvy = "0.15"
 urlencoding = "2"
+
+[dev-dependencies]
+axum-test = "20"
+wiremock = "0.6"

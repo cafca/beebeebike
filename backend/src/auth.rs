@@ -366,3 +366,81 @@ fn map_unique_email_error(e: sqlx::Error) -> AppError {
     }
     AppError::from(e)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_session_simple() {
+        let mut headers = HeaderMap::new();
+        headers.insert("cookie", "session=abc123".parse().unwrap());
+        assert_eq!(
+            extract_session_from_headers(&headers),
+            Some("abc123".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_session_among_multiple_cookies() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "cookie",
+            "theme=dark; session=xyz789; lang=de".parse().unwrap(),
+        );
+        assert_eq!(
+            extract_session_from_headers(&headers),
+            Some("xyz789".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_session_missing() {
+        let mut headers = HeaderMap::new();
+        headers.insert("cookie", "theme=dark; lang=de".parse().unwrap());
+        assert_eq!(extract_session_from_headers(&headers), None);
+    }
+
+    #[test]
+    fn extract_session_no_cookie_header() {
+        let headers = HeaderMap::new();
+        assert_eq!(extract_session_from_headers(&headers), None);
+    }
+
+    #[test]
+    fn extract_session_empty_value() {
+        let mut headers = HeaderMap::new();
+        headers.insert("cookie", "session=".parse().unwrap());
+        assert_eq!(extract_session_from_headers(&headers), Some("".to_string()));
+    }
+
+    #[test]
+    fn extract_session_with_uuid_value() {
+        let mut headers = HeaderMap::new();
+        let uuid = "550e8400-e29b-41d4-a716-446655440000";
+        headers.insert("cookie", format!("session={uuid}").parse().unwrap());
+        assert_eq!(
+            extract_session_from_headers(&headers),
+            Some(uuid.to_string())
+        );
+    }
+
+    #[test]
+    fn session_cookie_format() {
+        let cookie = session_cookie("test-session-id");
+        let s = cookie.to_str().unwrap();
+        assert!(s.contains("session=test-session-id"));
+        assert!(s.contains("HttpOnly"));
+        assert!(s.contains("SameSite=Lax"));
+        assert!(s.contains("Path=/"));
+        assert!(s.contains("Max-Age=2592000"));
+    }
+
+    #[test]
+    fn clear_session_cookie_expires() {
+        let cookie = clear_session_cookie();
+        let s = cookie.to_str().unwrap();
+        assert!(s.contains("session="));
+        assert!(s.contains("Max-Age=0"));
+    }
+}

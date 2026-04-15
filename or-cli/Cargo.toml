@@ -1,7 +1,0 @@
-[package]
-name = "or-cli"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-or-domain = { path = "../or-domain" }

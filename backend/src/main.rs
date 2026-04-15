@@ -1,0 +1,54 @@
+mod config;
+mod errors;
+
+use axum::{routing::get, Router};
+use config::Config;
+use sqlx::postgres::PgPoolOptions;
+use std::sync::Arc;
+
+pub struct AppState {
+    pub db: sqlx::PgPool,
+    pub config: Config,
+    pub http_client: reqwest::Client,
+}
+
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "ortschaft_backend=debug,tower_http=debug".into()),
+        )
+        .init();
+
+    dotenvy::dotenv().ok();
+    let config = Config::from_env();
+
+    let db = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&config.database_url)
+        .await
+        .expect("Failed to connect to database");
+
+    sqlx::migrate!("./migrations")
+        .run(&db)
+        .await
+        .expect("Failed to run migrations");
+
+    let state = Arc::new(AppState {
+        db,
+        config,
+        http_client: reqwest::Client::new(),
+    });
+
+    let app = Router::new()
+        .route("/api/health", get(|| async { "ok" }))
+        .with_state(state);
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+        .await
+        .expect("Failed to bind");
+
+    tracing::info!("Listening on {}", listener.local_addr().unwrap());
+    axum::serve(listener, app).await.unwrap();
+}

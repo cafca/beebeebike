@@ -5,12 +5,14 @@
   import SearchBar from './components/SearchBar.svelte';
   import RoutePanel from './components/RoutePanel.svelte';
   import { auth, checkSession, logout } from './lib/auth.svelte.js';
+  import { loadHomeLocation, locations } from './lib/locations.svelte.js';
   import { initOverlay } from './lib/overlay.js';
   import { initBrush, destroyBrush } from './lib/brush.svelte.js';
-  import { initRouting } from './lib/routing.svelte.js';
+  import { applyStartAtHome, clearRoute, initRouting, syncHomeMarker } from './lib/routing.svelte.js';
 
   let map = $state(null);
   let authModalMode = $state('login');
+  let loadedLocationsForUser = $state(null);
   let showAuthModal = $state(false);
 
   checkSession();
@@ -26,6 +28,31 @@
       initRouting(map);
       return () => destroyBrush();
     }
+  });
+
+  $effect(() => {
+    const userId = auth.user?.id;
+    if (!userId) {
+      loadedLocationsForUser = null;
+      return;
+    }
+    if (loadedLocationsForUser === userId) return;
+
+    loadedLocationsForUser = userId;
+    loadHomeLocation()
+      .then(() => {
+        syncHomeMarker();
+        clearRoute();
+      })
+      .catch((e) => console.error('Failed to load home location:', e));
+  });
+
+  $effect(() => {
+    locations.home;
+    locations.startAtHome;
+    if (!map) return;
+    syncHomeMarker();
+    applyStartAtHome();
   });
 
   function openAuth(mode) {

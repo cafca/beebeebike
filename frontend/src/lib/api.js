@@ -24,6 +24,9 @@ export const api = {
     request('POST', '/api/auth/login', { email, password }),
   logout: () => request('POST', '/api/auth/logout'),
   me: () => request('GET', '/api/auth/me'),
+  getHomeLocation: () => request('GET', '/api/locations/home'),
+  saveHomeLocation: (location) => request('PUT', '/api/locations/home', location),
+  deleteHomeLocation: () => request('DELETE', '/api/locations/home'),
   getOverlay: (bbox) => request('GET', `/api/ratings?bbox=${bbox}`),
   paint: (geometry, value) => request('PUT', '/api/ratings/paint', { geometry, value }),
   route: (origin, destination) =>

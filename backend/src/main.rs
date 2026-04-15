@@ -2,6 +2,7 @@ mod auth;
 mod config;
 mod errors;
 mod geocode;
+mod locations;
 mod ratings;
 mod routing;
 
@@ -59,6 +60,12 @@ async fn main() {
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/logout", post(auth::logout))
         .route("/api/auth/me", get(auth::me))
+        .route(
+            "/api/locations/home",
+            get(locations::get_home)
+                .put(locations::save_home)
+                .delete(locations::delete_home),
+        )
         .route("/api/ratings", get(ratings::get_overlay))
         .route("/api/ratings/paint", put(ratings::paint))
         .route("/api/route", post(routing::get_route))

@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { brush } from './brush.svelte.js';
+import { shouldSuppressMapClick } from './paintGesture.js';
 
 export const route = $state({
   origin: null,      // { lng, lat, name }
@@ -79,7 +79,7 @@ export function clearRoute() {
 }
 
 function handleMapClick(event) {
-  if (brush.active) return;
+  if (shouldSuppressMapClick()) return;
   if (route.data) return;
 
   const point = {

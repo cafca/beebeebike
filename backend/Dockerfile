@@ -16,7 +16,7 @@ RUN cargo build --release
 FROM debian:bookworm-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=backend-builder /app/backend/target/release/ortschaft-backend /usr/local/bin/
+COPY --from=backend-builder /app/backend/target/release/beebeebike-backend /usr/local/bin/
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 ENV STATIC_DIR=/app/frontend/dist
-CMD ["ortschaft-backend"]
+CMD ["beebeebike-backend"]

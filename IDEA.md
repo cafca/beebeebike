@@ -1,4 +1,4 @@
-# Ortschaft — Web App MVP
+# beebeebike — Web App MVP
 
 A personal bicycle routing app for Berlin. Each user builds their own map of road segment ratings — streets they love, streets they avoid. When they request a route, the routing engine incorporates those personal ratings to find the best path *for them*.
 
@@ -275,9 +275,9 @@ services:
   db:
     image: postgis/postgis:16-3.4
     environment:
-      POSTGRES_DB: ortschaft
-      POSTGRES_USER: ortschaft
-      POSTGRES_PASSWORD: ortschaft
+      POSTGRES_DB: beebeebike
+      POSTGRES_USER: beebeebike
+      POSTGRES_PASSWORD: beebeebike
     ports:
       - "5432:5432"
     volumes:
@@ -288,7 +288,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgres://ortschaft:ortschaft@db:5432/ortschaft
+      DATABASE_URL: postgres://beebeebike:beebeebike@db:5432/beebeebike
       GRAPHHOPPER_URL: http://graphhopper:8989
       PHOTON_URL: https://photon.komoot.io
     depends_on:

@@ -1,4 +1,4 @@
-# Ortschaft MVP Design
+# beebeebike MVP Design
 
 Personal bicycle routing app for Berlin. Users paint rated areas on the map — streets they love in green, streets they avoid in red. The routing engine uses these painted areas to find personalized routes.
 

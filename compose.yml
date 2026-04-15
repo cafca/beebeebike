@@ -1,11 +1,11 @@
 services:
   db:
     image: postgis/postgis:16-3.4
-    container_name: ortschaft-db
+    container_name: beebeebike-db
     environment:
-      POSTGRES_DB: ortschaft
-      POSTGRES_USER: ortschaft
-      POSTGRES_PASSWORD: ortschaft
+      POSTGRES_DB: beebeebike
+      POSTGRES_USER: beebeebike
+      POSTGRES_PASSWORD: beebeebike
     ports:
       - "5432:5432"
     volumes:
@@ -14,7 +14,7 @@ services:
 
   graphhopper:
     image: israelhikingmap/graphhopper:latest
-    container_name: ortschaft-graphhopper
+    container_name: beebeebike-graphhopper
     entrypoint:
       - "./graphhopper.sh"
       - "-c"
@@ -33,7 +33,7 @@ services:
 
   tiles:
     image: versatiles/versatiles-frontend:latest-alpine
-    container_name: ortschaft-tiles
+    container_name: beebeebike-tiles
     ports:
       - "8080:8080"
     volumes:
@@ -45,11 +45,11 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: ortschaft-backend
+    container_name: beebeebike-backend
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgres://ortschaft:ortschaft@db:5432/ortschaft
+      DATABASE_URL: postgres://beebeebike:beebeebike@db:5432/beebeebike
       GRAPHHOPPER_URL: http://graphhopper:8989
       PHOTON_URL: https://photon.komoot.io
       LISTEN_ADDR: 0.0.0.0:3000

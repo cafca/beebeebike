@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: ortschaft-db
+    environment:
+      POSTGRES_DB: ortschaft
+      POSTGRES_USER: ortschaft
+      POSTGRES_PASSWORD: ortschaft
+    command: postgres -c shared_buffers=64MB -c work_mem=4MB -c effective_cache_size=256MB
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    mem_limit: 256m
+    restart: unless-stopped
+
+  graphhopper:
+    image: israelhikingmap/graphhopper:latest
+    container_name: ortschaft-graphhopper
+    entrypoint:
+      - "./graphhopper.sh"
+      - "-c"
+      - "/config/config.yml"
+      - "-o"
+      - "/data/graphhopper-cache"
+    volumes:
+      - ./server/graphhopper/config.yml:/config/config.yml:ro
+      - ./data/osm/berlin/berlin.osm.pbf:/data/berlin.osm.pbf:ro
+      - ./data/osm/berlin/graphhopper:/data/graphhopper-cache
+    environment:
+      JAVA_OPTS: "-Xmx384m -Xms256m"
+    mem_limit: 512m
+    restart: unless-stopped
+
+  tiles:
+    image: versatiles/versatiles-frontend:latest-alpine
+    container_name: ortschaft-tiles
+    volumes:
+      - ./data/tiles/berlin.versatiles:/tiles/berlin.versatiles:ro
+    command: ["/app/versatiles", "server", "-s", "/app/frontend-dev.br.tar", "[osm]/tiles/berlin.versatiles"]
+    mem_limit: 128m
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/cafca/beebeebike:latest
+    container_name: ortschaft-backend
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgres://ortschaft:ortschaft@db:5432/ortschaft
+      GRAPHHOPPER_URL: http://graphhopper:8989
+      PHOTON_URL: https://photon.komoot.io
+      LISTEN_ADDR: 0.0.0.0:3000
+      STATIC_DIR: /app/frontend/dist
+    depends_on:
+      - db
+      - graphhopper
+    mem_limit: 128m
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -1,0 +1,97 @@
+<script>
+  import { brush, undo, redo } from '../lib/brush.svelte.js';
+
+  const ratings = [
+    { value: -7, color: '#991b1b' },
+    { value: -3, color: '#dc2626' },
+    { value: -1, color: '#fca5a5' },
+    { value: 0,  color: '#6b7280' },  // eraser
+    { value: 1,  color: '#86efac' },
+    { value: 3,  color: '#22c55e' },
+    { value: 7,  color: '#059669' },
+  ];
+</script>
+
+<div class="toolbar">
+  <div class="color-strip">
+    {#each ratings as r}
+      <button
+        class="color-btn"
+        class:active={brush.value === r.value}
+        style="background: {r.color}"
+        onclick={() => brush.value = r.value}
+        title={r.value === 0 ? 'Eraser' : String(r.value)}
+      ></button>
+    {/each}
+  </div>
+
+  <div class="brush-controls">
+    <input
+      type="range"
+      min="5"
+      max="80"
+      bind:value={brush.size}
+      title="Brush size"
+    />
+  </div>
+
+  <div class="undo-redo">
+    <button disabled={!brush.canUndo} onclick={undo} title="Undo (Ctrl+Z)">↩</button>
+    <button disabled={!brush.canRedo} onclick={redo} title="Redo (Ctrl+Shift+Z)">↪</button>
+  </div>
+</div>
+
+<style>
+  .toolbar {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 8px 12px;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    z-index: 10;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .color-strip {
+    display: flex;
+  }
+  .color-btn {
+    width: 32px;
+    height: 32px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .color-btn:first-child { border-radius: 6px 0 0 6px; }
+  .color-btn:last-child { border-radius: 0 6px 6px 0; }
+  .color-btn.active {
+    transform: scale(1.15);
+    border-color: white;
+    box-shadow: 0 0 0 2px #333;
+    z-index: 1;
+  }
+  .brush-controls input {
+    width: 80px;
+  }
+  .undo-redo {
+    display: flex;
+    gap: 4px;
+  }
+  .undo-redo button {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .undo-redo button:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+</style>

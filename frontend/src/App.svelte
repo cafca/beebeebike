@@ -1,8 +1,10 @@
 <script>
   import Map from './components/Map.svelte';
   import AuthModal from './components/AuthModal.svelte';
+  import Toolbar from './components/Toolbar.svelte';
   import { auth, checkSession, logout } from './lib/auth.svelte.js';
   import { initOverlay } from './lib/overlay.js';
+  import { initBrush, destroyBrush } from './lib/brush.svelte.js';
 
   let map = $state(null);
 
@@ -12,10 +14,11 @@
     map = m;
   }
 
-  // Initialize overlay when both map and user are ready
   $effect(() => {
     if (map && auth.user) {
       initOverlay(map);
+      initBrush(map);
+      return () => destroyBrush();
     }
   });
 </script>
@@ -27,6 +30,7 @@
     <span>{auth.user.display_name || auth.user.email}</span>
     <button onclick={logout}>Log out</button>
   </div>
+  <Toolbar />
 {:else}
   <AuthModal />
 {/if}

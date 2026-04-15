@@ -14,12 +14,14 @@
     saveHomeLocation,
     setStartAtHome,
   } from '../lib/locations.svelte.js';
+  import PreferencesPanel from './PreferencesPanel.svelte';
 
   let query = $state('');
   let results = $state([]);
   let debounceTimer;
   let settingField = $state('origin');
   let homeActionError = $state('');
+  let showPreferences = $state(false);
 
   $effect(() => {
     settingField = route.origin ? 'destination' : 'origin';
@@ -107,6 +109,26 @@
 
 <div class="search-container">
   <div class="search-bar">
+    <div class="panel-actions">
+      <button
+        class="icon-btn"
+        class:active={showPreferences}
+        aria-label="Preferences"
+        aria-pressed={showPreferences}
+        title="Preferences"
+        onclick={() => showPreferences = !showPreferences}
+      >
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"/>
+        </svg>
+      </button>
+
+      {#if route.origin && (!locations.startAtHome || route.destination || route.data || route.origin.savedLocationName !== 'home')}
+        <button class="icon-btn clear-btn" onclick={handleClear} title="Clear route" aria-label="Clear route">&times;</button>
+      {/if}
+    </div>
+
     {#if route.origin}
       <div class="waypoint">
         <span class="dot origin-dot"></span>
@@ -158,8 +180,8 @@
       <div class="home-error">{homeActionError}</div>
     {/if}
 
-    {#if route.origin && (!locations.startAtHome || route.destination || route.data || route.origin.savedLocationName !== 'home')}
-      <button class="clear-btn" onclick={handleClear}>&times;</button>
+    {#if showPreferences}
+      <PreferencesPanel />
     {/if}
   </div>
 
@@ -184,20 +206,46 @@
     display: flex; flex-direction: column; gap: 4px;
     position: relative;
   }
+  .panel-actions {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    display: flex;
+    gap: 4px;
+    z-index: 2;
+  }
+  .icon-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: white;
+    color: #374151;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-btn:hover,
+  .icon-btn.active {
+    background: #eef2ff;
+    color: #2563eb;
+  }
   input {
     border: none; outline: none; font-size: 14px; padding: 6px 0;
-    width: 100%;
+    width: calc(100% - 68px);
   }
   .waypoint {
     display: flex; align-items: center; gap: 8px; font-size: 13px;
-    padding: 4px 0;
+    padding: 4px 68px 4px 0;
   }
   .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .origin-dot { background: #22c55e; }
   .dest-dot { background: #ef4444; }
   .clear-btn {
-    position: absolute; right: 8px; top: 8px;
-    background: none; border: none; font-size: 18px; cursor: pointer; color: #666;
+    font-size: 18px;
+    line-height: 1;
   }
   .save-home-btn {
     display: flex; align-items: center; justify-content: center; gap: 6px;

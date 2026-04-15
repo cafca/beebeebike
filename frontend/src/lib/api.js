@@ -29,7 +29,7 @@ export const api = {
   deleteHomeLocation: () => request('DELETE', '/api/locations/home'),
   getOverlay: (bbox) => request('GET', `/api/ratings?bbox=${bbox}`),
   paint: (geometry, value) => request('PUT', '/api/ratings/paint', { geometry, value }),
-  route: (origin, destination) =>
-    request('POST', '/api/route', { origin, destination }),
+  route: (origin, destination, rating_weight) =>
+    request('POST', '/api/route', { origin, destination, rating_weight }),
   geocode: (q) => request('GET', `/api/geocode?q=${encodeURIComponent(q)}`),
 };

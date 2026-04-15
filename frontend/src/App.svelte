@@ -2,6 +2,7 @@
   import Map from './components/Map.svelte';
   import AuthModal from './components/AuthModal.svelte';
   import { auth, checkSession, logout } from './lib/auth.svelte.js';
+  import { initOverlay } from './lib/overlay.js';
 
   let map = $state(null);
 
@@ -10,6 +11,13 @@
   function handleMapLoad(m) {
     map = m;
   }
+
+  // Initialize overlay when both map and user are ready
+  $effect(() => {
+    if (map && auth.user) {
+      initOverlay(map);
+    }
+  });
 </script>
 
 <Map onload={handleMapLoad} />

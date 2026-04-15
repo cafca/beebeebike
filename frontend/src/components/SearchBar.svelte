@@ -48,8 +48,7 @@
 
   function formatName(props) {
     const streetLine = [props.street, props.housenumber].filter(Boolean).join(' ').trim();
-    const locality = props.city || props.district || props.locality;
-    const parts = [props.name, streetLine, locality].filter(Boolean);
+    const parts = [props.name, streetLine, props.postcode].filter(Boolean);
     return parts.join(', ') || 'Unknown';
   }
 

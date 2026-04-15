@@ -75,6 +75,17 @@ export function initRouting(map) {
 export async function computeRoute() {
   if (!route.origin || !route.destination) return;
 
+  if (currentMap) {
+    const bounds = new maplibregl.LngLatBounds();
+    bounds.extend([route.origin.lng, route.origin.lat]);
+    bounds.extend([route.destination.lng, route.destination.lat]);
+    currentMap.fitBounds(bounds, {
+      padding: { top: 140, bottom: 140, left: 80, right: 80 },
+      maxZoom: 15,
+      duration: 400,
+    });
+  }
+
   route.loading = true;
   try {
     const data = await api.route(
@@ -106,6 +117,15 @@ export function clearRoute() {
     ? routePointFromLocation(locations.home)
     : null;
   clearRouteGeometry();
+}
+
+export function centerOnHome(map) {
+  const m = map || currentMap;
+  if (!m || !locations.home) return;
+  m.jumpTo({
+    center: [locations.home.lng, locations.home.lat],
+    zoom: 14,
+  });
 }
 
 export function applyStartAtHome() {

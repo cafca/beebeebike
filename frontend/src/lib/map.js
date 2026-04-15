@@ -25,13 +25,16 @@ const COLORS = {
   caution: '#b8795d',
 };
 
-export async function createMap(container) {
+const DEFAULT_CENTER = [13.405, 52.52];
+const DEFAULT_ZOOM = 12;
+
+export async function createMap(container, { center, zoom } = {}) {
   const style = await loadBicycleStyle();
   const map = new maplibregl.Map({
     container,
     style,
-    center: [13.405, 52.52],
-    zoom: 12,
+    center: center || DEFAULT_CENTER,
+    zoom: zoom ?? DEFAULT_ZOOM,
     maxBounds: [[12.9, 52.2], [13.9, 52.8]],
   });
 

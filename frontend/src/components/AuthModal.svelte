@@ -69,7 +69,7 @@
   }
   .modal {
     position: relative;
-    background: white; padding: 32px; border-radius: 12px; min-width: 320px;
+    background: white; padding: 32px; border-radius: 12px; min-width: min(320px, calc(100vw - 32px));
     box-shadow: 0 4px 24px rgba(0,0,0,0.2);
   }
   .close {
@@ -90,4 +90,10 @@
   .error { color: #dc2626; font-size: 13px; margin: 0; }
   .switch { margin-top: 12px; font-size: 13px; text-align: center; }
   .link { background: none; border: none; color: #2563eb; cursor: pointer; text-decoration: underline; }
+
+  @media (max-width: 640px) {
+    .modal {
+      padding: 24px 20px;
+    }
+  }
 </style>

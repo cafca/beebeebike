@@ -26,6 +26,20 @@ Then open the app at `http://localhost:5173`.
 
 Docker Compose files live at the project root and are meant to be run from there.
 
+## Production domain
+
+The production nginx helpers in `infra/` default to `beebeebike.com`. On the server, after the Docker services are up, run:
+
+```sh
+sudo DOMAIN=beebeebike.com bash ~/beebeebike/infra/setup-sudo.sh
+```
+
+That script provisions nginx for `beebeebike.com` and `www.beebeebike.com`, then asks Certbot to issue certificates and enable HTTPS redirects. If you ever need to reapply the `/tiles/` proxy changes against an existing site config, use:
+
+```sh
+sudo DOMAIN=beebeebike.com bash ~/beebeebike/infra/update-nginx.sh
+```
+
 ## Contributing
 
 Contributions are welcome. Please open an issue first so we can talk through the idea, the shape of the change, and any bike-brain edge cases before you start building.

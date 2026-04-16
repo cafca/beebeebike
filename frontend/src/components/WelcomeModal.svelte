@@ -4,7 +4,19 @@
 
 <div class="overlay">
   <div class="modal">
-    <img class="route-preview" src="/assets/welcome-route.png" alt="BeeBeeBike route preview on a Berlin map" />
+    <video
+      class="route-preview"
+      autoplay
+      loop
+      muted
+      playsinline
+      preload="auto"
+      disablepictureinpicture
+      disableremoteplayback
+      aria-label="Intro video showing how to paint map areas and plan a route in BeeBeeBike"
+    >
+      <source src="/assets/welcome-intro.mp4" type="video/mp4" />
+    </video>
     <h2>Welcome to BeeBeeBike</h2>
     <p>
       A bicycle routing app for Berlin that learns your preferences. Paint areas on the map

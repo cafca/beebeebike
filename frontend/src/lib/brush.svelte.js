@@ -31,6 +31,9 @@ let activePointerId = null;
 let lastTouchEndTime = 0;
 let points = [];
 let lastPointerPixel = null;
+let lastAddedPixel = null;
+let previewRafId = null;
+const MIN_MOVE_PX = 4; // suppress sub-pixel jitter; squared below
 let currentMap = null;
 let initialized = false;
 let currentCanvas = null;
@@ -143,10 +146,15 @@ export function destroyBrush() {
   if (brush.paintMode && currentMap) {
     currentMap.dragPan.enable();
   }
+  if (previewRafId !== null) {
+    cancelAnimationFrame(previewRafId);
+    previewRafId = null;
+  }
   brush.paintMode = false;
   painting = false;
   activePointerId = null;
   points = [];
+  lastAddedPixel = null;
   modifierDown = false;
   lastCursorLngLat = null;
   clearBrushCursor();
@@ -181,7 +189,9 @@ function onPointerDown(e) {
   painting = true;
   lastCursorLngLat = currentMap.unproject([e.offsetX, e.offsetY]);
   lastPointerPixel = [e.offsetX, e.offsetY];
+  lastAddedPixel = [e.offsetX, e.offsetY];
   points = [lastCursorLngLat];
+  currentCanvas.setPointerCapture(e.pointerId);
   if (!brush.paintMode) {
     dragPanWasEnabled = currentMap.dragPan.isEnabled();
     if (dragPanWasEnabled) currentMap.dragPan.disable();
@@ -222,9 +232,17 @@ function onPointerMove(e) {
   e.preventDefault();
   e.stopPropagation();
   e.stopImmediatePropagation?.();
-  points.push(lastCursorLngLat);
+
+  // Only add a point when the pointer has moved a meaningful distance to avoid
+  // bloating the points array with jitter (each point feeds Turf buffer()).
+  const dx = e.offsetX - lastAddedPixel[0];
+  const dy = e.offsetY - lastAddedPixel[1];
+  if (dx * dx + dy * dy >= MIN_MOVE_PX * MIN_MOVE_PX) {
+    lastAddedPixel = [e.offsetX, e.offsetY];
+    points.push(lastCursorLngLat);
+    schedulePreview();
+  }
   updateBrushCursor(lastCursorLngLat);
-  updatePreview();
 }
 
 function onPointerLeave() {
@@ -242,6 +260,10 @@ function onPointerUp(e) {
 
   if (e.pointerType === 'touch') lastTouchEndTime = Date.now();
   activePointerId = null;
+  if (previewRafId !== null) {
+    cancelAnimationFrame(previewRafId);
+    previewRafId = null;
+  }
 
   e?.preventDefault();
   e?.stopPropagation();
@@ -282,10 +304,15 @@ function onPointerUp(e) {
 }
 
 function cancelPaint() {
+  if (previewRafId !== null) {
+    cancelAnimationFrame(previewRafId);
+    previewRafId = null;
+  }
   painting = false;
   activePointerId = null;
   points = [];
   lastPointerPixel = null;
+  lastAddedPixel = null;
   clearPreview();
   restoreDragPan();
   syncCursor();
@@ -309,6 +336,14 @@ function buildPolygon() {
 
   const buffered = buffer(line, Math.max(radiusKm, 0.005), { units: 'kilometers' });
   return buffered?.geometry || null;
+}
+
+function schedulePreview() {
+  if (previewRafId !== null) return;
+  previewRafId = requestAnimationFrame(() => {
+    previewRafId = null;
+    if (painting) updatePreview();
+  });
 }
 
 function updatePreview() {

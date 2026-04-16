@@ -1,4 +1,4 @@
-package land.u_001.ferrostar_flutter
+package land._001.ferrostar_flutter
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall

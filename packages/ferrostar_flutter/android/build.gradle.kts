@@ -1,4 +1,4 @@
-group = "land.u_001.ferrostar_flutter"
+group = "land._001.ferrostar_flutter"
 version = "1.0-SNAPSHOT"
 
 buildscript {
@@ -27,7 +27,7 @@ plugins {
 }
 
 android {
-    namespace = "land.u_001.ferrostar_flutter"
+    namespace = "land._001.ferrostar_flutter"
 
     compileSdk = 36
 

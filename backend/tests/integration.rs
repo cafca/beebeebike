@@ -1072,7 +1072,10 @@ async fn redo_after_undo() {
         .await;
 
     let (hname, hval) = with_session(&session);
-    server.post("/api/ratings/undo").add_header(hname, hval).await;
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await;
 
     // Redo — area should come back
     let (hname, hval) = with_session(&session);
@@ -1116,7 +1119,10 @@ async fn new_paint_clears_redo_stack() {
         .json(&json!({ "geometry": poly_a, "value": 3 }))
         .await;
     let (hname, hval) = with_session(&session);
-    server.post("/api/ratings/undo").add_header(hname, hval).await;
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await;
 
     // Painting clears the redo stack
     let (hname, hval) = with_session(&session);
@@ -1164,7 +1170,10 @@ async fn undo_restores_partially_clipped_polygon() {
 
     // Undo B — A should be fully restored (just A in the overlay, no fragment + B)
     let (hname, hval) = with_session(&session);
-    server.post("/api/ratings/undo").add_header(hname, hval).await;
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await;
 
     let (hname, hval) = with_session(&session);
     let overlay: Value = server
@@ -1173,7 +1182,11 @@ async fn undo_restores_partially_clipped_polygon() {
         .await
         .json();
     let features = overlay["features"].as_array().unwrap();
-    assert_eq!(features.len(), 1, "should have exactly A restored, not A-fragment + nothing");
+    assert_eq!(
+        features.len(),
+        1,
+        "should have exactly A restored, not A-fragment + nothing"
+    );
     assert_eq!(features[0]["properties"]["value"], 3);
 }
 
@@ -1212,7 +1225,10 @@ async fn undo_restores_fully_covered_polygon() {
 
     // Undo B — A should reappear with its original value
     let (hname, hval) = with_session(&session);
-    server.post("/api/ratings/undo").add_header(hname, hval).await;
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await;
 
     let (hname, hval) = with_session(&session);
     let overlay: Value = server
@@ -1250,7 +1266,10 @@ async fn undo_multi_step() {
     // Undo all three
     for _ in 0..3 {
         let (hname, hval) = with_session(&session);
-        server.post("/api/ratings/undo").add_header(hname, hval).await;
+        server
+            .post("/api/ratings/undo")
+            .add_header(hname, hval)
+            .await;
     }
 
     let (hname, hval) = with_session(&session);

@@ -11,3 +11,15 @@ CREATE TABLE paint_events (
 
 CREATE INDEX idx_paint_events_user_status_seq
     ON paint_events (user_id, status, seq);
+
+-- Backfill existing rated_areas as seed events so undo doesn't wipe
+-- pre-migration data. Existing areas are non-overlapping by invariant,
+-- so replaying them in any order via apply_paint produces the same state.
+INSERT INTO paint_events (user_id, seq, geometry, value, status)
+SELECT
+    user_id,
+    ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY id) AS seq,
+    geometry,
+    value,
+    0 AS status
+FROM rated_areas;

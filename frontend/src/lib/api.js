@@ -33,6 +33,8 @@ export const api = {
     if (targetId !== null && targetId !== undefined) body.target_id = targetId;
     return request('PUT', '/api/ratings/paint', body);
   },
+  undo: () => request('POST', '/api/ratings/undo'),
+  redo: () => request('POST', '/api/ratings/redo'),
   route: (origin, destination, rating_weight, distance_influence) =>
     request('POST', '/api/route', {
       origin,

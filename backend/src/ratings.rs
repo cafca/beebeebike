@@ -27,6 +27,14 @@ pub struct PaintResponse {
     pub created_id: Option<i64>,
     pub clipped_count: i64,
     pub deleted_count: i64,
+    pub can_undo: bool,
+    pub can_redo: bool,
+}
+
+#[derive(Serialize)]
+pub struct UndoRedoResponse {
+    pub can_undo: bool,
+    pub can_redo: bool,
 }
 
 #[derive(Deserialize)]
@@ -53,6 +61,18 @@ struct CreatedRow {
 #[derive(FromRow)]
 struct CountRow {
     pub count: i64,
+}
+
+#[derive(FromRow)]
+struct SeqRow {
+    pub seq: i64,
+}
+
+#[derive(FromRow)]
+struct EventRow {
+    pub id: i64,
+    pub geometry: String,
+    pub value: i16,
 }
 
 // ---------------------------------------------------------------------------
@@ -93,14 +113,135 @@ fn parse_bbox(bbox: &str) -> Result<(f64, f64, f64, f64), AppError> {
 }
 
 // ---------------------------------------------------------------------------
+// Core helpers
+// ---------------------------------------------------------------------------
+
+/// Apply a single paint operation to `rated_areas` within an open transaction.
+/// This is the clipping logic extracted so it can be called both from the
+/// paint endpoint and from `rebuild_rated_areas_for_user`.
+async fn apply_paint(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: Uuid,
+    geometry_json: &str,
+    value: i32,
+) -> Result<(i64, i64), AppError> {
+    // Step 1: Delete fully covered polygons
+    let deleted_row = sqlx::query_as::<_, CountRow>(
+        r#"
+        WITH deleted AS (
+            DELETE FROM rated_areas
+            WHERE user_id = $1
+              AND ST_Covers(ST_SetSRID(ST_GeomFromGeoJSON($2), 4326), geometry)
+            RETURNING 1
+        )
+        SELECT COUNT(*) AS count FROM deleted
+        "#,
+    )
+    .bind(user_id)
+    .bind(geometry_json)
+    .fetch_one(&mut **tx)
+    .await?;
+
+    // Step 2: Clip overlapping polygons
+    let clipped_row = sqlx::query_as::<_, CountRow>(
+        r#"
+        WITH overlapping AS (
+            DELETE FROM rated_areas
+            WHERE user_id = $1
+              AND ST_Intersects(geometry, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))
+            RETURNING user_id, value, ST_Difference(geometry, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326)) AS clipped
+        ),
+        fragments AS (
+            SELECT user_id, value, (ST_Dump(clipped)).geom AS geom
+            FROM overlapping
+            WHERE NOT ST_IsEmpty(clipped)
+        ),
+        inserted AS (
+            INSERT INTO rated_areas (user_id, geometry, value)
+            SELECT user_id, geom, value
+            FROM fragments
+            WHERE ST_GeometryType(geom) = 'ST_Polygon'
+              AND ST_Area(geom) > 0
+            RETURNING 1
+        )
+        SELECT COUNT(*) AS count FROM overlapping
+        "#,
+    )
+    .bind(user_id)
+    .bind(geometry_json)
+    .fetch_one(&mut **tx)
+    .await?;
+
+    // Step 3: Insert new polygon (skip if value == 0, eraser mode)
+    if value != 0 {
+        sqlx::query(
+            r#"
+            INSERT INTO rated_areas (user_id, geometry, value)
+            VALUES ($1, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326), $3)
+            "#,
+        )
+        .bind(user_id)
+        .bind(geometry_json)
+        .bind(value)
+        .execute(&mut **tx)
+        .await?;
+    }
+
+    Ok((deleted_row.count, clipped_row.count))
+}
+
+/// Wipe a user's `rated_areas` and rebuild by replaying all active paint events.
+async fn rebuild_rated_areas_for_user(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: Uuid,
+) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM rated_areas WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+
+    let events = sqlx::query_as::<_, EventRow>(
+        r#"
+        SELECT id, ST_AsGeoJSON(geometry) AS geometry, value
+        FROM paint_events
+        WHERE user_id = $1 AND status = 0
+        ORDER BY seq
+        "#,
+    )
+    .bind(user_id)
+    .fetch_all(&mut **tx)
+    .await?;
+
+    for event in events {
+        apply_paint(tx, user_id, &event.geometry, event.value as i32).await?;
+    }
+
+    Ok(())
+}
+
+async fn history_state(db: &sqlx::PgPool, user_id: Uuid) -> Result<(bool, bool), AppError> {
+    let can_undo = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM paint_events WHERE user_id = $1 AND status = 0)",
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await?;
+
+    let can_redo = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM paint_events WHERE user_id = $1 AND status = 1)",
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await?;
+
+    Ok((can_undo, can_redo))
+}
+
+// ---------------------------------------------------------------------------
 // Handlers
 // ---------------------------------------------------------------------------
 
 /// PUT /api/ratings/paint
-///
-/// Accepts a GeoJSON Polygon and a rating value. Clips existing polygons
-/// belonging to the authenticated user that overlap with the new polygon,
-/// then inserts the new polygon (unless value == 0, eraser mode).
 pub async fn paint(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -151,98 +292,148 @@ pub async fn paint(
 
         tx.commit().await?;
 
+        let (can_undo, can_redo) = history_state(&state.db, user_id).await?;
         return Ok(Json(PaintResponse {
             created_id: None,
             clipped_count: 0,
             deleted_count: if body.value == 0 { affected_count } else { 0 },
+            can_undo,
+            can_redo,
         }));
     }
 
-    // Step 1: Delete fully covered polygons and count them
-    let deleted_row = sqlx::query_as::<_, CountRow>(
-        r#"
-        WITH deleted AS (
-            DELETE FROM rated_areas
-            WHERE user_id = $1
-              AND ST_Covers(ST_SetSRID(ST_GeomFromGeoJSON($2), 4326), geometry)
-            RETURNING 1
-        )
-        SELECT COUNT(*) AS count FROM deleted
-        "#,
+    // Clear redo stack: any undone events are discarded when a new paint arrives
+    sqlx::query("DELETE FROM paint_events WHERE user_id = $1 AND status = 1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // Allocate the next sequence number
+    let seq_row = sqlx::query_as::<_, SeqRow>(
+        "SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM paint_events WHERE user_id = $1",
     )
     .bind(user_id)
-    .bind(&geometry_json)
     .fetch_one(&mut *tx)
     .await?;
 
-    let deleted_count = deleted_row.count;
-
-    // Step 2: For overlapping polygons, delete them and re-insert clipped fragments.
-    // ST_Difference can return MultiPolygon or GeometryCollection, so we use
-    // ST_Dump to split into individual geometries and filter to valid Polygons.
-    let clipped_row = sqlx::query_as::<_, CountRow>(
+    // Record the event
+    sqlx::query(
         r#"
-        WITH overlapping AS (
-            DELETE FROM rated_areas
-            WHERE user_id = $1
-              AND ST_Intersects(geometry, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))
-            RETURNING user_id, value, ST_Difference(geometry, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326)) AS clipped
-        ),
-        fragments AS (
-            SELECT user_id, value, (ST_Dump(clipped)).geom AS geom
-            FROM overlapping
-            WHERE NOT ST_IsEmpty(clipped)
-        ),
-        inserted AS (
-            INSERT INTO rated_areas (user_id, geometry, value)
-            SELECT user_id, geom, value
-            FROM fragments
-            WHERE ST_GeometryType(geom) = 'ST_Polygon'
-              AND ST_Area(geom) > 0
-            RETURNING 1
-        )
-        SELECT COUNT(*) AS count FROM overlapping
+        INSERT INTO paint_events (user_id, seq, geometry, value, status)
+        VALUES ($1, $2, ST_SetSRID(ST_GeomFromGeoJSON($3), 4326), $4, 0)
         "#,
     )
     .bind(user_id)
+    .bind(seq_row.seq)
     .bind(&geometry_json)
-    .fetch_one(&mut *tx)
+    .bind(body.value)
+    .execute(&mut *tx)
     .await?;
 
-    let clipped_count = clipped_row.count;
+    // Apply to the derived cache
+    let (deleted_count, clipped_count) =
+        apply_paint(&mut tx, user_id, &geometry_json, body.value).await?;
 
-    // Step 3: Insert new polygon (skip if value == 0, eraser mode)
+    // Fetch the id of the newly created rated_area (if any)
     let created_id = if body.value != 0 {
-        let row = sqlx::query_as::<_, CreatedRow>(
-            r#"
-            INSERT INTO rated_areas (user_id, geometry, value)
-            VALUES ($1, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326), $3)
-            RETURNING id
-            "#,
+        sqlx::query_as::<_, CreatedRow>(
+            "SELECT id FROM rated_areas WHERE user_id = $1 ORDER BY id DESC LIMIT 1",
         )
         .bind(user_id)
-        .bind(&geometry_json)
-        .bind(body.value)
-        .fetch_one(&mut *tx)
-        .await?;
-        Some(row.id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .map(|r| r.id)
     } else {
         None
     };
 
     tx.commit().await?;
 
+    let (can_undo, can_redo) = history_state(&state.db, user_id).await?;
     Ok(Json(PaintResponse {
         created_id,
         clipped_count,
         deleted_count,
+        can_undo,
+        can_redo,
     }))
 }
 
+/// POST /api/ratings/undo
+pub async fn undo(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<UndoRedoResponse>, AppError> {
+    let user_id: Uuid = require_auth(&state.db, &headers).await?;
+
+    let mut tx = state.db.begin().await?;
+
+    // Mark the most recent active event as undone
+    let updated = sqlx::query_scalar::<_, i64>(
+        r#"
+        UPDATE paint_events SET status = 1
+        WHERE id = (
+            SELECT id FROM paint_events
+            WHERE user_id = $1 AND status = 0
+            ORDER BY seq DESC
+            LIMIT 1
+        )
+        RETURNING id
+        "#,
+    )
+    .bind(user_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    if updated.is_some() {
+        rebuild_rated_areas_for_user(&mut tx, user_id).await?;
+    }
+
+    tx.commit().await?;
+
+    let (can_undo, can_redo) = history_state(&state.db, user_id).await?;
+    Ok(Json(UndoRedoResponse { can_undo, can_redo }))
+}
+
+/// POST /api/ratings/redo
+pub async fn redo(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<UndoRedoResponse>, AppError> {
+    let user_id: Uuid = require_auth(&state.db, &headers).await?;
+
+    let mut tx = state.db.begin().await?;
+
+    // Find the earliest undone event
+    let event = sqlx::query_as::<_, EventRow>(
+        r#"
+        SELECT id, ST_AsGeoJSON(geometry) AS geometry, value
+        FROM paint_events
+        WHERE user_id = $1 AND status = 1
+        ORDER BY seq ASC
+        LIMIT 1
+        "#,
+    )
+    .bind(user_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    if let Some(event) = event {
+        sqlx::query("UPDATE paint_events SET status = 0 WHERE id = $1")
+            .bind(event.id)
+            .execute(&mut *tx)
+            .await?;
+
+        apply_paint(&mut tx, user_id, &event.geometry, event.value as i32).await?;
+    }
+
+    tx.commit().await?;
+
+    let (can_undo, can_redo) = history_state(&state.db, user_id).await?;
+    Ok(Json(UndoRedoResponse { can_undo, can_redo }))
+}
+
 /// GET /api/ratings?bbox=west,south,east,north
-///
-/// Returns the authenticated user's rated polygons as a GeoJSON FeatureCollection
-/// filtered to those intersecting the given bounding box.
 pub async fn get_overlay(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -268,6 +459,8 @@ pub async fn get_overlay(
     .fetch_all(&state.db)
     .await?;
 
+    let (can_undo, can_redo) = history_state(&state.db, user_id).await?;
+
     let features: Vec<Value> = rows
         .into_iter()
         .map(|row| {
@@ -284,6 +477,8 @@ pub async fn get_overlay(
     Ok(Json(json!({
         "type": "FeatureCollection",
         "features": features,
+        "can_undo": can_undo,
+        "can_redo": can_redo,
     })))
 }
 

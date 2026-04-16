@@ -24,8 +24,6 @@ export const brush = $state({
   paintMode: false,
 });
 
-const undoStack = [];
-const redoStack = [];
 let painting = false;
 let activePointerId = null;
 let lastTouchEndTime = 0;
@@ -129,6 +127,14 @@ export function initBrush(map) {
   syncCursor();
   syncPreviewPaint();
   syncBrushCursorPaint();
+
+  // Sync initial undo/redo button state from the server
+  refreshOverlay(map).then((data) => {
+    if (data) {
+      brush.canUndo = data.can_undo ?? false;
+      brush.canRedo = data.can_redo ?? false;
+    }
+  });
 }
 
 export function destroyBrush() {
@@ -459,10 +465,8 @@ function featureAreaId(feature) {
 async function submitPaint(geometry, value, targetId = null) {
   try {
     const result = await api.paint(geometry, value, targetId);
-    undoStack.push({ geometry, value, result });
-    redoStack.length = 0;
-    brush.canUndo = undoStack.length > 0;
-    brush.canRedo = false;
+    brush.canUndo = result.can_undo;
+    brush.canRedo = result.can_redo;
     await refreshOverlay(currentMap);
     await refreshRouteIfReady();
   } catch (e) {
@@ -471,14 +475,10 @@ async function submitPaint(geometry, value, targetId = null) {
 }
 
 export async function undo() {
-  if (undoStack.length === 0) return;
-  const entry = undoStack.pop();
-  redoStack.push(entry);
-  brush.canUndo = undoStack.length > 0;
-  brush.canRedo = true;
-
   try {
-    await api.paint(entry.geometry, 0); // erase
+    const r = await api.undo();
+    brush.canUndo = r.can_undo;
+    brush.canRedo = r.can_redo;
     await refreshOverlay(currentMap);
     await refreshRouteIfReady();
   } catch (e) {
@@ -487,14 +487,10 @@ export async function undo() {
 }
 
 export async function redo() {
-  if (redoStack.length === 0) return;
-  const entry = redoStack.pop();
-  undoStack.push(entry);
-  brush.canUndo = true;
-  brush.canRedo = redoStack.length > 0;
-
   try {
-    await api.paint(entry.geometry, entry.value);
+    const r = await api.redo();
+    brush.canUndo = r.can_undo;
+    brush.canRedo = r.can_redo;
     await refreshOverlay(currentMap);
     await refreshRouteIfReady();
   } catch (e) {

@@ -147,14 +147,17 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
+    pointer-events: none;
   }
   .search-stack {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
     gap: 8px;
+    pointer-events: auto;
   }
   .user-bar {
+    pointer-events: auto;
     background: white; padding: 8px 16px; border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     display: flex; gap: 12px; align-items: center; font-size: 14px;
@@ -172,6 +175,7 @@
       background: white;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      pointer-events: auto;
     }
     .search-stack {
       flex-direction: column;

@@ -371,7 +371,12 @@ class ApiClient {
   Future<User> getMe();
 
   // Routing
-  Future<RouteResponse> computeRoute(LatLng origin, LatLng destination, {double? ratingWeight});
+  Future<RouteResponse> computeRoute(
+    LatLng origin,
+    LatLng destination, {
+    double? ratingWeight,        // 0.0-1.0, default 1.0
+    double? distanceInfluence,   // 0-100, default 70 (GraphHopper distance_influence)
+  });
 
   // Geocoding
   Future<List<GeocodeResult>> geocode(String query, {int limit = 5});
@@ -400,4 +405,5 @@ All of these have extensibility seams noted in the relevant sections — they ar
 - Offline routing or tile download UI
 - App Store submission / public release
 - Rating weight preference slider (use web default of 1.0)
+- Distance influence preference slider (use backend default of 70)
 - Recent search persistence on server (local only)

@@ -62,10 +62,22 @@ impl GraphhopperMode {
     }
 
     fn apply_mode_flags(self, request: &mut serde_json::Map<String, Value>) {
-        if matches!(self, Self::Navigate) {
-            // Required by GraphHopper's navigation resource. Without this the
-            // upstream returns `400 Currently type=mapbox required.`
-            request.insert("type".into(), json!("mapbox"));
+        match self {
+            Self::Preview => {
+                // Return GeoJSON-shaped `points` instead of an encoded
+                // polyline so the frontend can draw the route directly.
+                request.insert("points_encoded".into(), json!(false));
+            }
+            Self::Navigate => {
+                // Required by GraphHopper's navigation resource. Without this
+                // the upstream returns `400 Currently type=mapbox required.`
+                // The navigate endpoint already encodes points, returns voice
+                // and banner instructions, and handles roundabout exits by
+                // default, so none of those flags are set explicitly — doing
+                // so is rejected as `Do not set '<flag>'. Per default it is
+                // true.`
+                request.insert("type".into(), json!("mapbox"));
+            }
         }
     }
 }
@@ -149,7 +161,6 @@ fn build_graphhopper_request(
         "points": [body.origin, body.destination],
         "profile": "bike",
         "locale": "de",
-        "points_encoded": false,
         "ch.disable": true,
     });
 

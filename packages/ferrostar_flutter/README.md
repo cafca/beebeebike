@@ -18,7 +18,8 @@ See `example/lib/main.dart`.
 
 - iOS 16+
 - Android API 25+
-- Flutter 3.19+, Dart 3.3+
+- Flutter 3.41+, Dart 3.11+
+- iOS uses Flutter's Swift Package Manager plugin integration; CocoaPods is intentionally unsupported.
 
 ## License
 

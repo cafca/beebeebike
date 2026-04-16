@@ -12,9 +12,10 @@ Layout:
 
 - Shared plugin source lives under `ios/ferrostar_flutter/Sources/ferrostar_flutter`.
 - `ios/ferrostar_flutter/Package.swift` points that source tree at the Flutter framework package and the upstream Ferrostar package.
-- The CocoaPods podspec keeps the same source tree so the plugin stays in one place.
+- The CocoaPods podspec is intentionally fail-fast so unsupported iOS installs stop with a clear message instead of a compiler error.
 
 Notes:
 
 - The plugin method `smokeTest` is the proof-of-life path used by the example app.
-- The example app still keeps CocoaPods for Flutter-managed dependencies, but the plugin itself exposes a Swift package so Flutter can migrate the app project to Swift Package Manager for plugin linking.
+- The example app is now fully SwiftPM-based on iOS; the CocoaPods wiring was removed from the example project.
+- iOS consumers must use Flutter 3.41+ so the plugin is linked through Swift Package Manager.

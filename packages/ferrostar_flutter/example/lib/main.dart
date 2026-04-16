@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -35,6 +36,14 @@ class _SmokeTestPageState extends State<SmokeTestPage> {
   bool _running = false;
 
   Future<void> _runSmokeTest() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) {
+      setState(() {
+        _running = false;
+        _result = 'Task 4 only wires the smoke test on iOS. Android proof-of-life lands in Task 5.';
+      });
+      return;
+    }
+
     setState(() {
       _running = true;
       _result = 'Running smokeTest...';
@@ -55,6 +64,14 @@ class _SmokeTestPageState extends State<SmokeTestPage> {
       }
       setState(() {
         _result = 'smokeTest failed: ${error.code}: ${error.message ?? 'unknown error'}';
+        _running = false;
+      });
+    } on MissingPluginException {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _result = 'smokeTest is not available on this platform yet.';
         _running = false;
       });
     }

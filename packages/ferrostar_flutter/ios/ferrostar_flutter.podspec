@@ -1,7 +1,10 @@
-#
-# To learn more about a Podspec see http://guides.cocoapods.org/syntax/podspec.html.
-# Run `pod lib lint ferrostar_flutter.podspec` to validate before publishing.
-#
+raise <<~MSG
+  ferrostar_flutter does not support CocoaPods on iOS.
+
+  Use Flutter 3.41+ so the plugin can be integrated through Swift Package Manager.
+  See packages/ferrostar_flutter/ios/INTEGRATION.md for the supported setup.
+MSG
+
 Pod::Spec.new do |s|
   s.name             = 'ferrostar_flutter'
   s.version          = '0.1.0'

@@ -5,11 +5,8 @@ import FlutterFramework
 #endif
 import Foundation
 import UIKit
-
-#if canImport(FerrostarCore) && canImport(FerrostarCoreFFI)
 import FerrostarCore
 import FerrostarCoreFFI
-#endif
 
 public final class FerrostarFlutterPlugin: NSObject, FlutterPlugin {
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -24,7 +21,6 @@ public final class FerrostarFlutterPlugin: NSObject, FlutterPlugin {
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case "smokeTest":
-      #if canImport(FerrostarCore) && canImport(FerrostarCoreFFI)
       let sampleLocation = UserLocation(
         coordinates: GeographicCoordinate(lat: 52.52, lng: 13.405),
         horizontalAccuracy: 5.0,
@@ -33,15 +29,6 @@ public final class FerrostarFlutterPlugin: NSObject, FlutterPlugin {
         speed: nil
       )
       result("location created at \(sampleLocation.coordinates.lat), \(sampleLocation.coordinates.lng)")
-      #else
-      result(
-        FlutterError(
-          code: "internal",
-          message: "FerrostarCore is only available when the plugin is built through Swift Package Manager.",
-          details: nil
-        )
-      )
-      #endif
     default:
       result(FlutterMethodNotImplemented)
     }

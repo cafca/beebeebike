@@ -16,8 +16,7 @@
       <li>Enter a start and destination in the search bar or click two points on the map.</li>
       <li>Get a bicycle route tailored to your preferences</li>
     </ol>
-    <p><em>Sign up to access your custom map across devices!</em></p> 
-    <p class="muted">Your rated areas and any saved places are stored and processed on BeeBeeBike servers only. Message beebybike@vincentahrend.com to request data removal.</p>
+    <p class="muted">Your rated areas and any saved places are stored and processed on BeeBeeBike servers only. Address searches are sent context-free to Komoot's hosted Photon service. Message beebeebike@vincentahrend.com to request data removal.</p>
     <button onclick={onclose}>Start exploring</button>
   </div>
 </div>

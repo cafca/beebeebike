@@ -33,10 +33,11 @@
 </script>
 
 <section class="preferences-panel" aria-label="Preferences">
-  <h2>Options</h2>
-
   <div class="preference-row">
-    <label for="rating-weight">Preference strength</label>
+    <div class="preference-copy">
+      <label for="rating-weight">Preference strength</label>
+      <p>How strongly your painted likes and dislikes should shape the route.</p>
+    </div>
     <span>{formatRatingWeight(preferences.ratingWeight)}</span>
   </div>
 
@@ -51,12 +52,15 @@
   />
 
   <div class="scale-labels" aria-hidden="true">
-    <span>Off</span>
-    <span>Full</span>
+    <span>Ignore ratings</span>
+    <span>Follow ratings</span>
   </div>
 
   <div class="preference-row preference-row-spaced">
-    <label for="distance-influence">Distance influence</label>
+    <div class="preference-copy">
+      <label for="distance-influence">Route directness</label>
+      <p>How much shorter trips should win over detours to nicer streets.</p>
+    </div>
     <span>{formatDistanceInfluence(preferences.distanceInfluence)}</span>
   </div>
 
@@ -74,6 +78,16 @@
     <span>Flexible</span>
     <span>Direct</span>
   </div>
+
+  <div class="credits">
+    <p>Built with</p>
+    <div class="credit-links">
+      <a href="https://www.openstreetmap.org/" target="_blank" rel="noreferrer">OpenStreetMap</a>
+      <a href="https://maplibre.org/" target="_blank" rel="noreferrer">MapLibre</a>
+      <a href="https://www.graphhopper.com/" target="_blank" rel="noreferrer">GraphHopper</a>
+      <a href="https://photon.komoot.io/" target="_blank" rel="noreferrer">Photon service hosted by Komoot</a>
+    </div>
+  </div>
 </section>
 
 <style>
@@ -83,26 +97,38 @@
     border-top: 1px solid #e5e7eb;
     color: #111827;
   }
-  h2 {
-    margin: 0 0 10px;
-    font-size: 13px;
-    font-weight: 650;
-    line-height: 1.2;
-  }
   .preference-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 10px;
     font-size: 14px;
   }
+  .preference-copy {
+    min-width: 0;
+    flex: 1;
+  }
+  .preference-copy label {
+    display: block;
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .preference-copy p {
+    margin: 4px 0 0;
+    color: #6b7280;
+    font-size: 12px;
+    line-height: 1.35;
+  }
   .preference-row-spaced {
     margin-top: 16px;
   }
   .preference-row span {
-    min-width: 44px;
+    min-width: 52px;
     text-align: right;
+    line-height: 1.2;
+    padding-top: 1px;
   }
   input[type='range'] {
     width: 100%;
@@ -115,7 +141,33 @@
     color: #6b7280;
     font-size: 12px;
   }
+  .credits {
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .credits p {
+    margin: 0 0 8px;
+    color: #6b7280;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .credit-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+  .credit-links a {
+    color: #2563eb;
+    font-size: 12px;
+    line-height: 1.35;
+    text-decoration: none;
+  }
+  .credit-links a:hover {
+    text-decoration: underline;
+  }
   @media (max-width: 640px) {
     .preference-row { font-size: 14px; }
+    .preference-copy p { max-width: 28ch; }
   }
 </style>

@@ -873,6 +873,101 @@ async fn route_forwards_distance_influence_to_graphhopper() {
     graphhopper.verify().await;
 }
 
+#[tokio::test]
+async fn navigate_requires_auth() {
+    let Some(server) = setup().await else {
+        return;
+    };
+
+    let resp = server
+        .post("/api/navigate")
+        .json(&json!({
+            "origin": [13.405, 52.52],
+            "destination": [13.45, 52.51]
+        }))
+        .await;
+
+    resp.assert_status(StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn navigate_proxies_graphhopper_response_verbatim() {
+    if std::env::var("TEST_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let graphhopper = MockServer::start().await;
+    let navigate_json = json!({
+        "routes": [{
+            "distance": 1234.5,
+            "duration": 678.9,
+            "geometry": "yzocFzynhVq}@n}@o}@nzD",
+            "legs": [{
+                "steps": [{
+                    "distance": 120.0,
+                    "duration": 19.2,
+                    "name": "Kastanienallee",
+                    "maneuver": {
+                        "type": "turn",
+                        "modifier": "left",
+                        "location": [13.41, 52.52]
+                    },
+                    "voiceInstructions": [{
+                        "distanceAlongGeometry": 200.0,
+                        "announcement": "In 200 Metern links abbiegen"
+                    }],
+                    "bannerInstructions": [{
+                        "distanceAlongGeometry": 200.0,
+                        "primary": { "text": "Links abbiegen" }
+                    }]
+                }]
+            }]
+        }],
+        "waypoints": [
+            { "location": [13.405, 52.52], "name": "Start" },
+            { "location": [13.45, 52.51], "name": "Ziel" }
+        ]
+    });
+
+    Mock::given(method("POST"))
+        .and(path("/navigate"))
+        .and(body_partial_json(json!({
+            "profile": "bike",
+            "locale": "de",
+            "type": "mapbox",
+            "custom_model": {
+                "distance_influence": 42.0
+            }
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(navigate_json.clone()))
+        .expect(1)
+        .mount(&graphhopper)
+        .await;
+
+    let Some(server) = setup_with_graphhopper_url(graphhopper.uri()).await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+    let (hname, hval) = with_session(&session);
+
+    let resp = server
+        .post("/api/navigate")
+        .add_header(hname, hval)
+        .json(&json!({
+            "origin": [13.405, 52.52],
+            "destination": [13.45, 52.51],
+            "rating_weight": 1.0,
+            "distance_influence": 42.0
+        }))
+        .await;
+
+    resp.assert_status_ok();
+    let body: Value = resp.json();
+    assert_eq!(body, navigate_json);
+
+    graphhopper.verify().await;
+}
+
 // ---------------------------------------------------------------------------
 // Cross-user isolation
 // ---------------------------------------------------------------------------

@@ -38,6 +38,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/api/ratings", get(ratings::get_overlay))
         .route("/api/ratings/paint", put(ratings::paint))
         .route("/api/route", post(routing::get_route))
+        .route("/api/navigate", post(routing::get_navigation_route))
         .route("/api/geocode", get(geocode::geocode))
         .fallback_service(ServeDir::new(static_dir).append_index_html_on_directories(true))
         .layer(

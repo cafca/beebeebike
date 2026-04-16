@@ -11,10 +11,10 @@ BeeBeeBike is a Berlin bicycle routing web app (Svelte + Rust/Axum + GraphHopper
 ### Constraints
 
 - **Target audience:** Small group of testers (TestFlight-level)
-- **Backend:** Use the existing Rust/Axum API at maps.001.land as-is, with one extension (pass through GraphHopper instructions)
+- **Backend:** Use the existing Rust/Axum API at maps.001.land, with one new endpoint that proxies GraphHopper's navigate API for Ferrostar consumption
 - **No Mapbox:** MapLibre only, due to Mapbox pricing
 - **No painting on mobile:** Users paint rated areas on the web; mobile renders them read-only.
-- **Navigation:** Basic turn-by-turn guidance now, designed for extension to full navigation later
+- **Navigation:** Full turn-by-turn with voice guidance, automatic rerouting, and correct distance-based banner updates — all provided by Ferrostar. We're not scoping down for the sake of a simpler MVP; we're scoping to what Ferrostar delivers out of the box.
 
 ## Architecture
 
@@ -53,7 +53,7 @@ The mobile app is a thin client. All business logic (routing, rating priority, p
 - **`dio`** + **`dio_cookie_manager`** — HTTP client with cookie-based session handling
 - **`geolocator`** + **`flutter_compass`** — GPS tracking and heading (consumed by Ferrostar)
 - **`freezed`** + **`json_serializable`** — Immutable data models with JSON parsing
-- **`flutter_tts`** — Text-to-speech for voice guidance (later)
+- **`flutter_tts`** — Text-to-speech for voice guidance (v1, wired to Ferrostar's spoken instruction events)
 
 ### Project structure
 
@@ -165,8 +165,9 @@ Selecting a result drops a pin on map, bottom sheet slides up with route option.
 ```
 
 - Origin defaults to GPS, editable via search
-- Route auto-computes when both points set
+- Route auto-computes when both points set — uses lightweight `POST /api/route` for preview (GeoJSON line + distance + time)
 - Drag markers to adjust, recompute on drop
+- Tapping **Start** triggers `POST /api/navigate` (heavier response with voice + banner instructions), hands to Ferrostar, transitions to Navigation Screen
 
 ### Navigation Screen
 
@@ -183,14 +184,16 @@ Selecting a result drops a pin on map, bottom sheet slides up with route option.
 │                       [◎]    │  ← Re-center (only when panned away)
 │──────────────────────────────│
 │  12:34 arrival · 10 min     │  ← Bottom bar: ETA + remaining
-│  2.8 km remaining    [×]    │
+│  2.8 km remaining  [🔊] [×] │     Mute toggle + stop button
 └──────────────────────────────┘
 ```
 
-- Green banner: maneuver icon + instruction + distance to next turn
-- Blue chevron for user position with heading
+- Green banner: maneuver icon + instruction + distance to next turn (Ferrostar times these correctly, e.g., "In 200m" appears at 200m, not earlier)
+- Blue chevron for user position with heading (Ferrostar-snapped)
 - Camera: heading-up, ~45 tilt, zoom ~16, follows GPS at 1Hz
 - Re-center FAB appears only when user manually pans
+- **Voice guidance**: Ferrostar emits spoken instruction events (e.g., 500m ahead, 200m ahead, at the maneuver). Wired to `flutter_tts`. Mute toggle in the bottom bar.
+- **Automatic rerouting**: If Ferrostar's deviation handler detects >50m off-route for >10s, it calls our route API with current GPS as the new origin. UI shows a brief "Rerouting..." banner; new route replaces the old one.
 - Arrival: "You have arrived" banner, auto-returns to map screen after 5s
 
 ### Settings Screen
@@ -210,35 +213,49 @@ Invisible. Anonymous session created silently on first launch via `POST /api/aut
 
 ## Backend Changes
 
-One change required: pass through GraphHopper turn instructions in the route response.
+One new endpoint: **`POST /api/navigate`** — proxies GraphHopper's `/navigate/directions` endpoint to produce a response Ferrostar consumes directly via its built-in OSRM adapter.
 
-### Extended `POST /api/route` response
+### Why a separate endpoint
 
-Currently returns `{ geometry, distance, time }`. Extended to include:
+Ferrostar's natively-supported route formats are OSRM and Valhalla. GraphHopper's `/navigate/directions` endpoint returns **Mapbox Directions API v5-compatible JSON**, which is a superset of OSRM with two crucial additions:
+
+- `voice_instructions` — distance-keyed spoken prompts ("In 500m, turn left...")
+- `banner_instructions` — distance-keyed visual instructions for the UI
+
+These are what let Ferrostar emit correctly-timed voice and banner events without the client synthesizing them. Writing a custom adapter for GraphHopper's regular `/route` format would require us to generate these arrays ourselves — more code, worse localization, worse timing.
+
+The existing `POST /api/route` endpoint stays unchanged for the web app.
+
+### `POST /api/navigate` — request
+
+Same shape as `/api/route`:
 
 ```json
 {
-  "geometry": { ... },
-  "distance": 3200,
-  "time": 720000,
-  "instructions": [
-    {
-      "text": "Turn left onto Kastanienallee",
-      "distance": 200,
-      "time": 45000,
-      "interval": [0, 12],
-      "sign": -2,
-      "street_name": "Kastanienallee"
-    }
-  ]
+  "origin": [lng, lat],
+  "destination": [lng, lat],
+  "rating_weight": 0.5,
+  "distance_influence": 70
 }
 ```
 
-GraphHopper `sign` values: -3 sharp left, -2 left, -1 slight left, 0 straight, 1 slight right, 2 right, 3 sharp right, 4 finish, 5 via reached, 6 roundabout.
+### `POST /api/navigate` — behavior
 
-The `interval` field indexes into the route geometry coordinate array — this is how the mobile app maps instructions to positions on the route.
+1. Load user's rated areas intersecting the route corridor (same as `/api/route`)
+2. Build a GraphHopper request targeting the `/navigate/directions` endpoint (not `/route`)
+3. Apply the same Custom Model with rating-weighted priority multipliers
+4. Set `voice_instructions=true`, `banner_instructions=true`, `roundabout_exits=true` in the request
+5. Return GraphHopper's response verbatim — do not re-shape. Ferrostar parses Mapbox Directions format directly.
 
-No other backend changes needed. Auth, ratings, geocoding, and home location endpoints work as-is.
+### Prerequisite: GraphHopper navigate endpoint availability
+
+Self-hosted GraphHopper requires a navigation profile configured in `infra/graphhopper/config.yml`. The `/navigate/directions` endpoint is part of the open-source distribution but may need `profiles_navigation` configuration. This is verified during the first implementation task.
+
+**Fallback if navigate is unavailable:** Write a custom Dart Ferrostar adapter that transforms the regular `/route` response into Ferrostar's `Route` model, synthesizing `spoken_instructions` client-side from the plain text + interval data. This is more work but keeps the option open. Flag this as a decision point early in the plan.
+
+### No other backend changes
+
+Auth, ratings, geocoding, home location, and `POST /api/route` all work as-is.
 
 ## Navigation Engine
 
@@ -253,13 +270,19 @@ Wraps the Ferrostar SDK and exposes its state as a Riverpod stream.
 - Creates and configures a Ferrostar `NavigationController` when the user taps "Start"
 - Feeds GPS updates from `geolocator` into Ferrostar
 - Maps Ferrostar's `TripState` to our `NavigationState` model for the UI
+- Subscribes to Ferrostar's spoken instruction events and forwards them to `flutter_tts`
+- Subscribes to Ferrostar's route deviation handler and triggers rerouting when threshold exceeded
 - Destroys controller on exit
 
 ### GraphHopper Route Provider
 
-Ferrostar accepts a `RouteProvider` interface that converts a routing request into a `Route` object. We implement one that calls our existing `POST /api/route` endpoint, parses the GraphHopper instruction format (already Ferrostar-compatible), and returns the route to Ferrostar.
+Ferrostar's built-in OSRM `RouteAdapter` consumes Mapbox Directions v5-compatible JSON directly. Our route provider:
 
-This means our backend doesn't need to switch to OSRM or Valhalla formats — GraphHopper's native JSON works directly. The backend change described above (passing through instructions) is exactly what Ferrostar needs.
+- Calls `POST /api/navigate` on our backend
+- Passes the raw JSON response to Ferrostar's OSRM adapter, which produces a Ferrostar `Route` object complete with voice and banner instructions
+- Also used by the rerouting handler — same endpoint, new origin = current GPS
+
+No custom parsing needed in the happy path. If the fallback path is required (GraphHopper navigate unavailable), we swap in a custom adapter that reads `/api/route` responses and synthesizes spoken/banner instruction arrays from plain text + `interval` data.
 
 ### Camera Controller
 
@@ -314,13 +337,12 @@ class NavigationState {
                          └────────────┘
 ```
 
-### Extensibility seams (not built now)
+### Extensibility seams (post-v1)
 
-- **Voice guidance:** Ferrostar emits spoken instruction events; wire them to `flutter_tts` at `approaching` and `now` proximity thresholds
-- **Rerouting:** Ferrostar supports automatic rerouting via its `RouteDeviationHandler` — when off-route >10s, call our route API with current GPS as origin and feed the new route back
-- **Background navigation:** Ferrostar's core runs independently of the UI layer — wrap GPS stream in a foreground service (Android) / background location task (iOS) when ready
-- **Off-route threshold:** Ferrostar parameter, configurable per trip
+- **Background navigation:** Ferrostar's core runs independently of the UI layer, but platform-specific work is needed — foreground service (Android) / background location + audio session (iOS) to keep voice and rerouting working when the screen is off or the app is backgrounded.
+- **Lane guidance:** Ferrostar supports lane objects on banner instructions. Requires GraphHopper to include lane info in its navigate response, which depends on OSM data richness for the road. Evaluate once we have real rides.
 - **Painting rated areas on mobile:** Add back the brush tool from the web app as a mobile mode. Requires: touch gesture handler for stroke capture, local polygon buffering, `PUT /api/ratings/paint` integration, undo/redo stack, and color palette UI. The overlay rendering is already in place for v1 (read-only), so this is incremental work on top.
+- **CarPlay / Android Auto:** Ferrostar has a roadmap for these; not a near-term priority for bicycle use anyway.
 
 ## Map & Tiles
 
@@ -370,12 +392,21 @@ class ApiClient {
   Future<void> logout();
   Future<User> getMe();
 
-  // Routing
+  // Routing — preview (GeoJSON line for route preview screen)
   Future<RouteResponse> computeRoute(
     LatLng origin,
     LatLng destination, {
     double? ratingWeight,        // 0.0-1.0, default 1.0
-    double? distanceInfluence,   // 0-100, default 70 (GraphHopper distance_influence)
+    double? distanceInfluence,   // 0-100, default 70
+  });
+
+  // Routing — navigation (Mapbox Directions-compatible JSON for Ferrostar)
+  // Returns raw JSON; passed verbatim to Ferrostar's OSRM adapter.
+  Future<Map<String, dynamic>> computeNavigationRoute(
+    LatLng origin,
+    LatLng destination, {
+    double? ratingWeight,
+    double? distanceInfluence,
   });
 
   // Geocoding
@@ -400,10 +431,11 @@ API errors surface as typed exceptions (`AuthError`, `NetworkError`, `ServerErro
 All of these have extensibility seams noted in the relevant sections — they are deferred, not architecturally precluded.
 
 - Brush/paint tool on mobile (use web for v1; see Extensibility seams)
-- Voice guidance / TTS
-- Automatic rerouting on off-route (Ferrostar supports it, we just don't wire it up)
+- Lane guidance (depends on OSM/GraphHopper data quality; evaluate post-v1)
+- Background navigation (platform-specific work — foreground service / background location)
 - Offline routing or tile download UI
 - App Store submission / public release
 - Rating weight preference slider (use web default of 1.0)
 - Distance influence preference slider (use backend default of 70)
 - Recent search persistence on server (local only)
+- CarPlay / Android Auto

@@ -6,14 +6,14 @@
 
 ## Context
 
-Ortschaft is a Berlin bicycle routing web app (Svelte + Rust/Axum + GraphHopper + PostGIS). Users "paint" rated areas onto a map to influence bicycle route computation. This spec covers a mobile app (iOS first, Android later) that replicates routing and overlay features, adds turn-by-turn navigation, and defers the brush/paint tool to the web.
+BeeBeeBike is a Berlin bicycle routing web app (Svelte + Rust/Axum + GraphHopper + PostGIS). Users "paint" rated areas onto a map to influence bicycle route computation. This spec covers a mobile app (iOS first, Android later) that replicates routing and overlay features, adds turn-by-turn navigation, and defers the brush/paint tool to the web.
 
 ### Constraints
 
 - **Target audience:** Small group of testers (TestFlight-level)
-- **Backend:** Use the existing Rust/Axum API at maps.001.land as-is, with one small extension (pass through GraphHopper instructions)
+- **Backend:** Use the existing Rust/Axum API at maps.001.land as-is, with one extension (pass through GraphHopper instructions)
 - **No Mapbox:** MapLibre only, due to Mapbox pricing
-- **No painting on mobile:** Users paint rated areas on the web; mobile renders them read-only
+- **No painting on mobile:** Users paint rated areas on the web; mobile renders them read-only.
 - **Navigation:** Basic turn-by-turn guidance now, designed for extension to full navigation later
 
 ## Architecture
@@ -48,9 +48,10 @@ The mobile app is a thin client. All business logic (routing, rating priority, p
 ### Key packages
 
 - **`maplibre_gl`** — Map rendering, camera, markers, GeoJSON layers
+- **`ferrostar`** — Turn-by-turn navigation engine (Rust core with Dart bindings). Handles route matching, instruction tracking, ETA, off-route detection. Supports GraphHopper as a routing backend.
 - **`riverpod`** — State management
 - **`dio`** + **`dio_cookie_manager`** — HTTP client with cookie-based session handling
-- **`geolocator`** + **`flutter_compass`** — GPS tracking and heading
+- **`geolocator`** + **`flutter_compass`** — GPS tracking and heading (consumed by Ferrostar)
 - **`freezed`** + **`json_serializable`** — Immutable data models with JSON parsing
 - **`flutter_tts`** — Text-to-speech for voice guidance (later)
 
@@ -89,16 +90,16 @@ mobile/
 │   │   ├── turn_banner.dart
 │   │   └── rating_overlay.dart
 │   └── navigation/
-│       ├── route_matcher.dart
-│       ├── instruction_tracker.dart
-│       └── camera_controller.dart
+│       ├── ferrostar_adapter.dart   # Wraps Ferrostar, exposes Riverpod stream
+│       ├── graphhopper_provider.dart # Ferrostar RouteProvider using our backend
+│       └── camera_controller.dart    # Follow-mode camera on top of Ferrostar state
 ├── test/
 ├── ios/
 ├── android/
 └── pubspec.yaml
 ```
 
-## Screens & User Flow (Google Maps-style)
+## Screens & User Flow
 
 ### Map Screen (default)
 
@@ -241,34 +242,51 @@ No other backend changes needed. Auth, ratings, geocoding, and home location end
 
 ## Navigation Engine
 
-Self-contained module with three components. Designed for extensibility — basic guidance now, full navigation later.
+We use [**Ferrostar**](https://github.com/stadiamaps/ferrostar) (Stadia Maps) as the navigation engine rather than building one from scratch. Ferrostar is a Rust-core navigation SDK with Dart/Flutter bindings via UniFFI, map-agnostic (pairs with `maplibre_gl`), and supports GraphHopper as a routing backend natively. It handles route matching, instruction tracking, ETA, and off-route detection — the geometrically tricky parts that would take weeks to build from scratch.
 
-### Route Matcher
+Our navigation module is a thin adapter layer:
 
-Snaps GPS position to nearest point on route geometry.
+### Ferrostar Adapter
 
-- Projects GPS coordinate onto each route segment, finds closest point
-- Reports: snapped position, distance along route, current segment index
-- Detects off-route when snapped distance exceeds 50m threshold
-- Off-route shows visual indicator for now; rerouting hooks in later
+Wraps the Ferrostar SDK and exposes its state as a Riverpod stream.
 
-### Instruction Tracker
+- Creates and configures a Ferrostar `NavigationController` when the user taps "Start"
+- Feeds GPS updates from `geolocator` into Ferrostar
+- Maps Ferrostar's `TripState` to our `NavigationState` model for the UI
+- Destroys controller on exit
 
-Determines active instruction based on position along route.
+### GraphHopper Route Provider
 
-- Uses `interval` field from GraphHopper to map position to current instruction
-- Tracks distance remaining to next maneuver
-- Emits proximity states: `upcoming` (>200m), `approaching` (<=200m), `now` (<=30m), `passed`
-- Voice guidance hooks into proximity state changes (later)
+Ferrostar accepts a `RouteProvider` interface that converts a routing request into a `Route` object. We implement one that calls our existing `POST /api/route` endpoint, parses the GraphHopper instruction format (already Ferrostar-compatible), and returns the route to Ferrostar.
+
+This means our backend doesn't need to switch to OSRM or Valhalla formats — GraphHopper's native JSON works directly. The backend change described above (passing through instructions) is exactly what Ferrostar needs.
 
 ### Camera Controller
 
-Manages map camera in follow mode.
+Manages map camera in follow mode, reading from Ferrostar state.
 
-- Smoothly interpolates between GPS updates
-- Heading from GPS bearing (moving) or compass (stopped)
-- Tilt and zoom adjust based on speed
-- Follow mode breaks on user pan; re-center FAB restores it
+- Subscribes to the snapped user location from Ferrostar
+- Smoothly interpolates camera between updates
+- Heading from Ferrostar's `course` field (GPS bearing, falls back to compass when stationary)
+- Tilt ~45°, zoom ~16 in follow mode
+- Follow mode breaks on user pan gesture; re-center FAB restores it
+
+### Navigation state (mapped from Ferrostar's TripState)
+
+```dart
+class NavigationState {
+  final NavigationStatus status;       // idle, navigating, arrived
+  final bool onRoute;                  // from Ferrostar deviation detection
+  final SnappedPosition? position;     // Ferrostar snapped location
+  final Instruction? current;          // Ferrostar current maneuver
+  final Instruction? next;             // Ferrostar upcoming maneuver
+  final InstructionProximity proximity; // derived: upcoming, approaching, now, passed
+  final double remainingDistance;
+  final Duration remainingTime;
+  final DateTime? estimatedArrival;
+  final bool followMode;
+}
+```
 
 ### State machine
 
@@ -296,29 +314,13 @@ Manages map camera in follow mode.
                          └────────────┘
 ```
 
-### Navigation state
-
-```dart
-class NavigationState {
-  final NavigationStatus status;       // idle, navigating, arrived
-  final bool onRoute;
-  final SnappedPosition? position;
-  final Instruction? current;
-  final Instruction? next;
-  final InstructionProximity proximity; // upcoming, approaching, now, passed
-  final double remainingDistance;
-  final Duration remainingTime;
-  final DateTime? estimatedArrival;
-  final bool followMode;
-}
-```
-
 ### Extensibility seams (not built now)
 
-- **Voice guidance:** subscribe to proximity changes, trigger TTS at `approaching` and `now`
-- **Rerouting:** subscribe to onRoute, when false >10s call route API with current GPS as origin
-- **Background navigation:** engine runs on GPS stream, decoupled from UI
-- **Off-route threshold:** configurable parameter, not hardcoded
+- **Voice guidance:** Ferrostar emits spoken instruction events; wire them to `flutter_tts` at `approaching` and `now` proximity thresholds
+- **Rerouting:** Ferrostar supports automatic rerouting via its `RouteDeviationHandler` — when off-route >10s, call our route API with current GPS as origin and feed the new route back
+- **Background navigation:** Ferrostar's core runs independently of the UI layer — wrap GPS stream in a foreground service (Android) / background location task (iOS) when ready
+- **Off-route threshold:** Ferrostar parameter, configurable per trip
+- **Painting rated areas on mobile:** Add back the brush tool from the web app as a mobile mode. Requires: touch gesture handler for stroke capture, local polygon buffering, `PUT /api/ratings/paint` integration, undo/redo stack, and color palette UI. The overlay rendering is already in place for v1 (read-only), so this is incremental work on top.
 
 ## Map & Tiles
 
@@ -390,9 +392,11 @@ API errors surface as typed exceptions (`AuthError`, `NetworkError`, `ServerErro
 
 ## Out of scope (v1)
 
-- Brush/paint tool (use web)
+All of these have extensibility seams noted in the relevant sections — they are deferred, not architecturally precluded.
+
+- Brush/paint tool on mobile (use web for v1; see Extensibility seams)
 - Voice guidance / TTS
-- Automatic rerouting on off-route
+- Automatic rerouting on off-route (Ferrostar supports it, we just don't wire it up)
 - Offline routing or tile download UI
 - App Store submission / public release
 - Rating weight preference slider (use web default of 1.0)

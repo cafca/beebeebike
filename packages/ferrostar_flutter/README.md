@@ -21,6 +21,14 @@ See `example/lib/main.dart`.
 - Flutter 3.41+, Dart 3.11+
 - iOS uses Flutter's Swift Package Manager plugin integration; CocoaPods is intentionally unsupported.
 
+## Development
+
+After changing any `freezed` or `json_serializable` annotated file:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
 ## License
 
 BSD-3-Clause (matches upstream Ferrostar).

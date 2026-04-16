@@ -272,6 +272,27 @@ pub async fn get_route(
     }))
 }
 
+/// POST /api/navigate
+///
+/// Accepts the same request shape as `POST /api/route`, loads the user's
+/// rated areas, builds a GraphHopper Custom Model request, and forwards it to
+/// GraphHopper's navigation endpoint. The upstream response (Mapbox
+/// Directions-compatible JSON with voice and banner instructions) is returned
+/// verbatim so the Flutter `ferrostar_flutter` plugin can consume it
+/// directly.
+pub async fn get_navigation_route(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<RouteRequest>,
+) -> Result<Json<Value>, AppError> {
+    let user_id = require_auth(&state.db, &headers).await?;
+    let rows = load_rated_areas(&state, user_id, body.origin, body.destination).await?;
+    let gh_request = build_graphhopper_request(&state, &body, &rows, GraphhopperMode::Navigate)?;
+    let gh_json = post_graphhopper(&state, GraphhopperMode::Navigate, gh_request).await?;
+
+    Ok(Json(gh_json))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -232,7 +232,7 @@
     color: #2563eb;
   }
   input {
-    border: none; outline: none; font-size: 14px; padding: 6px 0;
+    border: none; outline: none; font-size: 16px; padding: 6px 0;
     width: calc(100% - 68px);
   }
   .waypoint {

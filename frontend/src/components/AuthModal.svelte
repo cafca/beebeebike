@@ -80,7 +80,7 @@
   h2 { margin-bottom: 16px; }
   form { display: flex; flex-direction: column; gap: 12px; }
   input {
-    padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
+    padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px;
   }
   button[type="submit"] {
     padding: 10px; background: #2563eb; color: white; border: none;

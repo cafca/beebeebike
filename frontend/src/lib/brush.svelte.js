@@ -27,8 +27,13 @@ export const brush = $state({
 const undoStack = [];
 const redoStack = [];
 let painting = false;
+let activePointerId = null;
+let lastTouchEndTime = 0;
 let points = [];
 let lastPointerPixel = null;
+let lastAddedPixel = null;
+let previewRafId = null;
+const MIN_MOVE_PX = 4; // suppress sub-pixel jitter; squared below
 let currentMap = null;
 let initialized = false;
 let currentCanvas = null;
@@ -110,9 +115,11 @@ export function initBrush(map) {
   currentCanvas.removeEventListener('pointerdown', onPointerDown, listenerOptions);
   currentCanvas.removeEventListener('pointermove', onPointerMove, listenerOptions);
   currentCanvas.removeEventListener('pointerleave', onPointerLeave, listenerOptions);
+  currentCanvas.removeEventListener('pointercancel', onPointerCancel, listenerOptions);
   currentCanvas.addEventListener('pointerdown', onPointerDown, listenerOptions);
   currentCanvas.addEventListener('pointermove', onPointerMove, listenerOptions);
   currentCanvas.addEventListener('pointerleave', onPointerLeave, listenerOptions);
+  currentCanvas.addEventListener('pointercancel', onPointerCancel, listenerOptions);
   document.removeEventListener('pointerup', onPointerUp, listenerOptions);
   document.addEventListener('pointerup', onPointerUp, listenerOptions);
   document.addEventListener('keydown', onKeyDown);
@@ -131,6 +138,7 @@ export function destroyBrush() {
     currentCanvas.removeEventListener('pointerdown', onPointerDown, listenerOptions);
     currentCanvas.removeEventListener('pointermove', onPointerMove, listenerOptions);
     currentCanvas.removeEventListener('pointerleave', onPointerLeave, listenerOptions);
+    currentCanvas.removeEventListener('pointercancel', onPointerCancel, listenerOptions);
   }
   document.removeEventListener('pointerup', onPointerUp, listenerOptions);
   document.removeEventListener('keydown', onKeyDown);
@@ -138,9 +146,15 @@ export function destroyBrush() {
   if (brush.paintMode && currentMap) {
     currentMap.dragPan.enable();
   }
+  if (previewRafId !== null) {
+    cancelAnimationFrame(previewRafId);
+    previewRafId = null;
+  }
   brush.paintMode = false;
   painting = false;
+  activePointerId = null;
   points = [];
+  lastAddedPixel = null;
   modifierDown = false;
   lastCursorLngLat = null;
   clearBrushCursor();
@@ -153,14 +167,31 @@ export function destroyBrush() {
 function onPointerDown(e) {
   if (!isPaintModifier(e)) return;
   if (e.button !== 0) return;
+
+  // A second pointer while already painting means a pinch gesture has started — cancel
+  // the current stroke and let MapLibre handle zoom/rotate.
+  if (painting) {
+    cancelPaint();
+    return;
+  }
+
+  // The second tap of a double-tap-and-drag touch-zoom fires as a lone pointerdown;
+  // ignore it so only deliberate single-finger drags paint.
+  if (e.pointerType === 'touch' && Date.now() - lastTouchEndTime < 300) {
+    return;
+  }
+
   e.preventDefault();
   e.stopPropagation();
   e.stopImmediatePropagation?.();
 
+  activePointerId = e.pointerId;
   painting = true;
   lastCursorLngLat = currentMap.unproject([e.offsetX, e.offsetY]);
   lastPointerPixel = [e.offsetX, e.offsetY];
+  lastAddedPixel = [e.offsetX, e.offsetY];
   points = [lastCursorLngLat];
+  currentCanvas.setPointerCapture(e.pointerId);
   if (!brush.paintMode) {
     dragPanWasEnabled = currentMap.dragPan.isEnabled();
     if (dragPanWasEnabled) currentMap.dragPan.disable();
@@ -170,6 +201,9 @@ function onPointerDown(e) {
 }
 
 function onPointerMove(e) {
+  // Ignore move events from fingers that are not the active painting pointer
+  if (painting && e.pointerId !== activePointerId) return;
+
   lastCursorLngLat = currentMap.unproject([e.offsetX, e.offsetY]);
 
   if (!painting) {
@@ -198,9 +232,17 @@ function onPointerMove(e) {
   e.preventDefault();
   e.stopPropagation();
   e.stopImmediatePropagation?.();
-  points.push(lastCursorLngLat);
+
+  // Only add a point when the pointer has moved a meaningful distance to avoid
+  // bloating the points array with jitter (each point feeds Turf buffer()).
+  const dx = e.offsetX - lastAddedPixel[0];
+  const dy = e.offsetY - lastAddedPixel[1];
+  if (dx * dx + dy * dy >= MIN_MOVE_PX * MIN_MOVE_PX) {
+    lastAddedPixel = [e.offsetX, e.offsetY];
+    points.push(lastCursorLngLat);
+    schedulePreview();
+  }
   updateBrushCursor(lastCursorLngLat);
-  updatePreview();
 }
 
 function onPointerLeave() {
@@ -214,6 +256,15 @@ function onPointerLeave() {
 
 function onPointerUp(e) {
   if (!painting) return;
+  if (e.pointerId !== activePointerId) return;
+
+  if (e.pointerType === 'touch') lastTouchEndTime = Date.now();
+  activePointerId = null;
+  if (previewRafId !== null) {
+    cancelAnimationFrame(previewRafId);
+    previewRafId = null;
+  }
+
   e?.preventDefault();
   e?.stopPropagation();
   e?.stopImmediatePropagation?.();
@@ -252,6 +303,27 @@ function onPointerUp(e) {
   submitPaint(polygon, brush.value);
 }
 
+function cancelPaint() {
+  if (previewRafId !== null) {
+    cancelAnimationFrame(previewRafId);
+    previewRafId = null;
+  }
+  painting = false;
+  activePointerId = null;
+  points = [];
+  lastPointerPixel = null;
+  lastAddedPixel = null;
+  clearPreview();
+  restoreDragPan();
+  syncCursor();
+}
+
+function onPointerCancel(e) {
+  if (painting && e.pointerId === activePointerId) {
+    cancelPaint();
+  }
+}
+
 function buildPolygon() {
   const coords = points.map(p => [p.lng, p.lat]);
   if (coords.length < 2) return null;
@@ -264,6 +336,14 @@ function buildPolygon() {
 
   const buffered = buffer(line, Math.max(radiusKm, 0.005), { units: 'kilometers' });
   return buffered?.geometry || null;
+}
+
+function schedulePreview() {
+  if (previewRafId !== null) return;
+  previewRafId = requestAnimationFrame(() => {
+    previewRafId = null;
+    if (painting) updatePreview();
+  });
 }
 
 function updatePreview() {

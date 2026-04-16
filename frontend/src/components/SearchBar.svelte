@@ -56,6 +56,8 @@
     if (key === 'highway' && val === 'bus_stop') return 'bus';
     if (key === 'aeroway') return 'airport';
     if (key === 'place' || key === 'boundary') return 'place';
+    if (key === 'amenity' && (val === 'restaurant' || val === 'fast_food')) return 'restaurant';
+    if (key === 'amenity' && (val === 'cafe' || val === 'coffee_shop')) return 'cafe';
     return 'poi';
   }
 
@@ -231,6 +233,20 @@
               <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M8 2a4 4 0 0 1 4 4c0 3-4 8-4 8S4 9 4 6a4 4 0 0 1 4-4z"/>
                 <circle cx="8" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+              </svg>
+            {:else if result.iconType === 'restaurant'}
+              <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="5" y1="1" x2="5" y2="6"/>
+                <path d="M3 1 v4 a2 2 0 0 0 4 0 V1"/>
+                <line x1="5" y1="8" x2="5" y2="15"/>
+                <line x1="11" y1="1" x2="11" y2="15"/>
+                <path d="M9 1 v5 a2 2 0 0 0 4 0 V1"/>
+              </svg>
+            {:else if result.iconType === 'cafe'}
+              <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 5 h8 l-1 7 H4 Z"/>
+                <path d="M11 6 h1.5 a1.5 1.5 0 0 1 0 3 H11"/>
+                <line x1="2" y1="14" x2="12" y2="14"/>
               </svg>
             {:else if result.iconType === 'poi'}
               <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

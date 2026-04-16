@@ -14,51 +14,101 @@ BeeBeeBike is a Berlin bicycle routing web app (Svelte + Rust/Axum + GraphHopper
 - **Backend:** Use the existing Rust/Axum API at maps.001.land, with one new endpoint that proxies GraphHopper's navigate API for Ferrostar consumption
 - **No Mapbox:** MapLibre only, due to Mapbox pricing
 - **No painting on mobile:** Users paint rated areas on the web; mobile renders them read-only.
-- **Navigation:** Full turn-by-turn with voice guidance, automatic rerouting, and correct distance-based banner updates — all provided by Ferrostar. We're not scoping down for the sake of a simpler MVP; we're scoping to what Ferrostar delivers out of the box.
+- **Navigation:** Full turn-by-turn with voice guidance, automatic rerouting, and correct distance-based banner updates — all provided by Ferrostar via a minimal Flutter plugin we build ourselves.
+- **Ferrostar Flutter plugin is a separate deliverable.** Ferrostar has no Dart bindings as of 2026 (upstream issue open since 2023). We build a minimal `ferrostar_flutter` plugin as an independent artifact (separate package directory, independently testable and publishable) that wraps Ferrostar's production-ready iOS Swift SDK and Android Kotlin SDK via method channels. Upstream contribution to the Ferrostar project is a non-goal for v1 but the plugin is structured to make it possible later.
 
 ## Architecture
 
 The mobile app is a thin client. All business logic (routing, rating priority, polygon clipping, auth) stays in the existing Rust backend.
 
 ```
-┌─────────────────────────────────┐
-│         Flutter App             │
-│                                 │
-│  ┌───────────┐  ┌────────────┐  │
-│  │ MapLibre  │  │ Navigation │  │
-│  │ GL Native │  │ Controller │  │
-│  └─────┬─────┘  └─────┬──────┘  │
-│        │              │         │
-│  ┌─────┴──────────────┴──────┐  │
-│  │      State (Riverpod)     │  │
-│  └─────────────┬─────────────┘  │
-│                │                │
-│  ┌─────────────┴─────────────┐  │
-│  │     API Client (Dio)      │  │
-│  └─────────────┬─────────────┘  │
-│                │                │
-└────────────────┼────────────────┘
-                 │ HTTPS
-        ┌────────┴────────┐
-        │  maps.001.land  │
-        │  (Rust/Axum)    │
-        └─────────────────┘
+┌──────────────────────────────────────────────┐
+│                Flutter App                   │
+│                                              │
+│   ┌───────────┐    ┌────────────────────┐   │
+│   │ MapLibre  │    │ Riverpod providers │   │
+│   └─────┬─────┘    └─────────┬──────────┘   │
+│         │                    │               │
+│         │          ┌─────────┴──────────┐   │
+│         │          │ ferrostar_flutter  │   │  ← Our plugin
+│         │          │   (Dart facade)    │   │    (separate artifact)
+│         │          └─────────┬──────────┘   │
+│         │                    │               │
+│  ┌──────┴────────────────────┴──────────┐   │
+│  │   Platform channels (method + event) │   │
+│  └──────┬────────────────────┬──────────┘   │
+└─────────┼────────────────────┼──────────────┘
+          │                    │
+    ┌─────▼─────┐        ┌─────▼──────┐
+    │ MapLibre  │        │ Ferrostar  │
+    │  Native   │        │ Swift/     │
+    │ (iOS/And) │        │ Kotlin SDK │
+    └───────────┘        └────────────┘
+
+                 Dart API Client (Dio)
+                          │ HTTPS
+                 ┌────────┴────────┐
+                 │  maps.001.land  │
+                 │  (Rust/Axum)    │
+                 └─────────────────┘
 ```
+
+**Two deliverables:**
+
+1. **`packages/ferrostar_flutter/`** — Standalone Flutter plugin. Wraps Ferrostar's native SDKs (Swift iOS, Kotlin Android) via method + event channels. Exposes a minimal Dart API covering only what our app needs in v1. Has its own tests and example app. Structured so it could eventually be published to pub.dev or upstreamed to the Ferrostar project.
+2. **`mobile/`** — The Ortschaft mobile app. Consumes `ferrostar_flutter` via a path dependency. Focuses purely on app UX (map, routing, navigation UI).
 
 ### Key packages
 
+**App (`mobile/`):**
 - **`maplibre_gl`** — Map rendering, camera, markers, GeoJSON layers
-- **`ferrostar`** — Turn-by-turn navigation engine (Rust core with Dart bindings). Handles route matching, instruction tracking, ETA, off-route detection. Supports GraphHopper as a routing backend.
+- **`ferrostar_flutter`** — Our own plugin (path dependency), wraps Ferrostar's native SDKs
 - **`riverpod`** — State management
 - **`dio`** + **`dio_cookie_manager`** — HTTP client with cookie-based session handling
-- **`geolocator`** + **`flutter_compass`** — GPS tracking and heading (consumed by Ferrostar)
+- **`geolocator`** + **`flutter_compass`** — GPS tracking and heading (fed into `ferrostar_flutter`)
 - **`freezed`** + **`json_serializable`** — Immutable data models with JSON parsing
-- **`flutter_tts`** — Text-to-speech for voice guidance (v1, wired to Ferrostar's spoken instruction events)
+- **`flutter_tts`** — Text-to-speech for voice guidance (wired to `ferrostar_flutter` spoken instruction stream)
+
+**Plugin (`packages/ferrostar_flutter/`):**
+- **iOS**: Ferrostar Swift SDK via Swift Package Manager (`FerrostarCore` ≥ 0.49.0)
+- **Android**: Ferrostar Kotlin SDK via Maven Central (`com.stadiamaps.ferrostar:core` ≥ 0.49.0)
+- **Dart**: `plugin_platform_interface`, `json_annotation`, `freezed_annotation`
 
 ### Project structure
 
+Two top-level directories added to the repository, each with its own Flutter tooling:
+
 ```
-mobile/
+packages/
+└── ferrostar_flutter/              # Standalone plugin
+    ├── lib/
+    │   ├── ferrostar_flutter.dart  # Public API (Facade)
+    │   ├── src/
+    │   │   ├── controller.dart     # FerrostarController (Dart side of native controller)
+    │   │   ├── models.dart         # Data models (Route, TripState, UserLocation, ...)
+    │   │   ├── observer.dart       # NavigationObserver interface
+    │   │   └── platform_interface.dart
+    │   └── src/method_channel/
+    │       └── method_channel_ferrostar.dart
+    ├── ios/
+    │   ├── ferrostar_flutter.podspec
+    │   └── Classes/
+    │       ├── FerrostarPlugin.swift         # Plugin entry
+    │       ├── ControllerBridge.swift        # Wraps FerrostarCore.NavigationController
+    │       ├── Serialization.swift           # Swift <-> JSON
+    │       └── ObserverBridge.swift          # Native -> Dart callbacks
+    ├── android/
+    │   ├── build.gradle
+    │   └── src/main/kotlin/land/_001/ferrostar_flutter/
+    │       ├── FerrostarPlugin.kt
+    │       ├── ControllerBridge.kt
+    │       ├── Serialization.kt
+    │       └── ObserverBridge.kt
+    ├── example/                    # Example app the plugin ships with
+    ├── test/                       # Dart unit tests (mocked channels)
+    └── pubspec.yaml
+
+mobile/                             # Ortschaft iOS/Android app
 ├── lib/
 │   ├── main.dart
 │   ├── app.dart
@@ -90,9 +140,8 @@ mobile/
 │   │   ├── turn_banner.dart
 │   │   └── rating_overlay.dart
 │   └── navigation/
-│       ├── ferrostar_adapter.dart   # Wraps Ferrostar, exposes Riverpod stream
-│       ├── graphhopper_provider.dart # Ferrostar RouteProvider using our backend
-│       └── camera_controller.dart    # Follow-mode camera on top of Ferrostar state
+│       ├── navigation_service.dart  # Uses ferrostar_flutter; exposes Riverpod stream
+│       └── camera_controller.dart   # Follow-mode map camera
 ├── test/
 ├── ios/
 ├── android/
@@ -259,59 +308,100 @@ Auth, ratings, geocoding, home location, and `POST /api/route` all work as-is.
 
 ## Navigation Engine
 
-We use [**Ferrostar**](https://github.com/stadiamaps/ferrostar) (Stadia Maps) as the navigation engine rather than building one from scratch. Ferrostar is a Rust-core navigation SDK with Dart/Flutter bindings via UniFFI, map-agnostic (pairs with `maplibre_gl`), and supports GraphHopper as a routing backend natively. It handles route matching, instruction tracking, ETA, and off-route detection — the geometrically tricky parts that would take weeks to build from scratch.
+We use [**Ferrostar**](https://github.com/stadiamaps/ferrostar) (Stadia Maps) as the navigation engine. Ferrostar is a Rust-core SDK with production-ready Swift (iOS) and Kotlin (Android) bindings via UniFFI. It handles route matching, instruction tracking, ETA, and off-route detection.
 
-Our navigation module is a thin adapter layer:
+Ferrostar has no Dart bindings, so we build a minimal Flutter plugin (`packages/ferrostar_flutter/`) that wraps the native SDKs.
 
-### Ferrostar Adapter
+### Plugin scope (`ferrostar_flutter` v0.1)
 
-Wraps the Ferrostar SDK and exposes its state as a Riverpod stream.
+The plugin exposes the subset of Ferrostar needed for v1. Anything not listed is explicitly out of scope for the plugin.
 
-- Creates and configures a Ferrostar `NavigationController` when the user taps "Start"
-- Feeds GPS updates from `geolocator` into Ferrostar
-- Maps Ferrostar's `TripState` to our `NavigationState` model for the UI
-- Subscribes to Ferrostar's spoken instruction events and forwards them to `flutter_tts`
-- Subscribes to Ferrostar's route deviation handler and triggers rerouting when threshold exceeded
-- Destroys controller on exit
+**In scope:**
+- Construct a Ferrostar `NavigationController` from an OSRM-format JSON route (one method: `createFromOsrmJson`)
+- Feed GPS location updates (one method: `updateLocation`)
+- Expose state as a Dart `Stream<NavigationState>` where `NavigationState` contains the UI-relevant derived data (current step visual + spoken instructions, trip progress, route deviation, ETA). The full `Route` and `TripState` are kept as opaque native handles; we only ship the fields the UI renders.
+- Emit spoken instruction events as they fire (a Dart `Stream<SpokenInstruction>`)
+- Emit route deviation events (a Dart `Stream<RouteDeviation>`)
+- Replace the active route (for rerouting) without tearing down the controller
+- Dispose method
 
-### GraphHopper Route Provider
+**Out of scope for plugin v0.1:**
+- Recording/replay (`NavigationRecorder`)
+- `NavigationCache`
+- Custom `RouteRequestGenerator` / `RouteResponseParser` — we use Ferrostar's built-in OSRM parser with JSON we pass in
+- Simulated location provider (not needed — we drive updates from Dart)
+- Background navigation (platform service work)
+- Alternative route processing
 
-Ferrostar's built-in OSRM `RouteAdapter` consumes Mapbox Directions v5-compatible JSON directly. Our route provider:
-
-- Calls `POST /api/navigate` on our backend
-- Passes the raw JSON response to Ferrostar's OSRM adapter, which produces a Ferrostar `Route` object complete with voice and banner instructions
-- Also used by the rerouting handler — same endpoint, new origin = current GPS
-
-No custom parsing needed in the happy path. If the fallback path is required (GraphHopper navigate unavailable), we swap in a custom adapter that reads `/api/route` responses and synthesizes spoken/banner instruction arrays from plain text + `interval` data.
-
-### Camera Controller
-
-Manages map camera in follow mode, reading from Ferrostar state.
-
-- Subscribes to the snapped user location from Ferrostar
-- Smoothly interpolates camera between updates
-- Heading from Ferrostar's `course` field (GPS bearing, falls back to compass when stationary)
-- Tilt ~45°, zoom ~16 in follow mode
-- Follow mode breaks on user pan gesture; re-center FAB restores it
-
-### Navigation state (mapped from Ferrostar's TripState)
+### Plugin Dart API shape
 
 ```dart
+class FerrostarFlutter {
+  /// Creates a controller from Mapbox Directions / OSRM-compatible JSON.
+  /// Returns a handle used for subsequent calls.
+  Future<FerrostarController> createController({
+    required Map<String, dynamic> osrmJson,
+    required List<WaypointInput> waypoints,
+    NavigationConfig config,
+  });
+}
+
+class FerrostarController {
+  /// Derived state stream — the main subscription for UI.
+  Stream<NavigationState> get stateStream;
+
+  /// Spoken instruction events — subscribe to drive TTS.
+  Stream<SpokenInstruction> get spokenInstructionStream;
+
+  /// Route deviation events — subscribe to drive rerouting.
+  Stream<RouteDeviation> get deviationStream;
+
+  /// Push a new GPS location. State update arrives via stateStream.
+  Future<void> updateLocation(UserLocation location);
+
+  /// Replace the active route (for rerouting) without recreating the controller.
+  Future<void> replaceRoute({required Map<String, dynamic> osrmJson});
+
+  /// Destroy native resources.
+  Future<void> dispose();
+}
+
 class NavigationState {
-  final NavigationStatus status;       // idle, navigating, arrived
-  final bool onRoute;                  // from Ferrostar deviation detection
-  final SnappedPosition? position;     // Ferrostar snapped location
-  final Instruction? current;          // Ferrostar current maneuver
-  final Instruction? next;             // Ferrostar upcoming maneuver
-  final InstructionProximity proximity; // derived: upcoming, approaching, now, passed
-  final double remainingDistance;
-  final Duration remainingTime;
-  final DateTime? estimatedArrival;
-  final bool followMode;
+  final TripStatus status;                 // idle, navigating, complete
+  final UserLocation? snappedLocation;
+  final TripProgress? progress;            // distance/duration remaining + ETA
+  final VisualInstruction? currentVisual;  // For banner UI
+  final StepRef? currentStep;              // index + road name
+  final bool isOffRoute;
 }
 ```
 
-### State machine
+### How the app uses it (`mobile/lib/navigation/navigation_service.dart`)
+
+Thin orchestration layer:
+
+- Calls `POST /api/navigate` on our backend → receives OSRM JSON
+- Calls `FerrostarFlutter.createController(osrmJson: …)` → gets a controller
+- Feeds `geolocator` GPS updates into `controller.updateLocation`
+- Exposes `controller.stateStream` as a Riverpod `StreamProvider<NavigationState>`
+- Subscribes to `spokenInstructionStream` → forwards to `flutter_tts`
+- Subscribes to `deviationStream` → when triggered, calls `/api/navigate` with current GPS as new origin, calls `controller.replaceRoute(…)` with the response
+- Manages lifecycle (dispose on navigation exit)
+
+### GraphHopper → OSRM JSON
+
+The backend's new `POST /api/navigate` endpoint proxies GraphHopper's `/navigate/directions`, which returns Mapbox Directions v5-compatible JSON. That format is OSRM-compatible and Ferrostar's native OSRM adapter ingests it directly. **No client-side transformation.**
+
+### Camera Controller
+
+Separate module in the app (not in the plugin). Reads `NavigationState.snappedLocation` from the state stream and drives the MapLibre camera.
+
+- Smoothly interpolates camera between updates
+- Heading from snapped location's course (falls back to `flutter_compass` when stationary)
+- Tilt ~45°, zoom ~16 in follow mode
+- Follow mode breaks on user pan gesture; re-center FAB restores it
+
+### App-level state machine (driven by plugin state stream)
 
 ```
          ┌──────────┐
@@ -439,3 +529,12 @@ All of these have extensibility seams noted in the relevant sections — they ar
 - Distance influence preference slider (use backend default of 70)
 - Recent search persistence on server (local only)
 - CarPlay / Android Auto
+- Publishing `ferrostar_flutter` to pub.dev or upstreaming to the Ferrostar project (structured to allow it later)
+
+## Implementation plans
+
+This spec decomposes into three implementation plans, each producing independently testable software:
+
+1. **Plan A — `ferrostar_flutter` plugin v0.1**: The plugin package, with example app and tests. Standalone deliverable. Largest and riskiest piece; done first.
+2. **Plan B — Backend `/api/navigate` endpoint**: Small, ~1-2 day change to the Rust backend. Can be done in parallel with Plan A once the OSRM response shape is confirmed.
+3. **Plan C — Ortschaft mobile app**: Consumes the plugin (Plan A) and new endpoint (Plan B). Implements map, search, routing, navigation UI, auth, settings.

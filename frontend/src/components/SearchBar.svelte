@@ -48,9 +48,9 @@
   }
 
   function getIconType(props) {
-    if (props.housenumber) return null;
     const key = props.osm_key;
     const val = props.osm_value;
+    if (!key || key === 'building') return null;
     if (key === 'highway' && val !== 'bus_stop') return null;
     if (key === 'railway' || key === 'public_transport') return 'train';
     if (key === 'highway' && val === 'bus_stop') return 'bus';

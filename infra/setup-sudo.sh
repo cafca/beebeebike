@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run this with: sudo bash ~/beebeebike/server/setup-sudo.sh
+# Run this with: sudo bash ~/beebeebike/infra/setup-sudo.sh
 # Sets up nginx + SSL for maps.001.land
 
 set -euo pipefail

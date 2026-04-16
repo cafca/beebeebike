@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run on server with: sudo bash ~/beebeebike/server/update-nginx.sh
+# Run on server with: sudo bash ~/beebeebike/infra/update-nginx.sh
 # Adds /tiles/ proxy and updates backend port in existing nginx config
 set -euo pipefail
 

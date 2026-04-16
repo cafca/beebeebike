@@ -16,12 +16,15 @@ docker compose -f compose.yml -f compose.dev.yml up --build
 
 Then open the app at `http://localhost:5173`.
 
-Useful local URLs:
+## Repository layout
 
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:3000`
-- Tiles: `http://localhost:8080`
-- GraphHopper: `http://localhost:8989`
+- `frontend/` - Svelte/Vite map UI.
+- `backend/` - Rust/Axum API, migrations, and integration tests.
+- `infra/` - Deployment and infrastructure support files, including GraphHopper config and nginx helpers.
+- `scripts/` - Local data download helpers.
+- `data/` - Local map data and generated routing/tile artifacts used by Docker Compose.
+
+Docker Compose files live at the project root and are meant to be run from there.
 
 ## Contributing
 

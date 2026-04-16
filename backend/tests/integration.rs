@@ -24,6 +24,38 @@ async fn setup() -> Option<TestServer> {
     setup_with_graphhopper_url("http://localhost:0".into()).await
 }
 
+async fn setup_with_db() -> Option<(TestServer, sqlx::PgPool)> {
+    let db_url = match std::env::var("TEST_DATABASE_URL") {
+        Ok(url) => url,
+        Err(_) => return None,
+    };
+    let db = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&db_url)
+        .await
+        .expect("failed to connect to test database");
+    sqlx::migrate!("./migrations")
+        .run(&db)
+        .await
+        .expect("failed to run migrations");
+    let config = Config {
+        database_url: db_url,
+        graphhopper_url: "http://localhost:0".into(),
+        photon_url: "http://localhost:0".into(),
+        listen_addr: "127.0.0.1:0".into(),
+        static_dir: "/nonexistent".into(),
+        rating_weight: 1.0,
+        distance_influence: 70.0,
+        max_areas_per_request: 200,
+    };
+    let state = Arc::new(AppState {
+        db: db.clone(),
+        config,
+        http_client: reqwest::Client::new(),
+    });
+    Some((TestServer::new(build_router(state)), db))
+}
+
 async fn setup_with_graphhopper_url(graphhopper_url: String) -> Option<TestServer> {
     let db_url = match std::env::var("TEST_DATABASE_URL") {
         Ok(url) => url,
@@ -966,6 +998,480 @@ async fn navigate_proxies_graphhopper_response_verbatim() {
     assert_eq!(body, navigate_json);
 
     graphhopper.verify().await;
+}
+
+// ---------------------------------------------------------------------------
+// Ratings: undo / redo
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn undo_requires_auth() {
+    let Some(server) = setup().await else {
+        return;
+    };
+    server
+        .post("/api/ratings/undo")
+        .await
+        .assert_status(StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn redo_requires_auth() {
+    let Some(server) = setup().await else {
+        return;
+    };
+    server
+        .post("/api/ratings/redo")
+        .await
+        .assert_status(StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn undo_noop_when_nothing_to_undo() {
+    let Some(server) = setup().await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+    let (hname, hval) = with_session(&session);
+    let resp = server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await;
+    resp.assert_status_ok();
+    let body: Value = resp.json();
+    assert_eq!(body["can_undo"], false);
+    assert_eq!(body["can_redo"], false);
+}
+
+#[tokio::test]
+async fn undo_simple_paint() {
+    let Some(server) = setup().await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    let polygon = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.4, 52.5], [13.41, 52.5], [13.41, 52.51], [13.4, 52.51], [13.4, 52.5]]]
+    });
+
+    let (hname, hval) = with_session(&session);
+    let paint_resp: Value = server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": polygon, "value": 3 }))
+        .await
+        .json();
+    assert_eq!(paint_resp["can_undo"], true);
+    assert_eq!(paint_resp["can_redo"], false);
+
+    // Undo — area should disappear
+    let (hname, hval) = with_session(&session);
+    let undo_resp: Value = server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await
+        .json();
+    assert_eq!(undo_resp["can_undo"], false);
+    assert_eq!(undo_resp["can_redo"], true);
+
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    assert_eq!(overlay["features"].as_array().unwrap().len(), 0);
+}
+
+#[tokio::test]
+async fn redo_after_undo() {
+    let Some(server) = setup().await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    let polygon = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.4, 52.5], [13.41, 52.5], [13.41, 52.51], [13.4, 52.51], [13.4, 52.5]]]
+    });
+
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": polygon, "value": 3 }))
+        .await;
+
+    let (hname, hval) = with_session(&session);
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await;
+
+    // Redo — area should come back
+    let (hname, hval) = with_session(&session);
+    let redo_resp: Value = server
+        .post("/api/ratings/redo")
+        .add_header(hname, hval)
+        .await
+        .json();
+    assert_eq!(redo_resp["can_undo"], true);
+    assert_eq!(redo_resp["can_redo"], false);
+
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    assert_eq!(overlay["features"].as_array().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn new_paint_clears_redo_stack() {
+    let Some(server) = setup().await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    let poly_a = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.4, 52.5], [13.41, 52.5], [13.41, 52.51], [13.4, 52.51], [13.4, 52.5]]]
+    });
+    let poly_b = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.42, 52.5], [13.43, 52.5], [13.43, 52.51], [13.42, 52.51], [13.42, 52.5]]]
+    });
+
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": poly_a, "value": 3 }))
+        .await;
+    let (hname, hval) = with_session(&session);
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await;
+
+    // Painting clears the redo stack
+    let (hname, hval) = with_session(&session);
+    let resp: Value = server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": poly_b, "value": 1 }))
+        .await
+        .json();
+    assert_eq!(resp["can_redo"], false);
+}
+
+#[tokio::test]
+async fn undo_restores_partially_clipped_polygon() {
+    let Some(server) = setup().await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    // Paint polygon A
+    let poly_a = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.4, 52.5], [13.42, 52.5], [13.42, 52.52], [13.4, 52.52], [13.4, 52.5]]]
+    });
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": poly_a, "value": 3 }))
+        .await;
+
+    // Paint polygon B partially overlapping A — clips A into a fragment
+    let poly_b = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.41, 52.51], [13.43, 52.51], [13.43, 52.53], [13.41, 52.53], [13.41, 52.51]]]
+    });
+    let (hname, hval) = with_session(&session);
+    let resp: Value = server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": poly_b, "value": -3 }))
+        .await
+        .json();
+    assert!(resp["clipped_count"].as_i64().unwrap() > 0);
+
+    // Undo B — A should be fully restored (just A in the overlay, no fragment + B)
+    let (hname, hval) = with_session(&session);
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await;
+
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    let features = overlay["features"].as_array().unwrap();
+    assert_eq!(
+        features.len(),
+        1,
+        "should have exactly A restored, not A-fragment + nothing"
+    );
+    assert_eq!(features[0]["properties"]["value"], 3);
+}
+
+#[tokio::test]
+async fn undo_restores_fully_covered_polygon() {
+    let Some(server) = setup().await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    // Paint small polygon A
+    let poly_a = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.405, 52.505], [13.41, 52.505], [13.41, 52.51], [13.405, 52.51], [13.405, 52.505]]]
+    });
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": poly_a, "value": 7 }))
+        .await;
+
+    // Paint large polygon B fully covering A
+    let poly_b = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.4, 52.5], [13.42, 52.5], [13.42, 52.52], [13.4, 52.52], [13.4, 52.5]]]
+    });
+    let (hname, hval) = with_session(&session);
+    let resp: Value = server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": poly_b, "value": -7 }))
+        .await
+        .json();
+    assert!(resp["deleted_count"].as_i64().unwrap() > 0);
+
+    // Undo B — A should reappear with its original value
+    let (hname, hval) = with_session(&session);
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await;
+
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    let features = overlay["features"].as_array().unwrap();
+    assert_eq!(features.len(), 1);
+    assert_eq!(features[0]["properties"]["value"], 7);
+}
+
+#[tokio::test]
+async fn undo_multi_step() {
+    let Some(server) = setup().await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    let polys = [
+        json!({ "type": "Polygon", "coordinates": [[[13.40, 52.50], [13.41, 52.50], [13.41, 52.51], [13.40, 52.51], [13.40, 52.50]]] }),
+        json!({ "type": "Polygon", "coordinates": [[[13.42, 52.50], [13.43, 52.50], [13.43, 52.51], [13.42, 52.51], [13.42, 52.50]]] }),
+        json!({ "type": "Polygon", "coordinates": [[[13.44, 52.50], [13.45, 52.50], [13.45, 52.51], [13.44, 52.51], [13.44, 52.50]]] }),
+    ];
+
+    for poly in &polys {
+        let (hname, hval) = with_session(&session);
+        server
+            .put("/api/ratings/paint")
+            .add_header(hname, hval)
+            .json(&json!({ "geometry": poly, "value": 1 }))
+            .await;
+    }
+
+    // Undo all three
+    for _ in 0..3 {
+        let (hname, hval) = with_session(&session);
+        server
+            .post("/api/ratings/undo")
+            .add_header(hname, hval)
+            .await;
+    }
+
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    assert_eq!(overlay["features"].as_array().unwrap().len(), 0);
+    assert_eq!(overlay["can_undo"], false);
+    assert_eq!(overlay["can_redo"], true);
+}
+
+#[tokio::test]
+async fn overlay_includes_history_state_flags() {
+    let Some(server) = setup().await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    // Fresh user: no history
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    assert_eq!(overlay["can_undo"], false);
+    assert_eq!(overlay["can_redo"], false);
+
+    // After a paint: can undo
+    let polygon = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.4, 52.5], [13.41, 52.5], [13.41, 52.51], [13.4, 52.51], [13.4, 52.5]]]
+    });
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": polygon, "value": 3 }))
+        .await;
+
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    assert_eq!(overlay["can_undo"], true);
+    assert_eq!(overlay["can_redo"], false);
+}
+
+#[tokio::test]
+async fn undo_after_migration_backfill_preserves_existing_areas() {
+    // Regression test for the migration scenario: a user has rated_areas that
+    // were painted before migration 006 ran. The migration backfills paint_events
+    // from those areas. This test simulates that state directly — bypassing the
+    // API to insert rated_areas + matching paint_events — then verifies that a
+    // new paint followed by undo leaves the pre-migration areas intact.
+    let Some((server, db)) = setup_with_db().await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    // Paint two non-overlapping areas via the API (creates rated_areas + paint_events).
+    let poly_a = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.40, 52.50], [13.41, 52.50], [13.41, 52.51], [13.40, 52.51], [13.40, 52.50]]]
+    });
+    let poly_b = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.42, 52.50], [13.43, 52.50], [13.43, 52.51], [13.42, 52.51], [13.42, 52.50]]]
+    });
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": poly_a, "value": 3 }))
+        .await;
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": poly_b, "value": 1 }))
+        .await;
+
+    // Simulate pre-migration state: delete paint_events for this user, leaving
+    // only the rated_areas rows (as they would exist before migration 006).
+    let (hname, hval) = with_session(&session);
+    let me: Value = server
+        .get("/api/auth/me")
+        .add_header(hname, hval)
+        .await
+        .json();
+    let user_id: uuid::Uuid = me["id"].as_str().unwrap().parse().unwrap();
+
+    sqlx::query("DELETE FROM paint_events WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&db)
+        .await
+        .unwrap();
+
+    // Re-run the migration backfill SQL for this user.
+    sqlx::query(
+        r#"
+        INSERT INTO paint_events (user_id, seq, geometry, value, status)
+        SELECT
+            user_id,
+            ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY id) AS seq,
+            geometry,
+            value,
+            0 AS status
+        FROM rated_areas
+        WHERE user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .execute(&db)
+    .await
+    .unwrap();
+
+    // Verify the backfill produced 2 events.
+    let event_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM paint_events WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+    assert_eq!(
+        event_count, 2,
+        "backfill should have created one event per rated_area"
+    );
+
+    // Now paint a third area (seq 3 will be assigned).
+    let poly_c = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.44, 52.50], [13.45, 52.50], [13.45, 52.51], [13.44, 52.51], [13.44, 52.50]]]
+    });
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": poly_c, "value": 7 }))
+        .await;
+
+    // Undo the third paint. The rebuild should replay the 2 backfilled events
+    // and restore rated_areas to exactly poly_a and poly_b.
+    let (hname, hval) = with_session(&session);
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await;
+
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    let features = overlay["features"].as_array().unwrap();
+    assert_eq!(
+        features.len(),
+        2,
+        "undo should restore the 2 pre-migration areas, not destroy them"
+    );
+    let values: std::collections::HashSet<i64> = features
+        .iter()
+        .map(|f| f["properties"]["value"].as_i64().unwrap())
+        .collect();
+    assert!(values.contains(&3) && values.contains(&1));
 }
 
 // ---------------------------------------------------------------------------

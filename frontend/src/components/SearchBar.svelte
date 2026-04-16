@@ -41,9 +41,24 @@
           name: formatName(f.properties),
           lng: f.geometry.coordinates[0],
           lat: f.geometry.coordinates[1],
+          iconType: getIconType(f.properties),
         }));
       } catch { results = []; }
     }, 300);
+  }
+
+  function getIconType(props) {
+    if (props.housenumber) return null;
+    const key = props.osm_key;
+    const val = props.osm_value;
+    if (key === 'highway' && val !== 'bus_stop') return null;
+    if (key === 'railway' || key === 'public_transport') return 'train';
+    if (key === 'highway' && val === 'bus_stop') return 'bus';
+    if (key === 'aeroway') return 'airport';
+    if (key === 'place' || key === 'boundary') return 'place';
+    if (key === 'amenity' && (val === 'restaurant' || val === 'fast_food')) return 'restaurant';
+    if (key === 'amenity' && (val === 'cafe' || val === 'coffee_shop')) return 'cafe';
+    return 'poi';
   }
 
   function formatName(props) {
@@ -188,7 +203,59 @@
     <ul class="results">
       {#each results as result}
         <li>
-          <button class="result-btn" onclick={() => select(result)}>{result.name}</button>
+          <button class="result-btn" onclick={() => select(result)}>
+            {#if result.iconType === 'train'}
+              <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="1.5" width="10" height="9" rx="2"/>
+                <line x1="3" y1="7" x2="13" y2="7"/>
+                <circle cx="5.5" cy="12.5" r="1.2" fill="currentColor" stroke="none"/>
+                <circle cx="10.5" cy="12.5" r="1.2" fill="currentColor" stroke="none"/>
+                <line x1="3" y1="14.5" x2="13" y2="14.5"/>
+                <line x1="5.5" y1="11.5" x2="4.5" y2="14.5"/>
+                <line x1="10.5" y1="11.5" x2="11.5" y2="14.5"/>
+              </svg>
+            {:else if result.iconType === 'bus'}
+              <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="3" width="12" height="9" rx="2"/>
+                <line x1="2" y1="7" x2="14" y2="7"/>
+                <circle cx="4.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/>
+                <circle cx="11.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/>
+                <line x1="5.5" y1="12" x2="5.5" y2="12"/>
+                <line x1="8" y1="3" x2="8" y2="1"/>
+              </svg>
+            {:else if result.iconType === 'airport'}
+              <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 2 L13 9 L8 7.5 L3 9 Z"/>
+                <line x1="8" y1="7.5" x2="8" y2="13"/>
+                <line x1="5.5" y1="12" x2="10.5" y2="12"/>
+              </svg>
+            {:else if result.iconType === 'place'}
+              <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 2a4 4 0 0 1 4 4c0 3-4 8-4 8S4 9 4 6a4 4 0 0 1 4-4z"/>
+                <circle cx="8" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+              </svg>
+            {:else if result.iconType === 'restaurant'}
+              <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="5" y1="1" x2="5" y2="6"/>
+                <path d="M3 1 v4 a2 2 0 0 0 4 0 V1"/>
+                <line x1="5" y1="8" x2="5" y2="15"/>
+                <line x1="11" y1="1" x2="11" y2="15"/>
+                <path d="M9 1 v5 a2 2 0 0 0 4 0 V1"/>
+              </svg>
+            {:else if result.iconType === 'cafe'}
+              <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 5 h8 l-1 7 H4 Z"/>
+                <path d="M11 6 h1.5 a1.5 1.5 0 0 1 0 3 H11"/>
+                <line x1="2" y1="14" x2="12" y2="14"/>
+              </svg>
+            {:else if result.iconType === 'poi'}
+              <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="8" cy="8" r="5.5"/>
+                <circle cx="8" cy="8" r="2" fill="currentColor" stroke="none"/>
+              </svg>
+            {/if}
+            {result.name}
+          </button>
         </li>
       {/each}
     </ul>
@@ -301,8 +368,12 @@
   .result-btn {
     width: 100%; text-align: left; padding: 10px 12px;
     background: none; border: none; cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; gap: 7px;
   }
   .result-btn:hover { background: #f0f4ff; }
+  .result-icon {
+    width: 14px; height: 14px; flex-shrink: 0; color: #6b7280;
+  }
 
   @media (max-width: 640px) {
     .search-container {

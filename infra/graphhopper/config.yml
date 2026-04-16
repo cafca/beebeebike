@@ -13,6 +13,9 @@ graphhopper:
    - name: bike
      custom_model_files: [bike.json, bike_elevation.json]
 
+  profiles_navigation:
+    - profile: bike
+
   profiles_ch:
     - profile: car
 

@@ -55,3 +55,12 @@ data/tiles/
 
 # ── GSD baseline (auto-generated) ──
 vendor/
+
+# Flutter
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/flutter_export_environment.sh
+**/Pods/
+**/.symlinks/

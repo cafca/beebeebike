@@ -21,7 +21,10 @@ class HomeLocationController extends AsyncNotifier<Location?> {
   }
 
   Future<void> clear() async {
-    await ref.read(locationsApiProvider).deleteHome();
-    state = const AsyncData(null);
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await ref.read(locationsApiProvider).deleteHome();
+      return null;
+    });
   }
 }

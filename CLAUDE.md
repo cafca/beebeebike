@@ -14,6 +14,18 @@ docker compose -f compose.yml -f compose.dev.yml up
 docker compose -f compose.prod.yml up -d --build
 ```
 
+### Previewing changes when working in a worktree
+
+Always do this when you have completed a unit of work.
+
+To preview your changes for the user: Assume other docker instances of this app are running and start the stack with a custom port. Pick a random port, save time and don't check for other running stacks.
+
+First, copy the data/ directory from the main repo location to current worktree. Then:
+
+VITE_DEV_PORT=<random port> docker compose -f compose.yml -f compose.dev.yml up
+
+Frontend has HMR, don't restart the stack following changes, it will auto-reload.
+
 ### Backend only (local Rust dev)
 
 ```bash
@@ -85,7 +97,7 @@ Rating values are discrete: -7, -3, -1, 0 (eraser), 1, 3, 7. The paint endpoint 
 | db | 5432 | PostGIS (spatial queries for rated areas) |
 | graphhopper | 8989 | Bicycle routing with custom model support |
 | tiles | 8080 | VersaTiles vector tile server |
-| frontend (dev only) | 5173 | Vite dev server with API proxy |
+| frontend (dev only) | 5173 (default) | Vite dev server with API proxy |
 
 ### Migrations
 

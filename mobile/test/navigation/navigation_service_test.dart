@@ -66,6 +66,7 @@ void main() {
       locationStream: const Stream.empty(),
       speakInstruction: (_) async {},
     );
+    addTearDown(() => service.dispose());
 
     await service.start(
       origin: const WaypointInput(lat: 52.52, lng: 13.405),

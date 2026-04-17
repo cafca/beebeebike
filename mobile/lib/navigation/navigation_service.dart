@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 typedef CreateController = Future<FerrostarController> Function(
   Map<String, dynamic> osrmJson,
@@ -35,15 +36,13 @@ class NavigationService {
     required WaypointInput origin,
     required WaypointInput destination,
   }) async {
+    await dispose();
     _destination = destination;
     final routeJson = await loadNavigationRoute(
       origin: [origin.lng, origin.lat],
       destination: [destination.lng, destination.lat],
     );
-    final waypoints = [
-      WaypointInput(lat: origin.lat, lng: origin.lng),
-      WaypointInput(lat: destination.lat, lng: destination.lng),
-    ];
+    final waypoints = [origin, destination];
     _controller = await createController(routeJson, waypoints);
 
     _spokenSub = _controller!.spokenInstructionStream.listen(
@@ -51,17 +50,22 @@ class NavigationService {
     );
 
     _deviationSub = _controller!.deviationStream.listen((deviation) async {
-      final dest = _destination;
-      if (dest == null) return;
-      final rerouteJson = await loadNavigationRoute(
-        origin: [deviation.userLocation.lng, deviation.userLocation.lat],
-        destination: [dest.lng, dest.lat],
-      );
-      await _controller!.replaceRoute(rerouteJson);
+      try {
+        final dest = _destination;
+        if (dest == null) return;
+        final rerouteJson = await loadNavigationRoute(
+          origin: [deviation.userLocation.lng, deviation.userLocation.lat],
+          destination: [dest.lng, dest.lat],
+        );
+        await _controller!.replaceRoute(rerouteJson);
+      } catch (e, st) {
+        // reroute failed — navigation continues on stale route
+        debugPrint('NavigationService reroute error: $e\n$st');
+      }
     });
 
     _locationSub = locationStream.listen(
-      (location) => _controller!.updateLocation(location),
+      (location) => _controller?.updateLocation(location),
     );
   }
 

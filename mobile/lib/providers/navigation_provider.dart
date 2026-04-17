@@ -16,7 +16,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
         ),
     loadNavigationRoute: ({required origin, required destination}) =>
         routingApi.computeNavigationRoute(origin, destination),
-    locationStream: const Stream.empty(),
+    locationStream: const Stream.empty(), // TODO: wire real geolocator stream
     speakInstruction: (_) async {},
   );
 });

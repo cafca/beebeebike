@@ -48,10 +48,10 @@ void main() {
     expect(id, 'ctrl-1');
     expect(log, hasLength(1));
     expect(log.first.method, 'createController');
-    final args = log.first.arguments as Map;
-    expect(args['osrm_json'], isA<Map>());
-    expect((args['waypoints'] as List), hasLength(2));
-    expect(args['config'], isA<Map>());
+    final args = log.first.arguments as Map<dynamic, dynamic>;
+    expect(args['osrm_json'], isA<Map<dynamic, dynamic>>());
+    expect((args['waypoints'] as List<dynamic>), hasLength(2));
+    expect(args['config'], isA<Map<dynamic, dynamic>>());
   });
 
   test('updateLocation sends controller_id and location map', () async {

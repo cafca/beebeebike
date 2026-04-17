@@ -1,4 +1,3 @@
-import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 

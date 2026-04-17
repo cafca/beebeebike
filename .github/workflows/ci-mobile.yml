@@ -1,0 +1,49 @@
+name: ci-mobile
+
+on:
+  push:
+    paths:
+      - 'mobile/**'
+      - 'packages/ferrostar_flutter/**'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'packages/ferrostar_flutter/**'
+
+jobs:
+  test-mobile:
+    name: Flutter tests (iOS)
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies (plugin)
+        working-directory: packages/ferrostar_flutter
+        run: flutter pub get
+
+      - name: Install dependencies (app)
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Analyze (plugin)
+        working-directory: packages/ferrostar_flutter
+        run: flutter analyze
+
+      - name: Analyze (app)
+        working-directory: mobile
+        run: flutter analyze
+
+      - name: Test (plugin)
+        working-directory: packages/ferrostar_flutter
+        run: flutter test
+
+      - name: Test (app)
+        working-directory: mobile
+        run: flutter test

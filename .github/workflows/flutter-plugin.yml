@@ -55,6 +55,9 @@ jobs:
           xcrun simctl boot "$UDID"
           echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
 
+      - name: Enable Flutter SPM integration
+        run: flutter config --enable-swift-package-manager
+
       - name: flutter build ios (simulator, no codesign)
         run: flutter build ios --no-codesign --simulator
 

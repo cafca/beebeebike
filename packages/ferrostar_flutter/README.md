@@ -12,7 +12,40 @@ See [the BeeBeeBike design spec](../../docs/superpowers/specs/2026-04-16-mobile-
 
 ## Usage
 
-See `example/lib/main.dart`.
+```dart
+import 'dart:convert';
+import 'package:ferrostar_flutter/ferrostar_flutter.dart';
+
+final osrmJson = jsonDecode(await rootBundle.loadString('route.json'))
+    as Map<String, dynamic>;
+
+final controller = await FerrostarFlutter.instance.createController(
+  osrmJson: osrmJson,
+  waypoints: [
+    WaypointInput(lat: origin.lat, lng: origin.lng),
+    WaypointInput(lat: dest.lat, lng: dest.lng),
+  ],
+);
+
+controller.stateStream.listen((state) {
+  // state.status, state.currentVisual, state.progress, etc.
+});
+
+controller.spokenInstructionStream.listen((s) => tts.speak(s.text));
+
+controller.deviationStream.listen((d) async {
+  final newOsrm = await api.requestReroute(currentGps, destination);
+  await controller.replaceRoute(newOsrm);
+});
+
+// On each GPS fix:
+await controller.updateLocation(userLocation);
+
+// On navigation end:
+await controller.dispose();
+```
+
+See [`example/lib/main.dart`](example/lib/main.dart) for a runnable demo.
 
 ## Platform requirements
 

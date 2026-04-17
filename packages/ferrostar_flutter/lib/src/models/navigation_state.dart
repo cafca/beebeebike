@@ -15,7 +15,7 @@ enum TripStatus {
 @freezed
 class StepRef with _$StepRef {
   const factory StepRef({
-    required int index,
+    int? index,
     @JsonKey(name: 'road_name') required String roadName,
   }) = _StepRef;
 

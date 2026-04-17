@@ -8,7 +8,7 @@ part of 'navigation_state.dart';
 
 _$StepRefImpl _$$StepRefImplFromJson(Map<String, dynamic> json) =>
     _$StepRefImpl(
-      index: (json['index'] as num).toInt(),
+      index: (json['index'] as num?)?.toInt(),
       roadName: json['road_name'] as String,
     );
 

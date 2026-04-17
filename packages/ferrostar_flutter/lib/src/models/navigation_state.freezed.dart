@@ -21,7 +21,7 @@ StepRef _$StepRefFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$StepRef {
-  int get index => throw _privateConstructorUsedError;
+  int? get index => throw _privateConstructorUsedError;
   @JsonKey(name: 'road_name')
   String get roadName => throw _privateConstructorUsedError;
 
@@ -39,7 +39,7 @@ abstract class $StepRefCopyWith<$Res> {
   factory $StepRefCopyWith(StepRef value, $Res Function(StepRef) then) =
       _$StepRefCopyWithImpl<$Res, StepRef>;
   @useResult
-  $Res call({int index, @JsonKey(name: 'road_name') String roadName});
+  $Res call({int? index, @JsonKey(name: 'road_name') String roadName});
 }
 
 /// @nodoc
@@ -59,10 +59,7 @@ class _$StepRefCopyWithImpl<$Res, $Val extends StepRef>
   $Res call({Object? index = null, Object? roadName = null}) {
     return _then(
       _value.copyWith(
-            index: null == index
-                ? _value.index
-                : index // ignore: cast_nullable_to_non_nullable
-                      as int,
+            index: null == index ? _value.index : index as int?,
             roadName: null == roadName
                 ? _value.roadName
                 : roadName // ignore: cast_nullable_to_non_nullable
@@ -81,7 +78,7 @@ abstract class _$$StepRefImplCopyWith<$Res> implements $StepRefCopyWith<$Res> {
   ) = __$$StepRefImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({int index, @JsonKey(name: 'road_name') String roadName});
+  $Res call({int? index, @JsonKey(name: 'road_name') String roadName});
 }
 
 /// @nodoc
@@ -100,10 +97,7 @@ class __$$StepRefImplCopyWithImpl<$Res>
   $Res call({Object? index = null, Object? roadName = null}) {
     return _then(
       _$StepRefImpl(
-        index: null == index
-            ? _value.index
-            : index // ignore: cast_nullable_to_non_nullable
-                  as int,
+        index: null == index ? _value.index : index as int?,
         roadName: null == roadName
             ? _value.roadName
             : roadName // ignore: cast_nullable_to_non_nullable
@@ -117,7 +111,7 @@ class __$$StepRefImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$StepRefImpl implements _StepRef {
   const _$StepRefImpl({
-    required this.index,
+    this.index,
     @JsonKey(name: 'road_name') required this.roadName,
   });
 
@@ -125,7 +119,7 @@ class _$StepRefImpl implements _StepRef {
       _$$StepRefImplFromJson(json);
 
   @override
-  final int index;
+  final int? index;
   @override
   @JsonKey(name: 'road_name')
   final String roadName;
@@ -165,14 +159,14 @@ class _$StepRefImpl implements _StepRef {
 
 abstract class _StepRef implements StepRef {
   const factory _StepRef({
-    required final int index,
+    final int? index,
     @JsonKey(name: 'road_name') required final String roadName,
   }) = _$StepRefImpl;
 
   factory _StepRef.fromJson(Map<String, dynamic> json) = _$StepRefImpl.fromJson;
 
   @override
-  int get index;
+  int? get index;
   @override
   @JsonKey(name: 'road_name')
   String get roadName;

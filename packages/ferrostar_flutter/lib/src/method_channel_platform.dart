@@ -10,6 +10,22 @@ import 'models/waypoint_input.dart';
 
 const _channelName = 'land._001/ferrostar_flutter';
 
+/// Recursively converts Map<Object?, Object?> → Map<String, dynamic> and
+/// List elements, so platform-channel payloads are safe for fromJson.
+dynamic _deepNormalize(dynamic value) {
+  if (value is Map) {
+    return Map<String, dynamic>.fromEntries(
+      value.entries.map(
+        (e) => MapEntry(e.key.toString(), _deepNormalize(e.value)),
+      ),
+    );
+  }
+  if (value is List) {
+    return value.map(_deepNormalize).toList();
+  }
+  return value;
+}
+
 class MethodChannelFerrostarFlutter extends FerrostarFlutterPlatform {
   final MethodChannel _channel = const MethodChannel(_channelName);
 
@@ -59,7 +75,7 @@ class MethodChannelFerrostarFlutter extends FerrostarFlutterPlatform {
     final ch = EventChannel('$_channelName/state/$controllerId');
     return ch
         .receiveBroadcastStream()
-        .map((e) => NavigationState.fromJson(Map<String, dynamic>.from(e as Map)));
+        .map((e) => NavigationState.fromJson(_deepNormalize(e) as Map<String, dynamic>));
   }
 
   @override
@@ -67,7 +83,7 @@ class MethodChannelFerrostarFlutter extends FerrostarFlutterPlatform {
     final ch = EventChannel('$_channelName/spoken/$controllerId');
     return ch
         .receiveBroadcastStream()
-        .map((e) => SpokenInstruction.fromJson(Map<String, dynamic>.from(e as Map)));
+        .map((e) => SpokenInstruction.fromJson(_deepNormalize(e) as Map<String, dynamic>));
   }
 
   @override
@@ -75,6 +91,6 @@ class MethodChannelFerrostarFlutter extends FerrostarFlutterPlatform {
     final ch = EventChannel('$_channelName/deviation/$controllerId');
     return ch
         .receiveBroadcastStream()
-        .map((e) => RouteDeviation.fromJson(Map<String, dynamic>.from(e as Map)));
+        .map((e) => RouteDeviation.fromJson(_deepNormalize(e) as Map<String, dynamic>));
   }
 }

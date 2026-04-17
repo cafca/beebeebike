@@ -34,10 +34,10 @@ final class ControllerBridge {
     }
 
     do {
-      let jsonData = try JSONSerialization.data(withJSONObject: osrm)
       let waypoints: [Waypoint] = try waypointsJson.map { try Serialization.decodeWaypoint($0) }
+      let routeData = try extractRouteData(from: osrm)
       let route = try createRouteFromOsrmRoute(
-        routeData: jsonData,
+        routeData: routeData,
         waypoints: waypoints,
         polylinePrecision: 6
       )
@@ -124,10 +124,9 @@ final class ControllerBridge {
       return
     }
     do {
-      let jsonData = try JSONSerialization.data(withJSONObject: osrm)
-      let route = try createRouteFromOsrmRoute(
-        routeData: jsonData,
-        waypoints: [],
+      let route = try createRouteFromOsrm(
+        routeData: try extractRouteData(from: osrm),
+        waypointData: try extractWaypointData(from: osrm),
         polylinePrecision: 6
       )
       let newController = createNavigator(route: route, config: entry.config, shouldRecord: false)
@@ -140,6 +139,25 @@ final class ControllerBridge {
     } catch {
       result(FlutterError(code: "route_parse_failed", message: "\(error)", details: nil))
     }
+  }
+
+  private static func extractRouteData(from osrm: [String: Any]) throws -> Data {
+    if let routes = osrm["routes"] as? [[String: Any]], let route = routes.first {
+      return try JSONSerialization.data(withJSONObject: route)
+    }
+
+    if osrm["legs"] != nil, osrm["geometry"] != nil {
+      return try JSONSerialization.data(withJSONObject: osrm)
+    }
+
+    throw Serialization.SerializationError.missingField("routes[0]")
+  }
+
+  private static func extractWaypointData(from osrm: [String: Any]) throws -> Data {
+    guard let waypoints = osrm["waypoints"] as? [[String: Any]] else {
+      throw Serialization.SerializationError.missingField("waypoints")
+    }
+    return try JSONSerialization.data(withJSONObject: waypoints)
   }
 
   private static func dispose(args: Any?, result: @escaping FlutterResult) {

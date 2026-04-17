@@ -9,6 +9,24 @@ import '../api/routing_api.dart';
 import '../navigation/location_converter.dart';
 import '../navigation/navigation_service.dart';
 
+Stream<UserLocation> _buildLocationStream() async* {
+  var permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
+  }
+  if (permission == LocationPermission.deniedForever ||
+      permission == LocationPermission.denied) {
+    debugPrint('NavigationService: location permission denied');
+    return;
+  }
+  yield* Geolocator.getPositionStream(
+    locationSettings: const LocationSettings(
+      accuracy: LocationAccuracy.bestForNavigation,
+      distanceFilter: 0,
+    ),
+  ).map(positionToUserLocation);
+}
+
 final flutterTtsProvider = Provider<FlutterTts>((ref) => FlutterTts());
 
 final navigationServiceProvider = Provider<NavigationService>((ref) {
@@ -23,7 +41,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
         ),
     loadNavigationRoute: ({required origin, required destination}) =>
         routingApi.computeNavigationRoute(origin, destination),
-    locationStream: Geolocator.getPositionStream().map(positionToUserLocation),
+    locationStream: _buildLocationStream(),
     speakInstruction: (text) async {
       try {
         await tts.speak(text);
@@ -34,6 +52,6 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
   );
 });
 
-final navigationStateProvider = StreamProvider<NavigationState>((ref) {
+final navigationStateProvider = StreamProvider.autoDispose<NavigationState>((ref) {
   return ref.watch(navigationServiceProvider).stateStream;
 });

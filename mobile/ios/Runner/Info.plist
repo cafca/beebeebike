@@ -6,6 +6,12 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>BeeBeeBike needs your location to navigate your bike route.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>BeeBeeBike needs your location to navigate your bike route, including when the screen is locked.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

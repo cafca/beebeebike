@@ -131,13 +131,14 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 }
 
 IconData _iconForManeuver(String type, String? modifier) {
+  final mod = modifier?.replaceAll('_', ' ');
   if (type == 'turn') {
-    if (modifier == 'left') return Icons.turn_left;
-    if (modifier == 'right') return Icons.turn_right;
-    if (modifier == 'sharp left') return Icons.turn_sharp_left;
-    if (modifier == 'sharp right') return Icons.turn_sharp_right;
-    if (modifier == 'slight left') return Icons.turn_slight_left;
-    if (modifier == 'slight right') return Icons.turn_slight_right;
+    if (mod == 'left') return Icons.turn_left;
+    if (mod == 'right') return Icons.turn_right;
+    if (mod == 'sharp left') return Icons.turn_sharp_left;
+    if (mod == 'sharp right') return Icons.turn_sharp_right;
+    if (mod == 'slight left') return Icons.turn_slight_left;
+    if (mod == 'slight right') return Icons.turn_slight_right;
   }
   if (type == 'arrive') return Icons.flag;
   return Icons.straight;

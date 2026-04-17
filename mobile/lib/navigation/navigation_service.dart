@@ -32,6 +32,7 @@ class NavigationService {
   StreamSubscription<RouteDeviation>? _deviationSub;
   StreamSubscription<NavigationState>? _stateSub;
   WaypointInput? _destination;
+  bool _rerouteInProgress = false;
 
   final _stateController = StreamController<NavigationState>.broadcast();
 
@@ -60,16 +61,22 @@ class NavigationService {
     );
 
     _deviationSub = _controller!.deviationStream.listen((deviation) async {
+      if (_rerouteInProgress) return;
+      _rerouteInProgress = true;
       try {
         final dest = _destination;
-        if (dest == null) return;
+        final controller = _controller;
+        if (dest == null || controller == null) return;
         final rerouteJson = await loadNavigationRoute(
           origin: [deviation.userLocation.lng, deviation.userLocation.lat],
           destination: [dest.lng, dest.lat],
         );
-        await _controller!.replaceRoute(rerouteJson);
+        if (_controller == null) return;
+        await controller.replaceRoute(rerouteJson);
       } catch (e, st) {
         debugPrint('NavigationService reroute error: $e\n$st');
+      } finally {
+        _rerouteInProgress = false;
       }
     });
 
@@ -89,5 +96,6 @@ class NavigationService {
     _deviationSub = null;
     _stateSub = null;
     _controller = null;
+    _rerouteInProgress = false;
   }
 }

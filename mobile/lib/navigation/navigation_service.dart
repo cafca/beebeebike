@@ -30,7 +30,12 @@ class NavigationService {
   StreamSubscription<UserLocation>? _locationSub;
   StreamSubscription<SpokenInstruction>? _spokenSub;
   StreamSubscription<RouteDeviation>? _deviationSub;
+  StreamSubscription<NavigationState>? _stateSub;
   WaypointInput? _destination;
+
+  final _stateController = StreamController<NavigationState>.broadcast();
+
+  Stream<NavigationState> get stateStream => _stateController.stream;
 
   Future<void> start({
     required WaypointInput origin,
@@ -44,6 +49,11 @@ class NavigationService {
     );
     final waypoints = [origin, destination];
     _controller = await createController(routeJson, waypoints);
+
+    _stateSub = _controller!.stateStream.listen(
+      _stateController.add,
+      onError: _stateController.addError,
+    );
 
     _spokenSub = _controller!.spokenInstructionStream.listen(
       (instruction) => speakInstruction(instruction.text),
@@ -59,7 +69,6 @@ class NavigationService {
         );
         await _controller!.replaceRoute(rerouteJson);
       } catch (e, st) {
-        // reroute failed — navigation continues on stale route
         debugPrint('NavigationService reroute error: $e\n$st');
       }
     });
@@ -73,6 +82,12 @@ class NavigationService {
     await _locationSub?.cancel();
     await _spokenSub?.cancel();
     await _deviationSub?.cancel();
+    await _stateSub?.cancel();
     await _controller?.dispose();
+    _locationSub = null;
+    _spokenSub = null;
+    _deviationSub = null;
+    _stateSub = null;
+    _controller = null;
   }
 }

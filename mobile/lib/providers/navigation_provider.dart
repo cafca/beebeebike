@@ -26,3 +26,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
     speakInstruction: (text) async { await tts.speak(text); },
   );
 });
+
+final navigationStateProvider = StreamProvider<NavigationState>((ref) {
+  return ref.watch(navigationServiceProvider).stateStream;
+});

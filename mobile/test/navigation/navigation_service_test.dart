@@ -8,9 +8,11 @@ import 'package:beebeebike/navigation/navigation_service.dart';
 
 class FakeFerrostarFlutterPlatform extends FerrostarFlutterPlatform {
   final _deviationCtrl = StreamController<RouteDeviation>.broadcast();
+  final _stateCtrl = StreamController<NavigationState>.broadcast();
   int replaceRouteCalls = 0;
 
   void emitDeviation(RouteDeviation d) => _deviationCtrl.add(d);
+  void emitState(NavigationState s) => _stateCtrl.add(s);
 
   @override
   Future<String> createController({
@@ -39,7 +41,7 @@ class FakeFerrostarFlutterPlatform extends FerrostarFlutterPlatform {
 
   @override
   Stream<NavigationState> stateStream({required String controllerId}) =>
-      const Stream.empty();
+      _stateCtrl.stream;
 
   @override
   Stream<SpokenInstruction> spokenInstructionStream(
@@ -88,5 +90,36 @@ void main() {
 
     await pumpEventQueue();
     expect(fakePlatform.replaceRouteCalls, 1);
+  });
+
+  test('stateStream forwards NavigationState emitted by the controller', () async {
+    final fakePlatform = FakeFerrostarFlutterPlatform();
+    final fakeController = FerrostarController('test', fakePlatform);
+
+    final service = NavigationService(
+      createController: (osrmJson, waypoints) async => fakeController,
+      loadNavigationRoute: ({required origin, required destination}) async => {
+        'routes': [
+          {'distance': 1234}
+        ]
+      },
+      locationStream: const Stream.empty(),
+      speakInstruction: (_) async {},
+    );
+    addTearDown(() => service.dispose());
+
+    final received = <NavigationState>[];
+    service.stateStream.listen(received.add);
+
+    await service.start(
+      origin: const WaypointInput(lat: 52.52, lng: 13.405),
+      destination: const WaypointInput(lat: 52.51, lng: 13.45),
+    );
+
+    const state = NavigationState(status: TripStatus.navigating, isOffRoute: false);
+    fakePlatform.emitState(state);
+    await pumpEventQueue();
+
+    expect(received, [state]);
   });
 }

@@ -23,7 +23,7 @@ mixin _$User {
   String get id => throw _privateConstructorUsedError;
   String? get email => throw _privateConstructorUsedError;
   @JsonKey(name: 'display_name')
-  String? get displayName => throw _privateConstructorUsedError;
+  String get displayName => throw _privateConstructorUsedError;
   @JsonKey(name: 'account_type')
   String get accountType => throw _privateConstructorUsedError;
 
@@ -44,7 +44,7 @@ abstract class $UserCopyWith<$Res> {
   $Res call(
       {String id,
       String? email,
-      @JsonKey(name: 'display_name') String? displayName,
+      @JsonKey(name: 'display_name') String displayName,
       @JsonKey(name: 'account_type') String accountType});
 }
 
@@ -65,7 +65,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
   $Res call({
     Object? id = null,
     Object? email = freezed,
-    Object? displayName = freezed,
+    Object? displayName = null,
     Object? accountType = null,
   }) {
     return _then(_value.copyWith(
@@ -77,10 +77,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
           ? _value.email
           : email // ignore: cast_nullable_to_non_nullable
               as String?,
-      displayName: freezed == displayName
+      displayName: null == displayName
           ? _value.displayName
           : displayName // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as String,
       accountType: null == accountType
           ? _value.accountType
           : accountType // ignore: cast_nullable_to_non_nullable
@@ -99,7 +99,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
   $Res call(
       {String id,
       String? email,
-      @JsonKey(name: 'display_name') String? displayName,
+      @JsonKey(name: 'display_name') String displayName,
       @JsonKey(name: 'account_type') String accountType});
 }
 
@@ -117,7 +117,7 @@ class __$$UserImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? email = freezed,
-    Object? displayName = freezed,
+    Object? displayName = null,
     Object? accountType = null,
   }) {
     return _then(_$UserImpl(
@@ -129,10 +129,10 @@ class __$$UserImplCopyWithImpl<$Res>
           ? _value.email
           : email // ignore: cast_nullable_to_non_nullable
               as String?,
-      displayName: freezed == displayName
+      displayName: null == displayName
           ? _value.displayName
           : displayName // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as String,
       accountType: null == accountType
           ? _value.accountType
           : accountType // ignore: cast_nullable_to_non_nullable
@@ -147,7 +147,7 @@ class _$UserImpl implements _User {
   const _$UserImpl(
       {required this.id,
       this.email,
-      @JsonKey(name: 'display_name') this.displayName,
+      @JsonKey(name: 'display_name') this.displayName = '',
       @JsonKey(name: 'account_type') required this.accountType});
 
   factory _$UserImpl.fromJson(Map<String, dynamic> json) =>
@@ -159,7 +159,7 @@ class _$UserImpl implements _User {
   final String? email;
   @override
   @JsonKey(name: 'display_name')
-  final String? displayName;
+  final String displayName;
   @override
   @JsonKey(name: 'account_type')
   final String accountType;
@@ -207,7 +207,7 @@ abstract class _User implements User {
   const factory _User(
           {required final String id,
           final String? email,
-          @JsonKey(name: 'display_name') final String? displayName,
+          @JsonKey(name: 'display_name') final String displayName,
           @JsonKey(name: 'account_type') required final String accountType}) =
       _$UserImpl;
 
@@ -219,7 +219,7 @@ abstract class _User implements User {
   String? get email;
   @override
   @JsonKey(name: 'display_name')
-  String? get displayName;
+  String get displayName;
   @override
   @JsonKey(name: 'account_type')
   String get accountType;

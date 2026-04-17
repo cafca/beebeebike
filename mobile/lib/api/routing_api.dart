@@ -16,8 +16,8 @@ class RoutingApi {
     final response = await _dio.post('/api/route', data: {
       'origin': origin,
       'destination': destination,
-      'rating_weight': ratingWeight,
-      'distance_influence': distanceInfluence,
+      if (ratingWeight != null) 'rating_weight': ratingWeight,
+      if (distanceInfluence != null) 'distance_influence': distanceInfluence,
     });
     return RoutePreview.fromJson(response.data as Map<String, dynamic>);
   }
@@ -31,8 +31,8 @@ class RoutingApi {
     final response = await _dio.post('/api/navigate', data: {
       'origin': origin,
       'destination': destination,
-      'rating_weight': ratingWeight,
-      'distance_influence': distanceInfluence,
+      if (ratingWeight != null) 'rating_weight': ratingWeight,
+      if (distanceInfluence != null) 'distance_influence': distanceInfluence,
     });
     return Map<String, dynamic>.from(response.data as Map);
   }

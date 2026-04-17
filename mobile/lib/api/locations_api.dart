@@ -8,10 +8,15 @@ class LocationsApi {
   final Dio _dio;
 
   Future<Location?> getHome() async {
-    final response = await _dio.get('/api/locations/home');
-    final data = response.data;
-    if (data == null) return null;
-    return Location.fromJson(Map<String, dynamic>.from(data as Map));
+    try {
+      final response = await _dio.get('/api/locations/home');
+      final data = response.data;
+      if (data == null) return null;
+      return Location.fromJson(Map<String, dynamic>.from(data as Map));
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
   }
 
   Future<Location> setHome(Location location) async {

@@ -47,3 +47,48 @@ jobs:
       - name: Test (app)
         working-directory: mobile
         run: flutter test
+
+  test-mobile-ios:
+    name: Flutter integration tests (iOS simulator)
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: flutter-actions/setup-flutter@v3
+        with:
+          channel: stable
+
+      - name: Install dependencies (plugin)
+        working-directory: packages/ferrostar_flutter
+        run: flutter pub get
+
+      - name: Install dependencies (app)
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Boot iPhone 17 simulator
+        run: |
+          UDID=$(xcrun simctl list devices available --json \
+            | python3 -c "
+          import json,sys
+          devs = json.load(sys.stdin)['devices']
+          for runtime, devices in devs.items():
+            for d in devices:
+              if 'iPhone 17' in d['name'] and d['isAvailable']:
+                print(d['udid']); exit()
+          ")
+          xcrun simctl boot "$UDID"
+          echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
+
+      - name: Enable Flutter SPM integration
+        working-directory: mobile
+        run: flutter config --enable-swift-package-manager
+
+      - name: Build (simulator, no codesign)
+        working-directory: mobile
+        run: flutter build ios --no-codesign --simulator
+
+      - name: Run integration smoke test
+        working-directory: mobile
+        run: flutter test integration_test/navigation_smoke_test.dart -d "$SIM_UDID"

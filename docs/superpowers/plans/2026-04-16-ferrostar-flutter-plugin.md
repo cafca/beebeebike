@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a minimal, standalone Flutter plugin that wraps [Ferrostar](https://github.com/stadiamaps/ferrostar)'s native iOS (Swift) and Android (Kotlin) SDKs so that a Dart/Flutter app can drive turn-by-turn navigation without any Dart bindings existing upstream.
+**Goal:** Build a minimal, standalone Flutter plugin that wraps [Ferrostar](https://github.com/stadiamaps/ferrostar)'s native iOS (Swift) SDK so that a Dart/Flutter app can drive turn-by-turn navigation without any Dart bindings existing upstream. Android seams are scaffolded but implementation is deferred.
 
 **Architecture:** Flutter plugin at `packages/ferrostar_flutter/`. iOS integration uses SPM to pull Ferrostar Swift SDK; Android uses Maven Central. A `MethodChannel` carries imperative calls Dart→Native (create controller, feed location, replace route, dispose); three `EventChannel`s carry state streams Native→Dart (navigation state, spoken instructions, route deviations). Opaque handles keep the heavy `Route` and `TripState` objects on the native side — only UI-relevant derived data crosses the channel boundary.
 
@@ -540,46 +540,14 @@ git commit -m "feat(plugin,ios): link FerrostarCore, verify import with smoke te
 
 ---
 
-### Task 5: Wire Ferrostar Kotlin SDK on Android (proof-of-life)
+### Task 5: Stub Android plugin (seam — no Ferrostar dependency)
+
+Android full implementation is deferred. This task ensures the Android plugin compiles cleanly and responds `notImplemented` to all method calls, so the Flutter plugin system works on both platforms without crashing.
 
 **Files:**
-- Modify: `packages/ferrostar_flutter/android/build.gradle`
 - Modify: `packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter/FerrostarFlutterPlugin.kt`
-- Modify: `packages/ferrostar_flutter/example/android/app/build.gradle`
 
-- [ ] **Step 1: Add Ferrostar Kotlin dependency**
-
-Edit `packages/ferrostar_flutter/android/build.gradle` — replace the dependencies block:
-
-```gradle
-dependencies {
-    implementation 'com.stadiamaps.ferrostar:core:0.49.0'
-}
-```
-
-Ensure `minSdkVersion` is 25 (or higher):
-
-```gradle
-android {
-    defaultConfig {
-        minSdkVersion 25
-    }
-}
-```
-
-- [ ] **Step 2: Set minSdk on example app**
-
-Edit `packages/ferrostar_flutter/example/android/app/build.gradle`:
-
-```gradle
-android {
-    defaultConfig {
-        minSdk 25
-    }
-}
-```
-
-- [ ] **Step 3: Update plugin entry point with smoke test**
+- [ ] **Step 1: Replace plugin entry point with a no-op stub**
 
 Replace `packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter/FerrostarFlutterPlugin.kt`:
 
@@ -591,10 +559,8 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import com.stadiamaps.ferrostar.core.GeographicCoordinate
-import com.stadiamaps.ferrostar.core.UserLocation
-import java.time.Instant
 
+// TODO(android): wire Ferrostar Kotlin SDK when targeting Android
 class FerrostarFlutterPlugin : FlutterPlugin, MethodCallHandler {
     private lateinit var channel: MethodChannel
 
@@ -604,19 +570,7 @@ class FerrostarFlutterPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     override fun onMethodCall(call: MethodCall, result: Result) {
-        when (call.method) {
-            "smokeTest" -> {
-                val loc = UserLocation(
-                    coordinates = GeographicCoordinate(lat = 52.52, lng = 13.405),
-                    horizontalAccuracy = 5.0,
-                    courseOverGround = null,
-                    timestamp = Instant.now(),
-                    speed = null,
-                )
-                result.success("location created at ${loc.coordinates.lat}, ${loc.coordinates.lng}")
-            }
-            else -> result.notImplemented()
-        }
+        result.notImplemented()
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -625,28 +579,22 @@ class FerrostarFlutterPlugin : FlutterPlugin, MethodCallHandler {
 }
 ```
 
-- [ ] **Step 4: Build the example for Android**
+- [ ] **Step 2: Verify the stub compiles**
 
 ```bash
 cd packages/ferrostar_flutter/example
 flutter build apk --debug
 ```
-Expected: builds successfully. Dependency resolution or NDK errors need to be fixed now.
+Expected: builds successfully. No Ferrostar dependency needed — stub has no imports beyond Flutter.
 
-- [ ] **Step 5: Run smoke test on Android emulator**
-
-Launch emulator, run `flutter run -d emulator`. Tap the Smoke button.
-Expected: same output `location created at 52.52, 13.405`.
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add packages/ferrostar_flutter/android \
-  packages/ferrostar_flutter/example/android
-git commit -m "feat(plugin,android): link Ferrostar Kotlin SDK, verify import with smoke test"
+git add packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter/FerrostarFlutterPlugin.kt
+git commit -m "chore(plugin,android): stub plugin entry point, defer Ferrostar wiring"
 ```
 
-**Decision gate:** if either platform smoke test fails, stop here and resolve the integration issue. Do not proceed with Dart API work over a broken native layer.
+**Decision gate:** iOS smoke test (Task 4) must already be green. Android seam only needs to compile — no functional test required.
 
 ---
 
@@ -2629,451 +2577,91 @@ git commit -m "test(plugin,ios): end-to-end smoke test in example app"
 
 ---
 
-## Phase 6: Android Native Bridge
+## Phase 6: Android Native Bridge (DEFERRED)
 
-Mirror the iOS bridge in Kotlin. Tasks follow the same shape.
+> **Android full implementation is deferred.** Seam stubs were created in Task 5. When ready to implement Android, expand this phase with the full Kotlin bridge mirroring the iOS implementation in Phase 5.
+>
+> Required tasks when Android work resumes:
+> - Android `ControllerRegistry.kt`
+> - Android `Serialization.kt`
+> - Android `StreamEmitters.kt` + `ControllerBridge.kt`
+> - Wire `FerrostarFlutterPlugin.kt` to `ControllerBridge`
+> - Android manual end-to-end test in example app
 
-### Task 23: Android `ControllerRegistry.kt`
+### Task 23: Android seam stubs
+
+Create stub Kotlin files that establish the right package/class names and compile cleanly. No Ferrostar dependency. These are the entry points for future Android implementation.
 
 **Files:**
 - Create: `packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter/ControllerRegistry.kt`
-
-- [ ] **Step 1: Implement**
-
-```kotlin
-// android/.../ControllerRegistry.kt
-package land._001.ferrostar_flutter
-
-import com.stadiamaps.ferrostar.core.NavigationController
-import com.stadiamaps.ferrostar.core.NavState
-import io.flutter.plugin.common.EventChannel
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
-
-object ControllerRegistry {
-  data class Entry(
-    val controller: NavigationController,
-    var stateSink: EventChannel.EventSink? = null,
-    var spokenSink: EventChannel.EventSink? = null,
-    var deviationSink: EventChannel.EventSink? = null,
-    var lastState: NavState? = null,
-  )
-
-  private val entries = ConcurrentHashMap<String, Entry>()
-
-  fun register(controller: NavigationController): String {
-    val id = UUID.randomUUID().toString()
-    entries[id] = Entry(controller)
-    return id
-  }
-
-  fun get(id: String): Entry? = entries[id]
-
-  fun remove(id: String): Entry? = entries.remove(id)
-}
-```
-
-- [ ] **Step 2: Commit**
-
-```bash
-git add packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter/ControllerRegistry.kt
-git commit -m "feat(plugin,android): ControllerRegistry"
-```
-
----
-
-### Task 24: Android `Serialization.kt`
-
-**Files:**
 - Create: `packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter/Serialization.kt`
-
-- [ ] **Step 1: Implement**
-
-```kotlin
-// android/.../Serialization.kt
-package land._001.ferrostar_flutter
-
-import com.stadiamaps.ferrostar.core.*
-import java.time.Instant
-
-object Serialization {
-
-  // Dart -> Kotlin
-
-  fun decodeUserLocation(m: Map<String, Any?>): UserLocation {
-    val lat = (m["lat"] as Number).toDouble()
-    val lng = (m["lng"] as Number).toDouble()
-    val acc = (m["horizontal_accuracy_m"] as Number).toDouble()
-    val ts  = (m["timestamp_ms"] as Number).toLong()
-    val course = (m["course_deg"] as? Number)?.let {
-      CourseOverGround(degrees = it.toInt().toUShort(), accuracy = null)
-    }
-    val speed = (m["speed_mps"] as? Number)?.let {
-      Speed(value = it.toDouble(), accuracy = null)
-    }
-    return UserLocation(
-      coordinates = GeographicCoordinate(lat, lng),
-      horizontalAccuracy = acc,
-      courseOverGround = course,
-      timestamp = Instant.ofEpochMilli(ts),
-      speed = speed,
-    )
-  }
-
-  fun decodeWaypoint(m: Map<String, Any?>): Waypoint {
-    val lat = (m["lat"] as Number).toDouble()
-    val lng = (m["lng"] as Number).toDouble()
-    val kind = when (m["kind"] as? String) {
-      "via_point" -> WaypointKind.VIA_POINT
-      else -> WaypointKind.BREAK
-    }
-    return Waypoint(GeographicCoordinate(lat, lng), kind)
-  }
-
-  fun decodeConfig(m: Map<String, Any?>): NavigationControllerConfig {
-    val devM = (m["deviation_threshold_m"] as? Number)?.toDouble() ?: 50.0
-    val snap = (m["snap_user_location_to_route"] as? Boolean) ?: true
-    return NavigationControllerConfig(
-      waypointAdvance = WaypointAdvanceMode.WaypointWithinRange(20.0),
-      stepAdvanceCondition = StepAdvanceCondition.DistanceToEndOfStep(10u, 32u),
-      routeDeviationTracking = RouteDeviationTracking.StaticThreshold(25u, devM),
-      snappedLocationCourseFiltering = if (snap) CourseFiltering.SnapToRoute else CourseFiltering.Raw,
-    )
-  }
-
-  // Kotlin -> Dart
-
-  fun encodeNavigationState(tripState: TripState, isOffRoute: Boolean): Map<String, Any?> {
-    return when (tripState) {
-      is TripState.Idle -> mapOf(
-        "status" to "idle", "is_off_route" to false,
-        "snapped_location" to null, "progress" to null,
-        "current_visual" to null, "current_step" to null,
-      )
-      is TripState.Complete -> mapOf(
-        "status" to "complete", "is_off_route" to false,
-        "snapped_location" to null, "progress" to null,
-        "current_visual" to null, "current_step" to null,
-      )
-      is TripState.Navigating -> mapOf(
-        "status" to "navigating",
-        "is_off_route" to isOffRoute,
-        "snapped_location" to encodeUserLocation(tripState.snappedUserLocation),
-        "progress" to encodeTripProgress(tripState.progress),
-        "current_visual" to tripState.visualInstruction?.let { encodeVisualInstruction(it) },
-        "current_step" to mapOf(
-          "index" to tripState.currentStepIndex,
-          "road_name" to tripState.currentStep.roadName,
-        ),
-      )
-    }
-  }
-
-  fun encodeUserLocation(loc: UserLocation): Map<String, Any?> = mapOf(
-    "lat" to loc.coordinates.lat,
-    "lng" to loc.coordinates.lng,
-    "horizontal_accuracy_m" to loc.horizontalAccuracy,
-    "course_deg" to loc.courseOverGround?.degrees?.toDouble(),
-    "speed_mps" to loc.speed?.value,
-    "timestamp_ms" to loc.timestamp.toEpochMilli(),
-  )
-
-  fun encodeTripProgress(p: TripProgress): Map<String, Any?> = mapOf(
-    "distance_to_next_maneuver_m" to p.distanceToNextManeuver,
-    "distance_remaining_m" to p.distanceRemaining,
-    "duration_remaining_ms" to (p.durationRemaining * 1000).toLong(),
-  )
-
-  fun encodeVisualInstruction(v: VisualInstruction): Map<String, Any?> = mapOf(
-    "primary_text" to v.primaryContent.text,
-    "secondary_text" to v.secondaryContent?.text,
-    "maneuver_type" to (v.primaryContent.maneuverType?.name?.lowercase() ?: "unknown"),
-    "maneuver_modifier" to v.primaryContent.maneuverModifier?.name?.lowercase(),
-    "trigger_distance_m" to v.triggerDistanceBeforeManeuver,
-  )
-
-  fun encodeSpokenInstruction(s: SpokenInstruction): Map<String, Any?> = mapOf(
-    "uuid" to s.utteranceId.toString(),
-    "text" to s.text,
-    "ssml" to s.ssml,
-    "trigger_distance_m" to s.triggerDistanceBeforeManeuver,
-    "emitted_at_ms" to System.currentTimeMillis(),
-  )
-
-  fun encodeDeviation(
-    deviationM: Double, durationMs: Long, location: UserLocation
-  ): Map<String, Any?> = mapOf(
-    "deviation_m" to deviationM,
-    "duration_off_route_ms" to durationMs,
-    "user_location" to encodeUserLocation(location),
-  )
-}
-```
-
-- [ ] **Step 2: Build**
-
-```bash
-cd packages/ferrostar_flutter/example
-flutter build apk --debug
-```
-
-- [ ] **Step 3: Commit**
-
-```bash
-git add packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter/Serialization.kt
-git commit -m "feat(plugin,android): Kotlin <-> Dart serialization"
-```
-
----
-
-### Task 25: Android `StreamEmitters.kt` + `ControllerBridge.kt`
-
-**Files:**
 - Create: `packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter/StreamEmitters.kt`
 - Create: `packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter/ControllerBridge.kt`
 
-- [ ] **Step 1: StreamEmitters**
+- [ ] **Step 1: Create `ControllerRegistry.kt` stub**
 
 ```kotlin
-// android/.../StreamEmitters.kt
 package land._001.ferrostar_flutter
 
-import io.flutter.plugin.common.BinaryMessenger
-import io.flutter.plugin.common.EventChannel
-
-object StreamEmitters {
-  enum class Kind { STATE, SPOKEN, DEVIATION }
-
-  fun register(controllerId: String, kind: Kind, messenger: BinaryMessenger) {
-    val base = "land._001/ferrostar_flutter"
-    val name = when (kind) {
-      Kind.STATE -> "$base/state/$controllerId"
-      Kind.SPOKEN -> "$base/spoken/$controllerId"
-      Kind.DEVIATION -> "$base/deviation/$controllerId"
-    }
-    val channel = EventChannel(messenger, name)
-    channel.setStreamHandler(object : EventChannel.StreamHandler {
-      override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-        val entry = ControllerRegistry.get(controllerId) ?: return
-        when (kind) {
-          Kind.STATE -> entry.stateSink = events
-          Kind.SPOKEN -> entry.spokenSink = events
-          Kind.DEVIATION -> entry.deviationSink = events
-        }
-      }
-      override fun onCancel(arguments: Any?) {
-        val entry = ControllerRegistry.get(controllerId) ?: return
-        when (kind) {
-          Kind.STATE -> entry.stateSink = null
-          Kind.SPOKEN -> entry.spokenSink = null
-          Kind.DEVIATION -> entry.deviationSink = null
-        }
-      }
-    })
-  }
-}
+// TODO(android): implement with Ferrostar NavigationController
+object ControllerRegistry
 ```
 
-- [ ] **Step 2: ControllerBridge**
+- [ ] **Step 2: Create `Serialization.kt` stub**
 
 ```kotlin
-// android/.../ControllerBridge.kt
 package land._001.ferrostar_flutter
 
-import com.stadiamaps.ferrostar.core.*
+// TODO(android): implement Dart <-> Ferrostar type conversions
+object Serialization
+```
+
+- [ ] **Step 3: Create `StreamEmitters.kt` stub**
+
+```kotlin
+package land._001.ferrostar_flutter
+
+// TODO(android): implement EventChannel handlers for state/spoken/deviation streams
+object StreamEmitters
+```
+
+- [ ] **Step 4: Create `ControllerBridge.kt` stub**
+
+```kotlin
+package land._001.ferrostar_flutter
+
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import org.json.JSONObject
 
+// TODO(android): implement method channel handler using Ferrostar NavigationController
 object ControllerBridge {
-
-  fun handle(call: MethodCall, result: MethodChannel.Result, messenger: BinaryMessenger) {
-    when (call.method) {
-      "createController" -> createController(call.arguments, result, messenger)
-      "updateLocation" -> updateLocation(call.arguments, result)
-      "replaceRoute" -> replaceRoute(call.arguments, result)
-      "dispose" -> dispose(call.arguments, result)
-      else -> result.notImplemented()
+    fun handle(call: MethodCall, result: MethodChannel.Result, messenger: BinaryMessenger) {
+        result.notImplemented()
     }
-  }
-
-  @Suppress("UNCHECKED_CAST")
-  private fun createController(args: Any?, result: MethodChannel.Result, messenger: BinaryMessenger) {
-    val m = args as? Map<String, Any?> ?: run {
-      return result.error("invalid_argument", "createController: bad args", null)
-    }
-    try {
-      val osrm = m["osrm_json"] as Map<String, Any?>
-      val waypoints = (m["waypoints"] as List<Map<String, Any?>>).map { Serialization.decodeWaypoint(it) }
-      val config = Serialization.decodeConfig(m["config"] as Map<String, Any?>)
-
-      val osrmBytes = JSONObject(osrm).toString().toByteArray(Charsets.UTF_8)
-      val route = createRouteFromOsrmRoute(osrmBytes, waypoints, 6u)
-
-      val controller = NavigationController(route, config)
-      val id = ControllerRegistry.register(controller)
-
-      StreamEmitters.register(id, StreamEmitters.Kind.STATE, messenger)
-      StreamEmitters.register(id, StreamEmitters.Kind.SPOKEN, messenger)
-      StreamEmitters.register(id, StreamEmitters.Kind.DEVIATION, messenger)
-
-      result.success(id)
-    } catch (e: Exception) {
-      result.error("route_parse_failed", e.message, null)
-    }
-  }
-
-  @Suppress("UNCHECKED_CAST")
-  private fun updateLocation(args: Any?, result: MethodChannel.Result) {
-    val m = args as? Map<String, Any?> ?: return result.error("invalid_argument", "updateLocation", null)
-    val id = m["controller_id"] as String
-    val entry = ControllerRegistry.get(id) ?: return result.error("unknown_controller", id, null)
-    try {
-      val loc = Serialization.decodeUserLocation(m["location"] as Map<String, Any?>)
-      val newState = if (entry.lastState != null) {
-        entry.controller.updateUserLocation(loc, entry.lastState!!)
-      } else {
-        entry.controller.getInitialState(loc)
-      }
-      entry.lastState = newState
-
-      val nav = (newState.tripState as? TripState.Navigating)
-      val isOffRoute = nav?.routeDeviation != null
-
-      entry.stateSink?.success(Serialization.encodeNavigationState(newState.tripState, isOffRoute))
-      nav?.spokenInstruction?.let { spoken ->
-        entry.spokenSink?.success(Serialization.encodeSpokenInstruction(spoken))
-      }
-      nav?.routeDeviation?.let { dev ->
-        entry.deviationSink?.success(Serialization.encodeDeviation(dev.deviationFromRouteLine, 0L, loc))
-      }
-
-      result.success(null)
-    } catch (e: Exception) {
-      result.error("invalid_argument", e.message, null)
-    }
-  }
-
-  @Suppress("UNCHECKED_CAST")
-  private fun replaceRoute(args: Any?, result: MethodChannel.Result) {
-    val m = args as? Map<String, Any?> ?: return result.error("invalid_argument", "replaceRoute", null)
-    val id = m["controller_id"] as String
-    val entry = ControllerRegistry.get(id) ?: return result.error("unknown_controller", id, null)
-    try {
-      val osrm = m["osrm_json"] as Map<String, Any?>
-      val bytes = JSONObject(osrm).toString().toByteArray(Charsets.UTF_8)
-      val route = createRouteFromOsrmRoute(bytes, emptyList(), 6u)
-      val newController = NavigationController(route, entry.controller.config)
-      ControllerRegistry.remove(id)
-      val newEntry = ControllerRegistry.Entry(
-        controller = newController,
-        stateSink = entry.stateSink,
-        spokenSink = entry.spokenSink,
-        deviationSink = entry.deviationSink,
-        lastState = null,
-      )
-      // Re-register under same id:
-      (ControllerRegistry.javaClass.getDeclaredField("entries").apply { isAccessible = true }.get(ControllerRegistry)
-        as java.util.concurrent.ConcurrentHashMap<String, ControllerRegistry.Entry>)[id] = newEntry
-      result.success(null)
-    } catch (e: Exception) {
-      result.error("route_parse_failed", e.message, null)
-    }
-  }
-
-  @Suppress("UNCHECKED_CAST")
-  private fun dispose(args: Any?, result: MethodChannel.Result) {
-    val m = args as? Map<String, Any?> ?: return result.error("invalid_argument", "dispose", null)
-    val id = m["controller_id"] as String
-    ControllerRegistry.remove(id)
-    result.success(null)
-  }
 }
 ```
 
-*(Note: the reflection trick for replaceRoute is ugly — replace with a proper `ControllerRegistry.swap(id, newEntry)` method in refinement. Tracked in "Refinement notes".)*
-
-- [ ] **Step 3: Wire plugin entry**
-
-Replace `FerrostarFlutterPlugin.kt`:
-
-```kotlin
-package land._001.ferrostar_flutter
-
-import io.flutter.embedding.engine.plugins.FlutterPlugin
-import io.flutter.plugin.common.MethodCall
-import io.flutter.plugin.common.MethodChannel
-
-class FerrostarFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
-  private lateinit var channel: MethodChannel
-  private lateinit var binding: FlutterPlugin.FlutterPluginBinding
-
-  override fun onAttachedToEngine(b: FlutterPlugin.FlutterPluginBinding) {
-    binding = b
-    channel = MethodChannel(b.binaryMessenger, "land._001/ferrostar_flutter")
-    channel.setMethodCallHandler(this)
-  }
-
-  override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-    ControllerBridge.handle(call, result, binding.binaryMessenger)
-  }
-
-  override fun onDetachedFromEngine(b: FlutterPlugin.FlutterPluginBinding) {
-    channel.setMethodCallHandler(null)
-  }
-}
-```
-
-- [ ] **Step 4: Build**
+- [ ] **Step 5: Build**
 
 ```bash
 cd packages/ferrostar_flutter/example
 flutter build apk --debug
 ```
+Expected: builds successfully with no errors.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter
-git commit -m "feat(plugin,android): ControllerBridge + StreamEmitters + plugin wiring"
+git commit -m "chore(plugin,android): add seam stubs for future Android implementation"
 ```
-
----
-
-### Task 26: Android manual end-to-end test in example app
-
-**Files:** (no code changes — reuse `example/lib/main.dart` from Task 22)
-
-- [ ] **Step 1: Boot Android emulator and run example**
-
-```bash
-cd packages/ferrostar_flutter/example
-flutter run -d emulator
-```
-
-- [ ] **Step 2: Verify same behavior as iOS e2e**
-
-Tap Start → Send location. Expect:
-- State: navigating
-- Instruction: populated
-- Distance remaining: populated
-
-Inspect `adb logcat | grep Ferrostar` for any crashes. Fix issues before proceeding.
-
-- [ ] **Step 3: Tag a dev milestone**
-
-```bash
-git tag dev/0.1.0-e2e-both-platforms
-```
-
-*(No code commit needed; this just marks a checkpoint.)*
 
 ---
 
 ## Phase 7: Tests & Polish
 
-### Task 27: Integration tests (drive both platforms)
+### Task 27: Integration tests (iOS only)
 
 **Files:**
 - Create: `packages/ferrostar_flutter/example/integration_test/plugin_integration_test.dart`
@@ -3150,32 +2738,24 @@ cd packages/ferrostar_flutter/example
 flutter test integration_test/plugin_integration_test.dart -d "iPhone 15"
 ```
 
-- [ ] **Step 4: Run on Android emulator**
-
-```bash
-flutter test integration_test/plugin_integration_test.dart -d emulator
-```
-
-Both should pass.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add packages/ferrostar_flutter/example/pubspec.yaml \
   packages/ferrostar_flutter/example/integration_test/plugin_integration_test.dart
-git commit -m "test(plugin): integration test for create->update->state on both platforms"
+git commit -m "test(plugin): integration test for create->update->state on iOS"
 ```
 
 ---
 
-### Task 28: Refinement pass — Swift/Kotlin code cleanup
+### Task 28: Refinement pass — Swift code cleanup (iOS only)
 
 **Files:**
 - Modify: `packages/ferrostar_flutter/ios/Classes/ControllerRegistry.swift`
 - Modify: `packages/ferrostar_flutter/ios/Classes/StreamEmitters.swift`
-- Modify: `packages/ferrostar_flutter/android/src/main/kotlin/land/_001/ferrostar_flutter/ControllerBridge.kt`
+- Modify: `packages/ferrostar_flutter/ios/Classes/ControllerBridge.swift`
 
-The rough edges from Phase 5/6 — Swift struct reconstruction, Kotlin reflection in replaceRoute — need cleanup now that the whole flow works.
+The rough edge from Phase 5 — Swift struct reconstruction on every mutation — needs cleanup now that the iOS flow works.
 
 - [ ] **Step 1: Convert iOS `Entry` to a reference type**
 
@@ -3204,40 +2784,19 @@ final class Entry {
 
 Update callers (`StreamEmitters.swift`, `ControllerBridge.swift`) to mutate fields directly instead of rebuilding the whole struct. This removes ~40 lines of boilerplate.
 
-- [ ] **Step 2: Add `ControllerRegistry.swap()` on Android**
-
-In `ControllerRegistry.kt`:
-
-```kotlin
-fun swap(id: String, newController: NavigationController) {
-  val old = entries[id] ?: return
-  entries[id] = Entry(
-    controller = newController,
-    stateSink = old.stateSink,
-    spokenSink = old.spokenSink,
-    deviationSink = old.deviationSink,
-    lastState = null,
-  )
-}
-```
-
-Update `ControllerBridge.replaceRoute` to call `ControllerRegistry.swap(id, newController)` — remove the reflection trick.
-
-- [ ] **Step 3: Rebuild + re-run integration tests**
+- [ ] **Step 2: Rebuild + re-run integration tests**
 
 ```bash
 cd packages/ferrostar_flutter/example
 flutter test integration_test/plugin_integration_test.dart -d "iPhone 15"
-flutter test integration_test/plugin_integration_test.dart -d emulator
 ```
-Both should still pass.
+Should still pass.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add packages/ferrostar_flutter/ios/Classes \
-  packages/ferrostar_flutter/android/src/main/kotlin
-git commit -m "refactor(plugin): clean up mutable entry handling on both platforms"
+git add packages/ferrostar_flutter/ios/Classes
+git commit -m "refactor(plugin,ios): convert Entry to class, simplify mutable field handling"
 ```
 
 ---

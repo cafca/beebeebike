@@ -5,6 +5,7 @@ import '../screens/search_screen.dart';
 import '../screens/settings_screen.dart';
 import '../widgets/search_bar.dart';
 
+// ConsumerWidget: ref used in Task 5 to watch routeControllerProvider.
 class MapScreen extends ConsumerWidget {
   const MapScreen({super.key});
 

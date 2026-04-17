@@ -1,4 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../api/client.dart';
 
 class RatingOverlayController {
   RatingOverlayController(this._dio);
@@ -10,3 +13,7 @@ class RatingOverlayController {
     return Map<String, dynamic>.from(response.data as Map);
   }
 }
+
+final ratingOverlayControllerProvider = Provider<RatingOverlayController>(
+  (ref) => RatingOverlayController(ref.watch(dioProvider)),
+);

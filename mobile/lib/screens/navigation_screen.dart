@@ -113,7 +113,6 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
                         const SizedBox(width: 16),
                         GestureDetector(
                           onTap: () {
-                            _navigationService.dispose();
                             Navigator.of(context).pop();
                           },
                           child: const Icon(Icons.close),

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../widgets/turn_banner.dart';
 
-class NavigationScreen extends ConsumerWidget {
+class NavigationScreen extends StatelessWidget {
   const NavigationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
@@ -23,24 +22,27 @@ class NavigationScreen extends ConsumerWidget {
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('12:34 arrival · 10 min'),
-                  Row(
-                    children: [
-                      Icon(Icons.volume_up_outlined),
-                      SizedBox(width: 16),
-                      Icon(Icons.close),
-                    ],
-                  ),
-                ],
+            child: SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('12:34 arrival · 10 min'),
+                    Row(
+                      children: [
+                        Icon(Icons.volume_up_outlined),
+                        SizedBox(width: 16),
+                        Icon(Icons.close),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

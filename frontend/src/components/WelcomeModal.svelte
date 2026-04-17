@@ -4,7 +4,19 @@
 
 <div class="overlay">
   <div class="modal">
-    <img class="route-preview" src="/assets/welcome-route.png" alt="BeeBeeBike route preview on a Berlin map" />
+    <video
+      class="route-preview"
+      autoplay
+      loop
+      muted
+      playsinline
+      preload="auto"
+      disablepictureinpicture
+      disableremoteplayback
+      aria-label="Intro video showing how to paint map areas and plan a route in BeeBeeBike"
+    >
+      <source src="/assets/welcome-intro.mp4" type="video/mp4" />
+    </video>
     <h2>Welcome to BeeBeeBike</h2>
     <p>
       A bicycle routing app for Berlin that learns your preferences. Paint areas on the map
@@ -16,8 +28,7 @@
       <li>Enter a start and destination in the search bar or click two points on the map.</li>
       <li>Get a bicycle route tailored to your preferences</li>
     </ol>
-    <p><em>Sign up to access your custom map across devices!</em></p> 
-    <p class="muted">Your rated areas and any saved places are stored and processed on BeeBeeBike servers only. Message beebybike@vincentahrend.com to request data removal.</p>
+    <p class="muted">Your rated areas and any saved places are stored and processed on BeeBeeBike servers only. Address searches are sent context-free to Komoot's hosted Photon service. Message beebeebike@vincentahrend.com to request data removal.</p>
     <button onclick={onclose}>Start exploring</button>
   </div>
 </div>

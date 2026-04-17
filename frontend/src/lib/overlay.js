@@ -68,13 +68,15 @@ export function initOverlay(map) {
 }
 
 export async function refreshOverlay(map) {
-  if (!initialized || !map) return;
+  if (!initialized || !map) return null;
   const bounds = map.getBounds();
   const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
   try {
     const data = await api.getOverlay(bbox);
     map.getSource('ratings').setData(data);
+    return data;
   } catch (e) {
     console.error('Failed to load overlay:', e);
+    return null;
   }
 }

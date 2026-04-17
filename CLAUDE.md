@@ -42,10 +42,10 @@ Backend uses `SQLX_OFFLINE=true` for Docker builds (no live DB needed at compile
 ### Frontend only
 
 ```bash
-cd frontend
+cd web
 npm ci
 npm run dev        # Vite dev server on :5173, proxies /api → localhost:3000
-npm run build      # production build → frontend/dist/
+npm run build      # production build → web/dist/
 ```
 
 ### Static data (not in repo)
@@ -97,7 +97,7 @@ Rating values are discrete: -7, -3, -1, 0 (eraser), 1, 3, 7. The paint endpoint 
 | db | 5432 | PostGIS (spatial queries for rated areas) |
 | graphhopper | 8989 | Bicycle routing with custom model support |
 | tiles | 8080 | VersaTiles vector tile server |
-| frontend (dev only) | 5173 (default) | Vite dev server with API proxy |
+| web (dev only) | 5173 (default) | Vite dev server with API proxy |
 
 ### Migrations
 

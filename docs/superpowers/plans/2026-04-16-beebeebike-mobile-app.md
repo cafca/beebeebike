@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the Flutter mobile client in `mobile/` that reproduces BeeBeeBike's routing and overlay experience on iOS/Android, then adds turn-by-turn navigation by consuming the new backend `/api/navigate` endpoint and the standalone `ferrostar_flutter` plugin from Plan A.
+**Goal:** Build the Flutter mobile client in `mobile/` that reproduces BeeBeeBike's routing and overlay experience on iOS (Android support follows later), then adds turn-by-turn navigation by consuming the backend `/api/navigate` endpoint (Plan B ✅) and the `ferrostar_flutter` plugin (Plan A ✅).
 
 **Architecture:** `mobile/` is a thin Flutter client. Dio talks to the existing backend for auth, geocoding, preview routing, ratings overlay, home location, and navigation-route JSON. Riverpod owns session, route preview, navigation, and settings state. `maplibre_gl` renders the map; a separate `NavigationService` orchestrates `ferrostar_flutter`, `geolocator`, `flutter_compass`, and `flutter_tts` so UI widgets stay declarative.
 
@@ -10,11 +10,39 @@
 
 **Parent spec:** `docs/superpowers/specs/2026-04-16-mobile-navigation-app-design.md`
 
-**Dependencies:** Plan A must provide `packages/ferrostar_flutter/`. Plan B must provide `POST /api/navigate`. This plan assumes both exist by the time Task 6 starts.
+**Platform scope:** iOS only. `ferrostar_flutter` v0.1.0 ships iOS bindings only. Android support will follow when the plugin gains Android bindings. Flutter project is created with `--platforms=ios` for now; adding Android later is a one-line `flutter create --platforms=android` re-run.
+
+**Dependencies:**
+- ✅ **Plan A complete** — `packages/ferrostar_flutter/` v0.1.0 merged (PR #29, commit `63f7084`). iOS only.
+- ✅ **Plan B complete** — `POST /api/navigate` merged (PR #26, commit `999e31b`).
+
+Both dependencies are live on `main`. Task 6 can proceed immediately.
 
 ---
 
-## File Structure
+## Repo Layout After This Plan
+
+This plan introduces `mobile/` and renames `frontend/` → `web/` to reflect the multi-client nature of the project. Android is stubbed with a placeholder directory so the layout is ready when the plugin gains Android support.
+
+```
+web/                        # Svelte web app (renamed from frontend/)
+mobile/                     # Flutter mobile app
+├── ios/                    # iOS platform code (active — v0.1)
+├── android/                # Android platform code (stub — future)
+├── lib/                    # Dart source (shared across platforms)
+├── test/
+├── pubspec.yaml
+└── README.md
+packages/
+└── ferrostar_flutter/      # iOS-only turn-by-turn plugin (Plan A)
+backend/                    # Rust/Axum API (unchanged)
+```
+
+The `frontend/` → `web/` rename happens in **Task 9** (Phase 7) so it does not block mobile development; do it last to avoid merge conflicts with any ongoing web work.
+
+---
+
+## Flutter App File Structure
 
 ```
 mobile/
@@ -93,9 +121,11 @@ cd /Users/pv/code/ortschaft
 flutter create \
   --org=land._001 \
   --project-name=beebeebike \
-  --platforms=ios,android \
+  --platforms=ios \
   mobile
 ```
+
+iOS only for now. To add Android later: `flutter create --platforms=android mobile` from the repo root.
 
 - [ ] **Step 2: Add Flutter-specific ignore rules**
 
@@ -278,13 +308,21 @@ Create `mobile/README.md`:
 ````markdown
 # BeeBeeBike mobile
 
-Run locally:
+> **Platform support:** iOS only (v0.1). Android support will be added once `ferrostar_flutter` gains Android bindings.
+
+Run locally on iOS simulator:
 
 ```bash
 flutter pub get
-flutter run \
-  --dart-define=BEEBEEBIKE_API_BASE_URL=http://10.0.2.2:3000 \
-  --dart-define=BEEBEEBIKE_TILE_STYLE_URL=http://10.0.2.2:8080/tiles/assets/styles/colorful/style.json
+flutter run -d ios \
+  --dart-define=BEEBEEBIKE_API_BASE_URL=http://127.0.0.1:3000 \
+  --dart-define=BEEBEEBIKE_TILE_STYLE_URL=http://127.0.0.1:8080/tiles/assets/styles/colorful/style.json
+```
+
+Run tests:
+
+```bash
+flutter test
 ```
 ````
 
@@ -1673,12 +1711,191 @@ Expected: clean if no fixes were needed. If you had to patch issues during the s
 
 ---
 
+## Phase 7: Repo Housekeeping
+
+### Task 9: Rename `frontend/` → `web/`
+
+**Files:**
+- Rename: `frontend/` → `web/`
+- Modify: `compose.yml`, `compose.dev.yml`, `compose.prod.yml` (volume/context paths)
+- Modify: `.github/workflows/ci.yml` (working-directory references)
+- Modify: `CLAUDE.md` (build instructions)
+- Modify: root `README.md`
+
+Do this after mobile work is merged and no open PRs touch `frontend/`.
+
+- [ ] **Step 1: Rename the directory**
+
+```bash
+cd /Users/pv/code/ortschaft
+git mv frontend web
+```
+
+- [ ] **Step 2: Update compose files**
+
+Search for `frontend` in all compose files and replace with `web`:
+
+```bash
+sed -i '' 's|./frontend|./web|g' compose.yml compose.dev.yml compose.prod.yml
+```
+
+- [ ] **Step 3: Update CI workflow**
+
+In `.github/workflows/ci.yml`, update any `working-directory: frontend` → `working-directory: web` and path filters from `frontend/**` → `web/**`.
+
+- [ ] **Step 4: Verify the stack still builds**
+
+```bash
+docker compose -f compose.yml -f compose.dev.yml build frontend
+```
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add -A
+git commit -m "chore: rename frontend/ to web/"
+```
+
+---
+
+### Task 10: Add GHA CI workflow for the mobile app
+
+**Files:**
+- Create: `.github/workflows/ci-mobile.yml`
+
+Path-gated so it only runs when `mobile/` or `packages/ferrostar_flutter/` change. iOS-only for now.
+
+- [ ] **Step 1: Create the workflow**
+
+Create `.github/workflows/ci-mobile.yml`:
+
+```yaml
+name: ci-mobile
+
+on:
+  push:
+    paths:
+      - 'mobile/**'
+      - 'packages/ferrostar_flutter/**'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - 'packages/ferrostar_flutter/**'
+
+jobs:
+  test-mobile:
+    name: Flutter tests (iOS)
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies (plugin)
+        working-directory: packages/ferrostar_flutter
+        run: flutter pub get
+
+      - name: Install dependencies (app)
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Analyze (plugin)
+        working-directory: packages/ferrostar_flutter
+        run: flutter analyze
+
+      - name: Analyze (app)
+        working-directory: mobile
+        run: flutter analyze
+
+      - name: Test (plugin)
+        working-directory: packages/ferrostar_flutter
+        run: flutter test
+
+      - name: Test (app)
+        working-directory: mobile
+        run: flutter test
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add .github/workflows/ci-mobile.yml
+git commit -m "ci: add path-gated Flutter test workflow for mobile and plugin"
+```
+
+---
+
+### Task 11: Update root README and CLAUDE.md
+
+**Files:**
+- Modify: `README.md`
+- Modify: `CLAUDE.md`
+
+- [ ] **Step 1: Add mobile section to root README**
+
+Add a "Mobile app" section after the existing web/backend sections:
+
+```markdown
+## Mobile app (iOS)
+
+Flutter client in `mobile/`. Requires the `ferrostar_flutter` plugin at `packages/ferrostar_flutter/`.
+
+```bash
+cd mobile
+flutter pub get
+flutter run -d ios \
+  --dart-define=BEEBEEBIKE_API_BASE_URL=http://127.0.0.1:3000 \
+  --dart-define=BEEBEEBIKE_TILE_STYLE_URL=http://127.0.0.1:8080/tiles/assets/styles/colorful/style.json
+```
+
+> Android support is planned for a future release.
+```
+
+- [ ] **Step 2: Update CLAUDE.md build instructions**
+
+Add a new section to `CLAUDE.md` under `## Build & Run`:
+
+```markdown
+### Mobile app (iOS only)
+
+```bash
+cd mobile
+flutter pub get
+flutter test
+
+# Run on iOS simulator
+flutter run -d ios \
+  --dart-define=BEEBEEBIKE_API_BASE_URL=http://127.0.0.1:3000 \
+  --dart-define=BEEBEEBIKE_TILE_STYLE_URL=http://127.0.0.1:8080/tiles/assets/styles/colorful/style.json
+```
+
+Platform scope: iOS only in v0.1. `ferrostar_flutter` (at `packages/ferrostar_flutter/`) is a path dependency and must be present.
+```
+
+Also update the `### Frontend only` section header to `### Web app (frontend)` or update it to reference `web/` after the Task 9 rename.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add README.md CLAUDE.md
+git commit -m "docs: add mobile app build instructions and iOS platform note"
+```
+
+---
+
 ## Self-Review Notes
 
 - **Spec coverage:** This plan covers auth bootstrap, search, route preview via `POST /api/route`, settings/home flows, read-only ratings overlay, navigation entry, turn banner UI, rerouting orchestration, mute/close affordances, and the thin-client architecture described in the spec.
 - **Explicit omissions preserved:** The plan does not add painting, background navigation, offline downloads, or preference sliders, matching the spec's out-of-scope list.
 - **Dependency boundary is clear:** The mobile app does not parse GraphHopper navigation JSON itself. It treats `/api/navigate` as an opaque Mapbox Directions payload and hands it to `ferrostar_flutter`, exactly as Plan A and Plan B require.
+- **iOS only:** `ferrostar_flutter` v0.1.0 is iOS-only. All navigation features in Tasks 6–7 are iOS-only. The app scaffolds with `--platforms=ios`; Android will be added via `flutter create --platforms=android` when the plugin supports it.
+- **Plan A and Plan B are done:** Both dependencies landed on `main` before this plan was executed. No blocking work remains.
 
 ## After This Plan
 
-If Tasks 1-8 are complete, the repo has all three deliverables from the spec: plugin, backend navigation endpoint, and the mobile app shell that consumes both. The next decision is whether to finish by merging all three plans sequentially or to execute Plan B in parallel while Plan A is still stabilizing.
+Tasks 1–8 deliver the iOS mobile app shell consuming both completed dependencies. Phase 7 (Tasks 9–11) finalises repo layout (`frontend/` → `web/`), CI coverage for the Flutter stack, and updated documentation. Android support is the logical next milestone — it unblocks once `ferrostar_flutter` gains Android bindings.

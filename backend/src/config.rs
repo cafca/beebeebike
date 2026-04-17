@@ -22,7 +22,7 @@ impl Config {
             photon_url: env::var("PHOTON_URL")
                 .unwrap_or_else(|_| "https://photon.komoot.io".into()),
             listen_addr: env::var("LISTEN_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".into()),
-            static_dir: env::var("STATIC_DIR").unwrap_or_else(|_| "../frontend/dist".into()),
+            static_dir: env::var("STATIC_DIR").unwrap_or_else(|_| "../web/dist".into()),
             rating_weight: env::var("RATING_WEIGHT")
                 .ok()
                 .and_then(|v| v.parse().ok())

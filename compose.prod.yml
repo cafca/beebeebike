@@ -51,7 +51,7 @@ services:
       GRAPHHOPPER_URL: http://graphhopper:8989
       PHOTON_URL: https://photon.komoot.io
       LISTEN_ADDR: 0.0.0.0:3000
-      STATIC_DIR: /app/frontend/dist
+      STATIC_DIR: /app/web/dist
     depends_on:
       - db
       - graphhopper

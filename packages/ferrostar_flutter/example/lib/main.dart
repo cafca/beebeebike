@@ -1,110 +1,96 @@
-import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() => runApp(const MaterialApp(home: E2EHome()));
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
+class E2EHome extends StatefulWidget {
+  const E2EHome({super.key});
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ferrostar Flutter Example',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-        useMaterial3: true,
-      ),
-      home: const SmokeTestPage(),
-    );
-  }
+  State<E2EHome> createState() => _E2EHomeState();
 }
 
-class SmokeTestPage extends StatefulWidget {
-  const SmokeTestPage({super.key});
+class _E2EHomeState extends State<E2EHome> {
+  FerrostarController? _ctrl;
+  NavigationState? _state;
+  String _log = '';
+  bool _loading = false;
 
-  @override
-  State<SmokeTestPage> createState() => _SmokeTestPageState();
-}
-
-class _SmokeTestPageState extends State<SmokeTestPage> {
-  static const MethodChannel _channel = MethodChannel('land._001/ferrostar_flutter');
-
-  String _result = 'Tap the button to verify the iOS Ferrostar smoke test.';
-  bool _running = false;
-
-  Future<void> _runSmokeTest() async {
-    if (defaultTargetPlatform != TargetPlatform.iOS) {
-      setState(() {
-        _running = false;
-        _result = 'Task 4 only wires the smoke test on iOS. Android proof-of-life lands in Task 5.';
-      });
-      return;
-    }
-
-    setState(() {
-      _running = true;
-      _result = 'Running smokeTest...';
-    });
-
+  Future<void> _start() async {
+    setState(() => _loading = true);
     try {
-      final String? response = await _channel.invokeMethod<String>('smokeTest');
-      if (!mounted) {
-        return;
-      }
+      final jsonStr = await rootBundle.loadString('assets/sample_osrm_route.json');
+      final osrm = json.decode(jsonStr) as Map<String, dynamic>;
+
+      final ctrl = await FerrostarFlutter.instance.createController(
+        osrmJson: osrm,
+        waypoints: [
+          const WaypointInput(lat: 59.442643, lng: 24.765368),
+          const WaypointInput(lat: 59.452226, lng: 24.730034),
+        ],
+      );
+      ctrl.stateStream.listen((s) => setState(() => _state = s));
+      ctrl.spokenInstructionStream.listen(
+          (s) => setState(() => _log = 'SPOKEN: ${s.text}'));
+      ctrl.deviationStream.listen(
+          (d) => setState(() => _log = 'DEVIATION: ${d.deviationM}m'));
       setState(() {
-        _result = response ?? 'smokeTest returned null';
-        _running = false;
+        _ctrl = ctrl;
+        _log = 'Controller ready';
       });
-    } on PlatformException catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _result = 'smokeTest failed: ${error.code}: ${error.message ?? 'unknown error'}';
-        _running = false;
-      });
-    } on MissingPluginException {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _result = 'smokeTest is not available on this platform yet.';
-        _running = false;
-      });
+    } catch (e) {
+      setState(() => _log = 'Error: $e');
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _tick() async {
+    try {
+      await _ctrl?.updateLocation(UserLocation(
+        lat: 59.4429,
+        lng: 24.7653,
+        horizontalAccuracyM: 5.0,
+        courseDeg: 315.0,
+        timestampMs: DateTime.now().millisecondsSinceEpoch,
+      ));
+    } catch (e) {
+      setState(() => _log = 'Tick error: $e');
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ferrostar iOS proof-of-life'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+  Widget build(BuildContext ctx) => Scaffold(
+        appBar: AppBar(title: const Text('ferrostar_flutter E2E')),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _result,
-                textAlign: TextAlign.center,
-                style: textTheme.titleMedium,
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _running ? null : _runSmokeTest,
-                child: Text(_running ? 'Running...' : 'Run smokeTest'),
-              ),
+              Row(children: [
+                ElevatedButton(
+                  onPressed: _loading ? null : _start,
+                  child: Text(_loading ? 'Loading...' : 'Start'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _ctrl == null ? null : _tick,
+                  child: const Text('Send location'),
+                ),
+              ]),
+              const SizedBox(height: 16),
+              Text('Status: ${_state?.status.name ?? "(none)"}'),
+              if (_state?.currentVisual != null)
+                Text('Instruction: ${_state!.currentVisual!.primaryText}'),
+              if (_state?.progress != null)
+                Text(
+                  'Remaining: ${_state!.progress!.distanceRemainingM.toStringAsFixed(0)}m',
+                ),
+              const SizedBox(height: 16),
+              Text('Log: $_log'),
             ],
           ),
         ),
-      ),
-    );
-  }
+      );
 }

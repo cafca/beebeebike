@@ -17,7 +17,7 @@
 ## File Structure
 
 ```
-infra/graphhopper/config.yml         # Enables GraphHopper navigation profile for bike routing
+backend/graphhopper_config.yml       # Enables GraphHopper navigation profile for bike routing
 backend/src/routing.rs               # Shared GraphHopper request builder + /api/route + /api/navigate handlers
 backend/src/lib.rs                   # Router registration
 backend/tests/integration.rs         # Authenticated end-to-end tests with Wiremocked GraphHopper
@@ -30,7 +30,7 @@ backend/tests/integration.rs         # Authenticated end-to-end tests with Wirem
 ### Task 1: Turn on the `bike` navigation profile in local/dev GraphHopper
 
 **Files:**
-- Modify: `infra/graphhopper/config.yml`
+- Modify: `backend/graphhopper_config.yml`
 
 - [ ] **Step 1: Add `profiles_navigation` for `bike`**
 
@@ -83,7 +83,7 @@ Expected: either `{"has_routes":true,"has_message":false}` or a JSON validation 
 
 ```bash
 cd /Users/pv/code/ortschaft
-git add infra/graphhopper/config.yml
+git add /backend/graphhopper_config.yml
 git commit -m "chore(graphhopper): enable bike navigation profile"
 ```
 

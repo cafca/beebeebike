@@ -298,7 +298,7 @@ Same shape as `/api/route`:
 
 ### Prerequisite: GraphHopper navigate endpoint availability
 
-Self-hosted GraphHopper requires a navigation profile configured in `infra/graphhopper/config.yml`. The `/navigate/directions` endpoint is part of the open-source distribution but may need `profiles_navigation` configuration. This is verified during the first implementation task.
+Self-hosted GraphHopper requires a navigation profile configured in `/backend/graphhopper_config.yml`. The `/navigate/directions` endpoint is part of the open-source distribution but may need `profiles_navigation` configuration. This is verified during the first implementation task.
 
 **Fallback if navigate is unavailable:** Write a custom Dart Ferrostar adapter that transforms the regular `/route` response into Ferrostar's `Route` model, synthesizing `spoken_instructions` client-side from the plain text + interval data. This is more work but keeps the option open. Flag this as a decision point early in the plan.
 

@@ -24,7 +24,7 @@ services:
     ports:
       - "8989:8989"
     volumes:
-      - ./infra/graphhopper/config.yml:/config/config.yml:ro
+      - ./backend/graphhopper_config.yml:/config/config.yml:ro
       - ./data/osm/berlin/berlin.osm.pbf:/data/berlin.osm.pbf:ro
       - ./data/osm/berlin/graphhopper:/data/graphhopper-cache
     environment:

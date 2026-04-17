@@ -64,3 +64,4 @@ vendor/
 **/flutter_export_environment.sh
 **/Pods/
 **/.symlinks/
+mobile/ios/Runner.xcworkspace/xcshareddata/swiftpm/

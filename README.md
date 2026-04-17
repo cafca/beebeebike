@@ -26,6 +26,20 @@ Then open the app at `http://localhost:5173`.
 
 Docker Compose files live at the project root and are meant to be run from there.
 
+## Mobile app (iOS)
+
+Flutter client in `mobile/`. Requires the `ferrostar_flutter` plugin at `packages/ferrostar_flutter/`.
+
+```bash
+cd mobile
+flutter pub get
+flutter run -d ios \
+  --dart-define=BEEBEEBIKE_API_BASE_URL=http://127.0.0.1:3000 \
+  --dart-define=BEEBEEBIKE_TILE_STYLE_URL=http://127.0.0.1:8080/tiles/assets/styles/colorful/style.json
+```
+
+> Android support is planned for a future release.
+
 ## Contributing
 
 Contributions are welcome. Please open an issue first so we can talk through the idea, the shape of the change, and any bike-brain edge cases before you start building.

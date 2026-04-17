@@ -39,7 +39,7 @@ cargo clippy -- -D warnings
 
 Backend uses `SQLX_OFFLINE=true` for Docker builds (no live DB needed at compile time). Locally, sqlx connects to Postgres at build time for query checking.
 
-### Frontend only
+### Web app (Svelte)
 
 ```bash
 cd web
@@ -47,6 +47,21 @@ npm ci
 npm run dev        # Vite dev server on :5173, proxies /api → localhost:3000
 npm run build      # production build → web/dist/
 ```
+
+### Mobile app (iOS only)
+
+```bash
+cd mobile
+flutter pub get
+flutter test
+
+# Run on iOS simulator
+flutter run -d ios \
+  --dart-define=BEEBEEBIKE_API_BASE_URL=http://127.0.0.1:3000 \
+  --dart-define=BEEBEEBIKE_TILE_STYLE_URL=http://127.0.0.1:8080/tiles/assets/styles/colorful/style.json
+```
+
+Platform scope: iOS only in v0.1. `ferrostar_flutter` (at `packages/ferrostar_flutter/`) is a path dependency and must be present.
 
 ### Static data (not in repo)
 

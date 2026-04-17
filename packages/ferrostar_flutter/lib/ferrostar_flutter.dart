@@ -1,8 +1,11 @@
-
-import 'ferrostar_flutter_platform_interface.dart';
-
-class FerrostarFlutter {
-  Future<String?> getPlatformVersion() {
-    return FerrostarFlutterPlatform.instance.getPlatformVersion();
-  }
-}
+export 'src/controller.dart';
+export 'src/exceptions.dart';
+export 'src/ferrostar_flutter.dart';
+export 'src/models/navigation_config.dart';
+export 'src/models/navigation_state.dart';
+export 'src/models/route_deviation.dart';
+export 'src/models/spoken_instruction.dart';
+export 'src/models/trip_progress.dart';
+export 'src/models/user_location.dart';
+export 'src/models/visual_instruction.dart';
+export 'src/models/waypoint_input.dart';

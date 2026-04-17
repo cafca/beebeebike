@@ -1,4 +1,5 @@
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
@@ -23,7 +24,13 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
     loadNavigationRoute: ({required origin, required destination}) =>
         routingApi.computeNavigationRoute(origin, destination),
     locationStream: Geolocator.getPositionStream().map(positionToUserLocation),
-    speakInstruction: (text) async { await tts.speak(text); },
+    speakInstruction: (text) async {
+      try {
+        await tts.speak(text);
+      } catch (e, st) {
+        debugPrint('TTS speak error: $e\n$st');
+      }
+    },
   );
 });
 

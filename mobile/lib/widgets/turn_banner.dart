@@ -5,10 +5,12 @@ class TurnBanner extends StatelessWidget {
     super.key,
     required this.primaryText,
     required this.distanceText,
+    this.icon = Icons.straight,
   });
 
   final String primaryText;
   final String distanceText;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -21,12 +23,13 @@ class TurnBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.turn_left, color: Colors.white),
+          Icon(icon, color: Colors.white),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               primaryText,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w700),
             ),
           ),
           Text(distanceText, style: const TextStyle(color: Colors.white)),

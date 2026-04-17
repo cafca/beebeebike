@@ -40,19 +40,24 @@ class RouteController extends Notifier<RouteState> {
     await _maybeLoadPreview();
   }
 
+  int _loadGeneration = 0;
+
   Future<void> _maybeLoadPreview() async {
     final origin = state.origin;
     final destination = state.destination;
     if (origin == null || destination == null) return;
 
-    state = state.copyWith(isLoading: true, error: null);
+    final generation = ++_loadGeneration;
+    state = state.copyWith(isLoading: true, error: null, preview: null);
     try {
       final preview = await ref.read(routePreviewLoaderProvider)(
         origin: origin,
         destination: destination,
       );
+      if (generation != _loadGeneration) return;
       state = state.copyWith(preview: preview, isLoading: false);
     } catch (error) {
+      if (generation != _loadGeneration) return;
       state = state.copyWith(isLoading: false, error: error.toString());
     }
   }

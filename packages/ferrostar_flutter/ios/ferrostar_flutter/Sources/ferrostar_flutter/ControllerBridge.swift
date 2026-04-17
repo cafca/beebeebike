@@ -131,16 +131,11 @@ final class ControllerBridge {
         polylinePrecision: 6
       )
       let newController = createNavigator(route: route, config: entry.config, shouldRecord: false)
-      ControllerRegistry.shared.update(id) { e in
-        e = ControllerRegistry.Entry(
-          controller: newController,
-          config: entry.config,
-          stateSink: e.stateSink,
-          spokenSink: e.spokenSink,
-          deviationSink: e.deviationSink,
-          lastState: nil
-        )
-      }
+      let newEntry = ControllerRegistry.Entry(controller: newController, config: entry.config)
+      newEntry.stateSink = entry.stateSink
+      newEntry.spokenSink = entry.spokenSink
+      newEntry.deviationSink = entry.deviationSink
+      ControllerRegistry.shared.replace(id, with: newEntry)
       result(nil)
     } catch {
       result(FlutterError(code: "route_parse_failed", message: "\(error)", details: nil))

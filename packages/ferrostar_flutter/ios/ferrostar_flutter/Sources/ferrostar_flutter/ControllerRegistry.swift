@@ -13,13 +13,18 @@ import FerrostarCoreFFI
 final class ControllerRegistry {
   static let shared = ControllerRegistry()
 
-  struct Entry {
+  final class Entry {
     let controller: Navigator
     let config: NavigationControllerConfig
     var stateSink: FlutterEventSink?
     var spokenSink: FlutterEventSink?
     var deviationSink: FlutterEventSink?
     var lastState: NavState?
+
+    init(controller: Navigator, config: NavigationControllerConfig) {
+      self.controller = controller
+      self.config = config
+    }
   }
 
   private let queue = DispatchQueue(label: "ferrostar_flutter.registry")
@@ -28,21 +33,21 @@ final class ControllerRegistry {
   func register(controller: Navigator, config: NavigationControllerConfig) -> String {
     let id = UUID().uuidString
     queue.sync {
-      entries[id] = Entry(
-        controller: controller,
-        config: config,
-        stateSink: nil, spokenSink: nil, deviationSink: nil, lastState: nil
-      )
+      entries[id] = Entry(controller: controller, config: config)
     }
     return id
   }
 
   func get(_ id: String) -> Entry? { queue.sync { entries[id] } }
 
-  func update(_ id: String, mutator: (inout Entry) -> Void) {
+  func update(_ id: String, mutator: (Entry) -> Void) {
     queue.sync {
-      if var e = entries[id] { mutator(&e); entries[id] = e }
+      if let e = entries[id] { mutator(e) }
     }
+  }
+
+  func replace(_ id: String, with entry: Entry) {
+    queue.sync { entries[id] = entry }
   }
 
   @discardableResult

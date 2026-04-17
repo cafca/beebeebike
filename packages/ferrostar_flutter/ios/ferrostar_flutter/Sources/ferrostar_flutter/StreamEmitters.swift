@@ -37,28 +37,22 @@ final class StreamEmitters: NSObject {
     }
 
     func onListen(withArguments _: Any?, eventSink: @escaping FlutterEventSink) -> FlutterError? {
-      ControllerRegistry.shared.update(controllerId) { entry in
+      ControllerRegistry.shared.update(controllerId) { e in
         switch kind {
-        case .state:
-          entry.stateSink = eventSink
-        case .spoken:
-          entry.spokenSink = eventSink
-        case .deviation:
-          entry.deviationSink = eventSink
+        case .state:    e.stateSink = eventSink
+        case .spoken:   e.spokenSink = eventSink
+        case .deviation: e.deviationSink = eventSink
         }
       }
       return nil
     }
 
     func onCancel(withArguments _: Any?) -> FlutterError? {
-      ControllerRegistry.shared.update(controllerId) { entry in
+      ControllerRegistry.shared.update(controllerId) { e in
         switch kind {
-        case .state:
-          entry.stateSink = nil
-        case .spoken:
-          entry.spokenSink = nil
-        case .deviation:
-          entry.deviationSink = nil
+        case .state:    e.stateSink = nil
+        case .spoken:   e.spokenSink = nil
+        case .deviation: e.deviationSink = nil
         }
       }
       return nil

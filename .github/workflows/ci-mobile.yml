@@ -2,6 +2,8 @@ name: ci-mobile
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'mobile/**'
       - 'packages/ferrostar_flutter/**'

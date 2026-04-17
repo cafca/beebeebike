@@ -1,8 +1,10 @@
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../api/client.dart';
 import '../api/routing_api.dart';
+import '../navigation/location_converter.dart';
 import '../navigation/navigation_service.dart';
 
 final navigationServiceProvider = Provider<NavigationService>((ref) {
@@ -16,7 +18,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
         ),
     loadNavigationRoute: ({required origin, required destination}) =>
         routingApi.computeNavigationRoute(origin, destination),
-    locationStream: const Stream.empty(), // TODO: wire real geolocator stream
+    locationStream: Geolocator.getPositionStream().map(positionToUserLocation),
     speakInstruction: (_) async {},
   );
 });

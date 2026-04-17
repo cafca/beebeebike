@@ -29,7 +29,7 @@ void main() {
     expect(result.timestampMs, 1000);
   });
 
-  test('sets courseDeg to null when heading is zero', () {
+  test('preserves heading=0 (due north) as courseDeg 0.0', () {
     final pos = Position(
       latitude: 52.52,
       longitude: 13.405,
@@ -45,6 +45,26 @@ void main() {
 
     final result = positionToUserLocation(pos);
 
+    expect(result.courseDeg, 0.0);
+  });
+
+  test('sets courseDeg/speedMps to null when geolocator returns -1 sentinel', () {
+    final pos = Position(
+      latitude: 52.52,
+      longitude: 13.405,
+      accuracy: 5,
+      heading: -1.0,
+      speed: -1.0,
+      timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+      altitude: 0,
+      altitudeAccuracy: 0,
+      headingAccuracy: 0,
+      speedAccuracy: 0,
+    );
+
+    final result = positionToUserLocation(pos);
+
     expect(result.courseDeg, isNull);
+    expect(result.speedMps, isNull);
   });
 }

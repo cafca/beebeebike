@@ -1512,3 +1512,73 @@ async fn users_cannot_see_each_others_areas() {
     let body: Value = resp.json();
     assert_eq!(body["features"].as_array().unwrap().len(), 0);
 }
+
+#[tokio::test]
+async fn undo_handles_self_intersecting_polygon() {
+    // Regression: prod 500 from `ST_Difference` on self-intersecting geometry
+    // during undo's rebuild. Bowtie-shaped input must be sanitized on write so
+    // later clipping and rebuild never see an invalid polygon.
+    let Some(server) = setup().await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    // Bowtie (figure-eight) — two triangles crossing at (13.405, 52.505).
+    let bowtie = json!({
+        "type": "Polygon",
+        "coordinates": [[
+            [13.40, 52.50],
+            [13.41, 52.51],
+            [13.41, 52.50],
+            [13.40, 52.51],
+            [13.40, 52.50]
+        ]]
+    });
+
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": bowtie, "value": 3 }))
+        .await
+        .assert_status_ok();
+
+    // Paint a second, overlapping, valid polygon — exercises ST_Difference
+    // against whatever the bowtie was normalized to.
+    let overlap = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.405, 52.505], [13.42, 52.505], [13.42, 52.52], [13.405, 52.52], [13.405, 52.505]]]
+    });
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": overlap, "value": -3 }))
+        .await
+        .assert_status_ok();
+
+    // Undo the second paint — triggers rebuild_rated_areas_for_user, which
+    // replays the bowtie event through apply_paint. Must not 500.
+    let (hname, hval) = with_session(&session);
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await
+        .assert_status_ok();
+
+    // Undo the bowtie paint too — rebuild with zero events.
+    let (hname, hval) = with_session(&session);
+    server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await
+        .assert_status_ok();
+
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    assert_eq!(overlay["features"].as_array().unwrap().len(), 0);
+}

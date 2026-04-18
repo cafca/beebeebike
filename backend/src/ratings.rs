@@ -125,13 +125,23 @@ async fn apply_paint(
     geometry_json: &str,
     value: i32,
 ) -> Result<(i64, i64), AppError> {
+    // Sanitize incoming GeoJSON: ST_MakeValid fixes self-intersections,
+    // ST_CollectionExtract(..., 3) keeps only polygon components. Applied
+    // at every use of the input geometry below.
+    //
     // Step 1: Delete fully covered polygons
     let deleted_row = sqlx::query_as::<_, CountRow>(
         r#"
-        WITH deleted AS (
+        WITH input AS (
+            SELECT ST_CollectionExtract(
+                ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON($2), 4326)),
+                3
+            ) AS g
+        ),
+        deleted AS (
             DELETE FROM rated_areas
             WHERE user_id = $1
-              AND ST_Covers(ST_SetSRID(ST_GeomFromGeoJSON($2), 4326), geometry)
+              AND ST_Covers((SELECT g FROM input), geometry)
             RETURNING 1
         )
         SELECT COUNT(*) AS count FROM deleted
@@ -142,14 +152,22 @@ async fn apply_paint(
     .fetch_one(&mut **tx)
     .await?;
 
-    // Step 2: Clip overlapping polygons
+    // Step 2: Clip overlapping polygons. ST_MakeValid(geometry) on the stored
+    // side is belt-and-suspenders against any legacy invalid rows.
     let clipped_row = sqlx::query_as::<_, CountRow>(
         r#"
-        WITH overlapping AS (
+        WITH input AS (
+            SELECT ST_CollectionExtract(
+                ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON($2), 4326)),
+                3
+            ) AS g
+        ),
+        overlapping AS (
             DELETE FROM rated_areas
             WHERE user_id = $1
-              AND ST_Intersects(geometry, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))
-            RETURNING user_id, value, ST_Difference(geometry, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326)) AS clipped
+              AND ST_Intersects(geometry, (SELECT g FROM input))
+            RETURNING user_id, value,
+                ST_Difference(ST_MakeValid(geometry), (SELECT g FROM input)) AS clipped
         ),
         fragments AS (
             SELECT user_id, value, (ST_Dump(clipped)).geom AS geom
@@ -172,12 +190,24 @@ async fn apply_paint(
     .fetch_one(&mut **tx)
     .await?;
 
-    // Step 3: Insert new polygon (skip if value == 0, eraser mode)
+    // Step 3: Insert new polygon (skip if value == 0, eraser mode).
+    // Sanitize, then ST_Dump so multi-polygon results (from a pathological
+    // self-intersecting input) become separate rated_areas rows.
     if value != 0 {
         sqlx::query(
             r#"
+            WITH input AS (
+                SELECT (ST_Dump(ST_CollectionExtract(
+                    ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON($2), 4326)),
+                    3
+                ))).geom AS g
+            )
             INSERT INTO rated_areas (user_id, geometry, value)
-            VALUES ($1, ST_SetSRID(ST_GeomFromGeoJSON($2), 4326), $3)
+            SELECT $1, g, $3 FROM input
+            WHERE g IS NOT NULL
+              AND NOT ST_IsEmpty(g)
+              AND ST_GeometryType(g) = 'ST_Polygon'
+              AND ST_Area(g) > 0
             "#,
         )
         .bind(user_id)
@@ -316,11 +346,26 @@ pub async fn paint(
     .fetch_one(&mut *tx)
     .await?;
 
-    // Record the event
+    // Record the event. paint_events.geometry is a single Polygon; if the
+    // sanitized input is a MultiPolygon (only happens for pathologically
+    // self-intersecting inputs), pick the largest component. The derived
+    // rated_areas still receive every fragment via apply_paint's Step 3.
     sqlx::query(
         r#"
         INSERT INTO paint_events (user_id, seq, geometry, value, status)
-        VALUES ($1, $2, ST_SetSRID(ST_GeomFromGeoJSON($3), 4326), $4, 0)
+        SELECT $1, $2, geom, $4, 0
+        FROM (
+            SELECT (ST_Dump(ST_CollectionExtract(
+                ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON($3), 4326)),
+                3
+            ))).geom AS geom
+        ) d
+        WHERE geom IS NOT NULL
+          AND NOT ST_IsEmpty(geom)
+          AND ST_GeometryType(geom) = 'ST_Polygon'
+          AND ST_Area(geom) > 0
+        ORDER BY ST_Area(geom) DESC
+        LIMIT 1
         "#,
     )
     .bind(user_id)

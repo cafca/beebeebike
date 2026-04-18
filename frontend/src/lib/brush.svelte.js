@@ -500,7 +500,7 @@ export async function redo() {
 
 async function refreshRouteIfReady() {
   if (route.origin && route.destination) {
-    await computeRoute();
+    await computeRoute({ fitBounds: false });
   }
 }
 

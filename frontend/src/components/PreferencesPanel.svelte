@@ -14,7 +14,7 @@
     if (!route.origin || !route.destination) return;
 
     window.clearTimeout(recomputeTimer);
-    recomputeTimer = window.setTimeout(() => computeRoute(), 220);
+    recomputeTimer = window.setTimeout(() => computeRoute({ fitBounds: false }), 220);
   }
 
   function updateRatingWeight(event) {

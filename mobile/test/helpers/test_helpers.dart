@@ -125,6 +125,24 @@ Dio buildMockDio({
         return;
       }
 
+      if (path == '/api/auth/register') {
+        if (loginSucceeds) {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: TestFixtures.loggedInUser,
+          ));
+        } else {
+          handler.reject(DioException(
+            requestOptions: options,
+            response: Response(requestOptions: options, statusCode: 409,
+                data: {'error': 'email already taken'}),
+            type: DioExceptionType.badResponse,
+          ));
+        }
+        return;
+      }
+
       if (path == '/api/geocode') {
         handler.resolve(Response(
           requestOptions: options,
@@ -153,11 +171,48 @@ Dio buildMockDio({
         return;
       }
 
+      if (path == '/api/navigate') {
+        if (routeSucceeds) {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: TestFixtures.routePreviewJson,
+          ));
+        } else {
+          handler.reject(DioException(
+            requestOptions: options,
+            response: Response(requestOptions: options, statusCode: 500),
+            type: DioExceptionType.badResponse,
+          ));
+        }
+        return;
+      }
+
       if (path == '/api/locations/home') {
-        handler.resolve(Response(
-          requestOptions: options,
-          statusCode: 404,
-        ));
+        if (options.method == 'GET') {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 404,
+          ));
+        } else if (options.method == 'PUT') {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {
+              'id': 'home',
+              'label': options.data?['label'] ?? 'Home',
+              'lng': options.data?['lng'] ?? 13.4050,
+              'lat': options.data?['lat'] ?? 52.5200,
+            },
+          ));
+        } else if (options.method == 'DELETE') {
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+          ));
+        } else {
+          handler.next(options);
+        }
         return;
       }
 
@@ -177,7 +232,7 @@ List<Override> testProviderOverrides({
   return [
     appConfigProvider.overrideWithValue(const AppConfig(
       apiBaseUrl: 'http://localhost:3000',
-      tileStyleUrl: 'http://localhost:8080/tiles/style.json',
+      tileStyleUrl: 'http://localhost:8080/tiles/assets/styles/colorful/style.json',
     )),
     dioProvider.overrideWithValue(buildMockDio(
       authenticated: authenticated,

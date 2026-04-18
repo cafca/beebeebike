@@ -123,11 +123,10 @@ void main() {
 
   testWidgets('arrived sheet replaces ETA sheet on TripStatus.complete',
       (tester) async {
-    final (_, stream, cam) = await _pump(tester);
-    // _handleArrival() returns early in tests (no MapLibre map controller),
-    // so call cam.onArrived() directly, then force a rebuild via the nav stream.
-    cam.onArrived();
-    await _triggerRebuild(tester, stream);
+    final (_, stream, __) = await _pump(tester);
+    stream.add(_baseState(status: TripStatus.complete));
+    await tester.pump();
+    await tester.pump();
     expect(find.byType(ArrivedSheet), findsOneWidget);
   });
 }

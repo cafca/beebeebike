@@ -90,11 +90,11 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   }
 
   Future<void> _handleArrival() async {
+    final cam = ref.read(navigationCameraControllerProvider);
+    cam.onArrived();
     final controller = _mapController;
     if (controller == null) return;
     final destination = ref.read(routeControllerProvider).destination;
-    final cam = ref.read(navigationCameraControllerProvider);
-    cam.onArrived();
     await controller
         .updateMyLocationTrackingMode(MyLocationTrackingMode.none);
     if (!mounted) return;

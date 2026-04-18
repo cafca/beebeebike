@@ -30,19 +30,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _loading = true;
       _error = null;
     });
-    try {
-      await ref.read(authControllerProvider.notifier).login(
-            _emailController.text.trim(),
-            _passwordController.text,
-          );
-      if (mounted) Navigator.of(context).pop();
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _error = 'Invalid email or password';
-          _loading = false;
-        });
-      }
+
+    await ref.read(authControllerProvider.notifier).login(
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
+
+    if (!mounted) return;
+
+    final result = ref.read(authControllerProvider);
+    if (result is AsyncError) {
+      setState(() {
+        _error = 'Invalid email or password';
+        _loading = false;
+      });
+    } else {
+      Navigator.of(context).pop();
     }
   }
 

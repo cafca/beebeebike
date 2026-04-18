@@ -65,7 +65,7 @@ void main() {
           {'distance': 1234}
         ]
       },
-      locationStream: () => const Stream.empty(),
+      locationStreamFactory: () => const Stream.empty(),
       speakInstruction: (_) async {},
     );
     addTearDown(() => service.dispose());
@@ -103,7 +103,7 @@ void main() {
           {'distance': 1234}
         ]
       },
-      locationStream: () => const Stream.empty(),
+      locationStreamFactory: () => const Stream.empty(),
       speakInstruction: (_) async {},
     );
     addTearDown(() => service.dispose());

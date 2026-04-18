@@ -1,22 +1,30 @@
 import 'dart:math';
 
+import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
 
 import '../models/geocode_result.dart';
 import '../models/location.dart';
 import '../models/route_state.dart';
+import '../navigation/camera_controller.dart';
+import '../providers/navigation_camera_provider.dart';
+import '../providers/navigation_provider.dart';
+import '../providers/navigation_session_provider.dart';
 import '../providers/route_provider.dart';
-import '../screens/navigation_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/settings_screen.dart';
 import '../services/map_style_loader.dart';
 import '../services/route_drawing.dart';
+import '../widgets/arrived_sheet.dart';
 import '../widgets/map_tap_region.dart';
+import '../widgets/recenter_fab.dart';
+import '../widgets/rerouting_toast.dart';
 import '../widgets/route_summary.dart';
 import '../widgets/search_bar.dart';
+import '../widgets/turn_banner.dart';
 
 final _berlinBounds = LatLngBounds(
   southwest: const LatLng(52.3, 13.0),
@@ -33,8 +41,11 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   MapLibreMapController? _mapController;
   RouteOverlay? _routeOverlay;
+  bool _ttsEnabled = true;
+  bool _rerouting = false;
 
   Future<void> _handleMapTap(Offset localPosition) async {
+    if (ref.read(navigationSessionProvider)) return;
     final controller = _mapController;
     if (controller == null) return;
     final coords = await controller.toLatLng(
@@ -66,7 +77,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
     final preview = next.preview;
     if (preview != null) {
-      _routeOverlay = await RouteOverlay.draw(controller, preview);
+      final fit = !ref.read(navigationSessionProvider);
+      _routeOverlay =
+          await RouteOverlay.draw(controller, preview, fitCamera: fit);
     }
   }
 
@@ -87,13 +100,120 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
+  Future<void> _startNavigationSession() async {
+    final routeState = ref.read(routeControllerProvider);
+    final origin = routeState.origin;
+    final destination = routeState.destination;
+    if (origin == null || destination == null) return;
+    final service = ref.read(navigationServiceProvider);
+    try {
+      await service.start(
+        origin: WaypointInput(lat: origin.lat, lng: origin.lng),
+        destination:
+            WaypointInput(lat: destination.lat, lng: destination.lng),
+      );
+    } catch (e, st) {
+      debugPrint('MapScreen: failed to start navigation: $e\n$st');
+    }
+  }
+
+  Future<void> _endNavigationSession() async {
+    final service = ref.read(navigationServiceProvider);
+    await service.dispose();
+    final controller = _mapController;
+    if (controller != null) {
+      await controller
+          .updateMyLocationTrackingMode(MyLocationTrackingMode.none);
+    }
+    if (!mounted) return;
+    setState(() => _rerouting = false);
+    ref.read(navigationSessionProvider.notifier).state = false;
+    ref.read(routeControllerProvider.notifier).clear();
+  }
+
+  Future<void> _handleFirstFix(UserLocation loc) async {
+    final cam = ref.read(navigationCameraControllerProvider);
+    cam.onFirstFix();
+    final controller = _mapController;
+    if (controller == null) return;
+    await controller.animateCamera(CameraUpdate.newLatLngZoom(
+        LatLng(loc.lat, loc.lng), cam.followZoom));
+    if (!mounted) return;
+    await controller
+        .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+  }
+
+  Future<void> _handleArrival() async {
+    final cam = ref.read(navigationCameraControllerProvider);
+    cam.onArrived();
+    if (mounted) setState(() => _rerouting = false);
+    final controller = _mapController;
+    if (controller == null) return;
+    final destination = ref.read(routeControllerProvider).destination;
+    await controller
+        .updateMyLocationTrackingMode(MyLocationTrackingMode.none);
+    if (!mounted) return;
+    if (destination != null) {
+      await controller.animateCamera(CameraUpdate.newLatLngZoom(
+          LatLng(destination.lat, destination.lng), cam.followZoom));
+    }
+  }
+
+  Future<void> _handleRecenterTap() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    final snapped = ref.read(navigationStateProvider).value?.snappedLocation;
+    if (snapped == null) return;
+    final cam = ref.read(navigationCameraControllerProvider);
+    cam.onRecenterTapped();
+    await controller.animateCamera(CameraUpdate.newLatLngZoom(
+        LatLng(snapped.lat, snapped.lng), cam.followZoom));
+    if (!mounted) return;
+    await controller
+        .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+  }
+
+  void _onNavStateChange(
+      AsyncValue<NavigationState>? prev, AsyncValue<NavigationState> next) {
+    if (!mounted) return;
+    if (!ref.read(navigationSessionProvider)) return;
+    final prevState = prev?.value;
+    final nextState = next.value;
+    if (nextState == null) return;
+
+    if (prevState?.snappedLocation == null &&
+        nextState.snappedLocation != null) {
+      _handleFirstFix(nextState.snappedLocation!);
+    }
+
+    if ((prevState?.isOffRoute ?? false) != nextState.isOffRoute) {
+      setState(() => _rerouting = nextState.isOffRoute);
+    }
+
+    if (prevState?.status != TripStatus.complete &&
+        nextState.status == TripStatus.complete) {
+      _handleArrival();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final routeState = ref.watch(routeControllerProvider);
     final preview = routeState.preview;
     final styleAsync = ref.watch(mapStyleProvider);
+    final navActive = ref.watch(navigationSessionProvider);
 
     ref.listen<RouteState>(routeControllerProvider, _onRouteStateChanged);
+    ref.listen<AsyncValue<NavigationState>>(
+        navigationStateProvider, _onNavStateChange);
+    ref.listen<bool>(navigationSessionProvider, (prev, next) {
+      if (prev == next) return;
+      if (next) {
+        _startNavigationSession();
+      } else if (prev == true) {
+        _endNavigationSession();
+      }
+    });
 
     return Scaffold(
       body: Stack(
@@ -113,128 +233,349 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
                 myLocationEnabled: true,
                 myLocationTrackingMode: MyLocationTrackingMode.none,
+                trackCameraPosition: true,
                 onMapCreated: (controller) {
                   _mapController = controller;
+                },
+                onCameraTrackingDismissed: () {
+                  ref
+                      .read(navigationCameraControllerProvider)
+                      .onTrackingDismissed();
+                },
+                onCameraIdle: () {
+                  final c = _mapController;
+                  if (c == null) return;
+                  final zoom = c.cameraPosition?.zoom;
+                  if (zoom != null) {
+                    ref
+                        .read(navigationCameraControllerProvider)
+                        .onZoomChanged(zoom);
+                  }
                 },
               ),
             ),
           ),
-          BeeBeeBikeSearchBar(
-            onTap: () async {
-              final result = await Navigator.of(context).push<GeocodeResult>(
-                MaterialPageRoute(builder: (_) => const SearchScreen()),
-              );
-              if (result == null || !context.mounted) return;
+          if (navActive)
+            _NavigationOverlay(
+              ttsEnabled: _ttsEnabled,
+              rerouting: _rerouting,
+              onToggleTts: () =>
+                  setState(() => _ttsEnabled = !_ttsEnabled),
+              onRecenter: _handleRecenterTap,
+              onClose: () =>
+                  ref.read(navigationSessionProvider.notifier).state = false,
+            )
+          else
+            _BrowseOverlay(
+              routeState: routeState,
+              preview: preview,
+              onFlyToMyLocation: _flyToCurrentLocation,
+              onStart: () {
+                ref.read(navigationSessionProvider.notifier).state = true;
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
 
-              Position? pos;
-              try {
-                pos = await Geolocator.getLastKnownPosition() ??
-                    await Geolocator.getCurrentPosition();
-              } catch (_) {}
-              if (!context.mounted) return;
-              ref.read(routeControllerProvider.notifier).setOrigin(
-                    Location(
-                      id: 'gps',
-                      name: 'Current location',
-                      label: 'Current location',
-                      lng: pos?.longitude ?? 13.4533,
-                      lat: pos?.latitude ?? 52.5065,
-                    ),
-                  );
-              if (!context.mounted) return;
-              ref.read(routeControllerProvider.notifier).setDestination(
-                    Location(
-                      id: result.id,
-                      name: result.name,
-                      label: result.label,
-                      lng: result.lng,
-                      lat: result.lat,
-                    ),
-                  );
-            },
-            onAvatarTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  FloatingActionButton(
-                    onPressed: _flyToCurrentLocation,
-                    child: const Icon(Icons.my_location),
+class _BrowseOverlay extends ConsumerWidget {
+  const _BrowseOverlay({
+    required this.routeState,
+    required this.preview,
+    required this.onFlyToMyLocation,
+    required this.onStart,
+  });
+
+  final RouteState routeState;
+  final dynamic preview;
+  final VoidCallback onFlyToMyLocation;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Stack(
+      children: [
+        BeeBeeBikeSearchBar(
+          onTap: () async {
+            final result = await Navigator.of(context).push<GeocodeResult>(
+              MaterialPageRoute(builder: (_) => const SearchScreen()),
+            );
+            if (result == null || !context.mounted) return;
+
+            Position? pos;
+            try {
+              pos = await Geolocator.getLastKnownPosition() ??
+                  await Geolocator.getCurrentPosition();
+            } catch (_) {}
+            if (!context.mounted) return;
+            ref.read(routeControllerProvider.notifier).setOrigin(
+                  Location(
+                    id: 'gps',
+                    name: 'Current location',
+                    label: 'Current location',
+                    lng: pos?.longitude ?? 13.4533,
+                    lat: pos?.latitude ?? 52.5065,
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: routeState.isLoading
-                        ? const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8),
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        : routeState.error != null
-                            ? Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.error_outline,
-                                      color: Colors.red),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Could not load route',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium,
-                                  ),
-                                ],
-                              )
-                            : preview == null
-                                ? const Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Center(
-                                        child: SizedBox(
-                                          width: 36,
-                                          child: Divider(thickness: 4),
-                                        ),
-                                      ),
-                                      SizedBox(height: 12),
-                                      Text('Home'),
-                                      Text('Saved places'),
-                                    ],
-                                  )
-                                : RouteSummary(
-                                    // GraphHopper returns time in milliseconds.
-                                    durationMinutes:
-                                        (preview.time / 60000).round(),
-                                    distanceKm: preview.distance / 1000,
-                                    onStart: () =>
-                                        Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const NavigationScreen(),
+                );
+            if (!context.mounted) return;
+            ref.read(routeControllerProvider.notifier).setDestination(
+                  Location(
+                    id: result.id,
+                    name: result.name,
+                    label: result.label,
+                    lng: result.lng,
+                    lat: result.lat,
+                  ),
+                );
+          },
+          onAvatarTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            );
+          },
+        ),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton(
+                  heroTag: 'browse-my-location-fab',
+                  onPressed: onFlyToMyLocation,
+                  child: const Icon(Icons.my_location),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: routeState.isLoading
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      : routeState.error != null
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.error_outline,
+                                    color: Colors.red),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Could not load route',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium,
+                                ),
+                              ],
+                            )
+                          : preview == null
+                              ? const Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Center(
+                                      child: SizedBox(
+                                        width: 36,
+                                        child: Divider(thickness: 4),
                                       ),
                                     ),
-                                  ),
+                                    SizedBox(height: 12),
+                                    Text('Home'),
+                                    Text('Saved places'),
+                                  ],
+                                )
+                              : RouteSummary(
+                                  // GraphHopper returns time in milliseconds.
+                                  durationMinutes:
+                                      (preview.time / 60000).round(),
+                                  distanceKm: preview.distance / 1000,
+                                  onStart: onStart,
+                                ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NavigationOverlay extends ConsumerWidget {
+  const _NavigationOverlay({
+    required this.ttsEnabled,
+    required this.rerouting,
+    required this.onToggleTts,
+    required this.onRecenter,
+    required this.onClose,
+  });
+
+  final bool ttsEnabled;
+  final bool rerouting;
+  final VoidCallback onToggleTts;
+  final VoidCallback onRecenter;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final navState = ref.watch(navigationStateProvider);
+    final cam = ref.watch(navigationCameraControllerProvider);
+
+    return Stack(
+      children: [
+        Align(
+          alignment: Alignment.topCenter,
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                navState.when(
+                  loading: () => const TurnBanner(
+                    primaryText: 'Starting navigation...',
+                    distanceText: '',
                   ),
-                ],
+                  error: (e, _) => const TurnBanner(
+                    primaryText: 'Navigation error',
+                    distanceText: '',
+                    icon: Icons.error_outline,
+                  ),
+                  data: (state) => TurnBanner(
+                    primaryText:
+                        state.currentVisual?.primaryText ?? 'On route',
+                    distanceText: state.progress != null
+                        ? _formatDistance(
+                            state.progress!.distanceToNextManeuverM)
+                        : '',
+                    icon: state.currentVisual != null
+                        ? _iconForManeuver(
+                            state.currentVisual!.maneuverType,
+                            state.currentVisual!.maneuverModifier,
+                          )
+                        : Icons.straight,
+                  ),
+                ),
+                if (rerouting) const ReroutingToast(),
+              ],
+            ),
+          ),
+        ),
+        if (cam.mode == CameraMode.free)
+          Align(
+            alignment: Alignment.bottomRight,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16, bottom: 140),
+                child: RecenterFab(onTap: onRecenter),
               ),
             ),
+          ),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: SafeArea(
+            top: false,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: cam.mode == CameraMode.arrived
+                  ? ArrivedSheet(onDone: onClose)
+                  : _EtaSheet(
+                      navState: navState,
+                      ttsEnabled: ttsEnabled,
+                      onToggleTts: onToggleTts,
+                      onClose: onClose,
+                    ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EtaSheet extends StatelessWidget {
+  const _EtaSheet({
+    required this.navState,
+    required this.ttsEnabled,
+    required this.onToggleTts,
+    required this.onClose,
+  });
+
+  final AsyncValue<NavigationState> navState;
+  final bool ttsEnabled;
+  final VoidCallback onToggleTts;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          navState.when(
+            loading: () => const Text('Loading...'),
+            error: (_, __) => const Text('—'),
+            data: (state) {
+              final p = state.progress;
+              if (p == null) return const Text('—');
+              return Text(_formatEta(p.durationRemainingMs));
+            },
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon:
+                    Icon(ttsEnabled ? Icons.volume_up : Icons.volume_off),
+                onPressed: onToggleTts,
+              ),
+              const SizedBox(width: 16),
+              GestureDetector(
+                onTap: onClose,
+                child: const Icon(Icons.close),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
+
+IconData _iconForManeuver(String type, String? modifier) {
+  final mod = modifier?.replaceAll('_', ' ');
+  if (type == 'turn') {
+    if (mod == 'left') return Icons.turn_left;
+    if (mod == 'right') return Icons.turn_right;
+    if (mod == 'sharp left') return Icons.turn_sharp_left;
+    if (mod == 'sharp right') return Icons.turn_sharp_right;
+    if (mod == 'slight left') return Icons.turn_slight_left;
+    if (mod == 'slight right') return Icons.turn_slight_right;
+  }
+  if (type == 'arrive') return Icons.flag;
+  return Icons.straight;
+}
+
+String _formatDistance(double meters) {
+  if (meters >= 1000) return '${(meters / 1000).toStringAsFixed(1)} km';
+  return '${meters.round()} m';
+}
+
+String _formatEta(int durationRemainingMs) {
+  final eta = DateTime.now().add(Duration(milliseconds: durationRemainingMs));
+  final h = eta.hour.toString().padLeft(2, '0');
+  final m = eta.minute.toString().padLeft(2, '0');
+  final minRemaining = (durationRemainingMs / 60000).round();
+  return '$h:$m arrival · $minRemaining min';
 }

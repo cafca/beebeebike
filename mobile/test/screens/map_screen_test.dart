@@ -1,7 +1,7 @@
 import 'package:beebeebike/models/route_state.dart';
+import 'package:beebeebike/providers/navigation_session_provider.dart';
 import 'package:beebeebike/providers/route_provider.dart';
 import 'package:beebeebike/screens/map_screen.dart';
-import 'package:beebeebike/screens/navigation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -89,25 +89,29 @@ void main() {
     expect(find.textContaining('5.0 km'), findsOneWidget);
   });
 
-  testWidgets('tapping Start navigates to NavigationScreen', (tester) async {
+  testWidgets('tapping Start flips navigationSessionProvider to true',
+      (tester) async {
     final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(overrides: [
+      ...testProviderOverrides(prefs: prefs),
+      routeControllerProvider.overrideWith(_PreviewRouteController.new),
+    ]);
+    addTearDown(container.dispose);
 
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          ...testProviderOverrides(prefs: prefs),
-          routeControllerProvider.overrideWith(_PreviewRouteController.new),
-        ],
+      UncontrolledProviderScope(
+        container: container,
         child: const MaterialApp(home: MapScreen()),
       ),
     );
     await tester.pump();
 
+    expect(container.read(navigationSessionProvider), isFalse);
     expect(find.text('Start'), findsOneWidget);
     await tester.tap(find.text('Start'));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
-    expect(find.byType(NavigationScreen), findsOneWidget);
+    expect(container.read(navigationSessionProvider), isTrue);
   });
 
   testWidgets('empty state shows Home and Saved places placeholders',

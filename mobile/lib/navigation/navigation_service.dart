@@ -18,13 +18,13 @@ class NavigationService {
   NavigationService({
     required this.createController,
     required this.loadNavigationRoute,
-    required this.locationStream,
+    required this.locationStreamFactory,
     required this.speakInstruction,
   });
 
   final CreateController createController;
   final LoadNavigationRoute loadNavigationRoute;
-  final LocationStreamFactory locationStream;
+  final LocationStreamFactory locationStreamFactory;
   final SpeakInstruction speakInstruction;
 
   FerrostarController? _controller;
@@ -81,7 +81,7 @@ class NavigationService {
       }
     });
 
-    _locationSub = locationStream().listen(
+    _locationSub = locationStreamFactory().listen(
       (location) => _controller?.updateLocation(location),
     );
   }

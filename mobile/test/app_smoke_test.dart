@@ -52,7 +52,7 @@ void main() {
     expect(find.text('Search here...'), findsOneWidget);
   });
 
-  testWidgets('auth provider is initialised on startup', (tester) async {
+  testWidgets('auth provider begins initialising on startup', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
 

@@ -25,10 +25,18 @@ class SettingsScreen extends ConsumerWidget {
               title: const Text('Home'),
               subtitle: Text(home.label),
             ),
-          ListTile(
-            title: const Text('Log out'),
-            onTap: () => ref.read(authControllerProvider.notifier).logout(),
-          ),
+          if (user?.email != null)
+            ListTile(
+              title: const Text('Log out'),
+              onTap: () =>
+                  ref.read(authControllerProvider.notifier).logout(),
+            )
+          else
+            const ListTile(
+              title: Text('Log in'),
+              subtitle: Text('Coming soon'),
+              enabled: false,
+            ),
         ],
       ),
     );

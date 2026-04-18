@@ -33,21 +33,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          MapLibreMap(
-            styleString: ref.watch(appConfigProvider).tileStyleUrl,
-            initialCameraPosition: const CameraPosition(
-              target: LatLng(52.5200, 13.4050),
-              zoom: 13,
-            ),
-            myLocationEnabled: true,
-            myLocationTrackingMode: MyLocationTrackingMode.none,
-            onMapCreated: (controller) {
-              setState(() => _mapController = controller);
-            },
-          ),
-          // Transparent tap layer — sits above the map but below UI widgets.
-          // HitTestBehavior.translucent lets taps on the search bar and bottom
-          // card fall through to those widgets' own recognizers.
           GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTapUp: (details) async {
@@ -70,7 +55,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     ),
                   );
             },
-            child: const SizedBox.expand(),
+            child: MapLibreMap(
+              styleString: ref.watch(appConfigProvider).tileStyleUrl,
+              initialCameraPosition: const CameraPosition(
+                target: LatLng(52.5200, 13.4050),
+                zoom: 13,
+              ),
+              myLocationEnabled: true,
+              myLocationTrackingMode: MyLocationTrackingMode.none,
+              onMapCreated: (controller) {
+                _mapController = controller;
+              },
+            ),
           ),
           BeeBeeBikeSearchBar(
             onTap: () async {

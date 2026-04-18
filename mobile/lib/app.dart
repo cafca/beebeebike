@@ -12,8 +12,9 @@ class BeeBeeBikeApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Eagerly initialise auth so the session cookie is ready before any
-    // route/geocode API call. The value is intentionally ignored here.
+    // Start auth eagerly on the first frame. The anonymous session completes
+    // in the background; all user-triggered API calls (route, geocode) happen
+    // after human interaction, giving the session time to settle.
     ref.watch(authControllerProvider);
 
     return MaterialApp(

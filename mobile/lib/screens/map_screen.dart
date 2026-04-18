@@ -1,7 +1,5 @@
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -17,11 +15,18 @@ import '../screens/settings_screen.dart';
 import '../widgets/route_summary.dart';
 import '../widgets/search_bar.dart';
 
-class MapScreen extends ConsumerWidget {
+class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends ConsumerState<MapScreen> {
+  MapLibreMapController? _mapController;
+
+  @override
+  Widget build(BuildContext context) {
     final routeState = ref.watch(routeControllerProvider);
     final preview = routeState.preview;
 
@@ -36,11 +41,24 @@ class MapScreen extends ConsumerWidget {
             ),
             myLocationEnabled: true,
             myLocationTrackingMode: MyLocationTrackingMode.none,
-            gestureRecognizers: {
-              Factory<EagerGestureRecognizer>(
-                  () => EagerGestureRecognizer()),
+            onMapCreated: (controller) {
+              setState(() => _mapController = controller);
             },
-            onMapClick: (Point<double> point, LatLng coords) {
+          ),
+          // Transparent tap layer — sits above the map but below UI widgets.
+          // HitTestBehavior.translucent lets taps on the search bar and bottom
+          // card fall through to those widgets' own recognizers.
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTapUp: (details) async {
+              final controller = _mapController;
+              if (controller == null) return;
+              final point = Point<double>(
+                details.localPosition.dx,
+                details.localPosition.dy,
+              );
+              final coords = await controller.toLatLng(point);
+              if (!mounted) return;
               ref.read(routeControllerProvider.notifier).setDestination(
                     Location(
                       id: 'geo:${coords.latitude},${coords.longitude}',
@@ -52,11 +70,11 @@ class MapScreen extends ConsumerWidget {
                     ),
                   );
             },
+            child: const SizedBox.expand(),
           ),
           BeeBeeBikeSearchBar(
             onTap: () async {
-              final result =
-                  await Navigator.of(context).push<GeocodeResult>(
+              final result = await Navigator.of(context).push<GeocodeResult>(
                 MaterialPageRoute(builder: (_) => const SearchScreen()),
               );
               if (result == null || !context.mounted) return;
@@ -66,28 +84,26 @@ class MapScreen extends ConsumerWidget {
                 pos = await Geolocator.getLastKnownPosition() ??
                     await Geolocator.getCurrentPosition();
               } catch (_) {}
-              if (pos != null && context.mounted) {
-                ref.read(routeControllerProvider.notifier).setOrigin(
-                      Location(
-                        id: 'gps',
-                        name: 'Current location',
-                        label: 'Current location',
-                        lng: pos.longitude,
-                        lat: pos.latitude,
-                      ),
-                    );
-              }
-              if (context.mounted) {
-                ref.read(routeControllerProvider.notifier).setDestination(
-                      Location(
-                        id: result.id,
-                        name: result.name,
-                        label: result.label,
-                        lng: result.lng,
-                        lat: result.lat,
-                      ),
-                    );
-              }
+              if (!context.mounted) return;
+              ref.read(routeControllerProvider.notifier).setOrigin(
+                    Location(
+                      id: 'gps',
+                      name: 'Current location',
+                      label: 'Current location',
+                      lng: pos?.longitude ?? 13.4533,
+                      lat: pos?.latitude ?? 52.5065,
+                    ),
+                  );
+              if (!context.mounted) return;
+              ref.read(routeControllerProvider.notifier).setDestination(
+                    Location(
+                      id: result.id,
+                      name: result.name,
+                      label: result.label,
+                      lng: result.lng,
+                      lat: result.lat,
+                    ),
+                  );
             },
             onAvatarTap: () {
               Navigator.of(context).push(

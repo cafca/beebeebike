@@ -39,8 +39,9 @@ class RouteOverlay {
 
   static Future<RouteOverlay> draw(
     MapLibreMapController controller,
-    RoutePreview preview,
-  ) async {
+    RoutePreview preview, {
+    bool fitCamera = true,
+  }) async {
     final coords = _decodeLineString(preview.geometry);
     final line = await controller.addLine(LineOptions(
       geometry: coords,
@@ -62,15 +63,17 @@ class RouteOverlay {
       circleStrokeColor: _markerStrokeColor,
       circleStrokeWidth: 2.0,
     ));
-    await controller.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        _boundsFor(coords),
-        left: 40,
-        top: 100,
-        right: 40,
-        bottom: 240,
-      ),
-    );
+    if (fitCamera) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          _boundsFor(coords),
+          left: 40,
+          top: 100,
+          right: 40,
+          bottom: 240,
+        ),
+      );
+    }
     return RouteOverlay._(line, origin, destination);
   }
 

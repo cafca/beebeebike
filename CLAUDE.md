@@ -55,10 +55,8 @@ cd mobile
 flutter pub get
 flutter test
 
-# Run on iOS simulator
-flutter run -d ios \
-  --dart-define=BEEBEEBIKE_API_BASE_URL=http://127.0.0.1:3000 \
-  --dart-define=BEEBEEBIKE_TILE_STYLE_URL=http://127.0.0.1:8080/tiles/assets/styles/colorful/style.json
+# Run on iOS simulator (defaults point to docker dev stack)
+flutter run -d ios
 ```
 
 Platform scope: iOS only in v0.1. `ferrostar_flutter` (at `packages/ferrostar_flutter/`) is a path dependency and must be present.

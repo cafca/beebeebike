@@ -11,11 +11,11 @@ class AppConfig {
     return const AppConfig(
       apiBaseUrl: String.fromEnvironment(
         'BEEBEEBIKE_API_BASE_URL',
-        defaultValue: 'https://beebeebike.com',
+        defaultValue: 'http://127.0.0.1:3000',
       ),
       tileStyleUrl: String.fromEnvironment(
         'BEEBEEBIKE_TILE_STYLE_URL',
-        defaultValue: 'https://beebeebike.com/assets/styles/colorful/style.json',
+        defaultValue: 'http://127.0.0.1:8080/assets/styles/colorful/style.json',
       ),
     );
   }

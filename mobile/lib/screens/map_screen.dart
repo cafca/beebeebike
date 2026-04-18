@@ -215,13 +215,52 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     if ((prevState?.isOffRoute ?? false) != nextState.isOffRoute) {
       debugPrint('MapScreen: isOffRoute -> ${nextState.isOffRoute}');
-      setState(() => _rerouting = nextState.isOffRoute);
     }
 
     if (prevState?.status != TripStatus.complete &&
         nextState.status == TripStatus.complete) {
       _handleArrival();
     }
+  }
+
+  void _onRerouteInProgressChange(
+      AsyncValue<bool>? prev, AsyncValue<bool> next) {
+    if (!mounted) return;
+    final prevInProgress = prev?.value ?? false;
+    final inProgress = next.value ?? false;
+    if (_rerouting != inProgress) {
+      debugPrint('MapScreen: rerouteInProgress -> $inProgress');
+      setState(() => _rerouting = inProgress);
+    }
+    // On reroute completion, refetch the preview polyline so the map
+    // shows the new route. `/api/navigate` used during reroute returns
+    // an encoded polyline (not GeoJSON), so the RoutePreview geometry
+    // isn't updated by ferrostar's replaceRoute. Re-hitting `/api/route`
+    // with current GPS as origin produces a fresh GeoJSON preview.
+    if (prevInProgress && !inProgress) {
+      _refreshPreviewFromGps();
+    }
+  }
+
+  Future<void> _refreshPreviewFromGps() async {
+    Position? pos;
+    try {
+      pos = await Geolocator.getLastKnownPosition() ??
+          await Geolocator.getCurrentPosition();
+    } catch (e) {
+      debugPrint('MapScreen: refreshPreview GPS error: $e');
+    }
+    if (!mounted || pos == null) return;
+    debugPrint('MapScreen: refreshing preview from GPS after reroute');
+    ref.read(routeControllerProvider.notifier).setOrigin(
+          Location(
+            id: 'gps',
+            name: 'Current location',
+            label: 'Current location',
+            lat: pos.latitude,
+            lng: pos.longitude,
+          ),
+        );
   }
 
   @override
@@ -234,6 +273,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     ref.listen<RouteState>(routeControllerProvider, _onRouteStateChanged);
     ref.listen<AsyncValue<NavigationState>>(
         navigationStateProvider, _onNavStateChange);
+    ref.listen<AsyncValue<bool>>(
+        rerouteInProgressProvider, _onRerouteInProgressChange);
     ref.listen<bool>(navigationSessionProvider, (prev, next) {
       if (prev == next) return;
       if (next) {

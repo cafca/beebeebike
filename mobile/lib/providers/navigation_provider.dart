@@ -60,3 +60,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
 final navigationStateProvider = StreamProvider.autoDispose<NavigationState>((ref) {
   return ref.watch(navigationServiceProvider).stateStream;
 });
+
+final rerouteInProgressProvider = StreamProvider.autoDispose<bool>((ref) {
+  return ref.watch(navigationServiceProvider).rerouteInProgressStream;
+});

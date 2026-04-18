@@ -36,8 +36,15 @@ class NavigationService {
   bool _rerouteInProgress = false;
 
   final _stateController = StreamController<NavigationState>.broadcast();
+  final _rerouteController = StreamController<bool>.broadcast();
 
   Stream<NavigationState> get stateStream => _stateController.stream;
+
+  /// Emits `true` when a reroute starts and `false` when it finishes
+  /// (success or failure). Consumers should hide UI "rerouting" affordances
+  /// the moment this flips back to `false`, without waiting on a fresh
+  /// [NavigationState] (which only arrives on the next GPS update).
+  Stream<bool> get rerouteInProgressStream => _rerouteController.stream;
 
   Future<void> start({
     required WaypointInput origin,
@@ -71,6 +78,7 @@ class NavigationService {
     _deviationSub = _controller!.deviationStream.listen((deviation) async {
       if (_rerouteInProgress) return;
       _rerouteInProgress = true;
+      _rerouteController.add(true);
       debugPrint(
           'NavigationService: deviation ${deviation.deviationM.toStringAsFixed(1)}m, rerouting...');
       try {
@@ -96,6 +104,7 @@ class NavigationService {
         debugPrint('NavigationService reroute error: $e\n$st');
       } finally {
         _rerouteInProgress = false;
+        _rerouteController.add(false);
       }
     });
 

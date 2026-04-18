@@ -475,6 +475,9 @@ class _BrowseOverlay extends ConsumerWidget {
                                       (preview.time / 60000).round(),
                                   distanceKm: preview.distance / 1000,
                                   onStart: onStart,
+                                  onClose: () => ref
+                                      .read(routeControllerProvider.notifier)
+                                      .clear(),
                                 ),
                 ),
               ],

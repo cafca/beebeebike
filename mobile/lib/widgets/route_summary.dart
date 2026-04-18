@@ -6,11 +6,13 @@ class RouteSummary extends StatelessWidget {
     required this.durationMinutes,
     required this.distanceKm,
     required this.onStart,
+    this.onClose,
   });
 
   final int durationMinutes;
   final double distanceKm;
   final VoidCallback onStart;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +20,25 @@ class RouteSummary extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('🚲 $durationMinutes min · ${distanceKm.toStringAsFixed(1)} km'),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                '🚲 $durationMinutes min · ${distanceKm.toStringAsFixed(1)} km',
+              ),
+            ),
+            if (onClose != null)
+              IconButton(
+                tooltip: 'Clear route',
+                icon: const Icon(Icons.close),
+                onPressed: onClose,
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(),
+              ),
+          ],
+        ),
         const SizedBox(height: 12),
         FilledButton(
           onPressed: onStart,

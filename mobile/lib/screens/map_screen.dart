@@ -118,7 +118,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final routeState = ref.read(routeControllerProvider);
     final origin = routeState.origin;
     final destination = routeState.destination;
-    if (origin == null || destination == null) return;
+    if (origin == null || destination == null) {
+      debugPrint(
+          'MapScreen: startNavigation aborted (origin or destination null)');
+      return;
+    }
+    debugPrint(
+        'MapScreen: starting navigation ${origin.name} -> ${destination.name}');
     final service = ref.read(navigationServiceProvider);
     try {
       await service.start(
@@ -126,12 +132,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         destination:
             WaypointInput(lat: destination.lat, lng: destination.lng),
       );
+      debugPrint('MapScreen: navigation started');
     } catch (e, st) {
       debugPrint('MapScreen: failed to start navigation: $e\n$st');
     }
   }
 
   Future<void> _endNavigationSession({bool clearRoute = false}) async {
+    debugPrint('MapScreen: ending navigation (clearRoute=$clearRoute)');
     final service = ref.read(navigationServiceProvider);
     await service.dispose();
     final controller = _mapController;
@@ -148,6 +156,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _handleFirstFix(UserLocation loc) async {
+    debugPrint(
+        'MapScreen: first GPS fix ${loc.lat.toStringAsFixed(5)}, ${loc.lng.toStringAsFixed(5)}');
     final cam = ref.read(navigationCameraControllerProvider);
     cam.onFirstFix();
     final controller = _mapController;
@@ -160,6 +170,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _handleArrival() async {
+    debugPrint('MapScreen: arrival fired');
     final cam = ref.read(navigationCameraControllerProvider);
     cam.onArrived();
     if (mounted) setState(() => _rerouting = false);
@@ -203,6 +214,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
 
     if ((prevState?.isOffRoute ?? false) != nextState.isOffRoute) {
+      debugPrint('MapScreen: isOffRoute -> ${nextState.isOffRoute}');
       setState(() => _rerouting = nextState.isOffRoute);
     }
 

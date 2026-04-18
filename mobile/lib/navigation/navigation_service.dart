@@ -43,14 +43,18 @@ class NavigationService {
     required WaypointInput origin,
     required WaypointInput destination,
   }) async {
+    debugPrint(
+        'NavigationService: start ${origin.lat},${origin.lng} -> ${destination.lat},${destination.lng}');
     await dispose();
     _destination = destination;
     final routeJson = await loadNavigationRoute(
       origin: [origin.lng, origin.lat],
       destination: [destination.lng, destination.lat],
     );
+    debugPrint('NavigationService: initial route fetched');
     final waypoints = [origin, destination];
     _controller = await createController(routeJson, waypoints);
+    debugPrint('NavigationService: controller created, subscriptions wired');
 
     _stateSub = _controller!.stateStream.listen(
       _stateController.add,
@@ -58,7 +62,10 @@ class NavigationService {
     );
 
     _spokenSub = _controller!.spokenInstructionStream.listen(
-      (instruction) => speakInstruction(instruction.text),
+      (instruction) {
+        debugPrint('NavigationService: spoken "${instruction.text}"');
+        speakInstruction(instruction.text);
+      },
     );
 
     _deviationSub = _controller!.deviationStream.listen((deviation) async {
@@ -98,6 +105,9 @@ class NavigationService {
   }
 
   Future<void> dispose() async {
+    if (_controller != null) {
+      debugPrint('NavigationService: disposing controller + subs');
+    }
     await _locationSub?.cancel();
     await _spokenSub?.cancel();
     await _deviationSub?.cancel();

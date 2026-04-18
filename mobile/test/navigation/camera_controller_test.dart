@@ -95,8 +95,32 @@ void main() {
       final c = NavigationCameraController();
       var notifications = 0;
       c.addListener(() => notifications++);
-      c.onTrackingDismissed(); // no-op from awaitingFirstFix
-      c.onRecenterTapped();    // no-op from awaitingFirstFix
+
+      // No-ops from awaitingFirstFix
+      c.onTrackingDismissed();
+      c.onRecenterTapped();
+      c.onZoomChanged(14.0);
+      expect(notifications, 0);
+
+      // Real transition: -> following
+      c.onFirstFix();
+      notifications = 0;
+
+      // No-ops from following
+      c.onFirstFix();
+      c.onZoomChanged(14.0);
+      expect(notifications, 0);
+
+      // Real transitions: -> free, -> arrived
+      c.onTrackingDismissed();
+      c.onArrived();
+      notifications = 0;
+
+      // No-ops from arrived
+      c.onArrived();
+      c.onTrackingDismissed();
+      c.onRecenterTapped();
+      c.onZoomChanged(14.0);
       expect(notifications, 0);
     });
   });

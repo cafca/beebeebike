@@ -41,6 +41,11 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
   @override
   void dispose() {
+    final c = _mapController;
+    final o = _routeOverlay;
+    if (c != null && o != null) {
+      o.remove(c); // fire-and-forget
+    }
     _navigationService.dispose();
     super.dispose();
   }
@@ -79,6 +84,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     await controller
         .animateCamera(CameraUpdate.newLatLngZoom(
             LatLng(loc.lat, loc.lng), cam.followZoom));
+    if (!mounted) return;
     await controller
         .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
   }
@@ -91,6 +97,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     cam.onArrived();
     await controller
         .updateMyLocationTrackingMode(MyLocationTrackingMode.none);
+    if (!mounted) return;
     if (destination != null) {
       await controller.animateCamera(CameraUpdate.newLatLngZoom(
           LatLng(destination.lat, destination.lng), 17));
@@ -106,12 +113,14 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
     cam.onRecenterTapped();
     await controller.animateCamera(CameraUpdate.newLatLngZoom(
         LatLng(snapped.lat, snapped.lng), cam.followZoom));
+    if (!mounted) return;
     await controller
         .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
   }
 
   void _onNavStateChange(
       AsyncValue<NavigationState>? prev, AsyncValue<NavigationState> next) {
+    if (!mounted) return;
     final prevState = prev?.value;
     final nextState = next.value;
     if (nextState == null) return;

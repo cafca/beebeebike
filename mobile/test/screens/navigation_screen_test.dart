@@ -29,7 +29,7 @@ void main() {
       createController: (_, __) => throw UnimplementedError(),
       loadNavigationRoute: ({required origin, required destination}) =>
           throw UnimplementedError(),
-      locationStream: const Stream.empty(),
+      locationStream: () => const Stream.empty(),
       speakInstruction: (_) async {},
     );
 

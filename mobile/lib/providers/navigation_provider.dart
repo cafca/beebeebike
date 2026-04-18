@@ -41,7 +41,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
         ),
     loadNavigationRoute: ({required origin, required destination}) =>
         routingApi.computeNavigationRoute(origin, destination),
-    locationStream: _buildLocationStream(),
+    locationStream: _buildLocationStream,
     speakInstruction: (text) async {
       try {
         await tts.speak(text);

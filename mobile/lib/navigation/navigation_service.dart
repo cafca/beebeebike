@@ -12,6 +12,7 @@ typedef LoadNavigationRoute = Future<Map<String, dynamic>> Function({
   required List<double> destination,
 });
 typedef SpeakInstruction = Future<void> Function(String text);
+typedef LocationStreamFactory = Stream<UserLocation> Function();
 
 class NavigationService {
   NavigationService({
@@ -23,7 +24,7 @@ class NavigationService {
 
   final CreateController createController;
   final LoadNavigationRoute loadNavigationRoute;
-  final Stream<UserLocation> locationStream;
+  final LocationStreamFactory locationStream;
   final SpeakInstruction speakInstruction;
 
   FerrostarController? _controller;
@@ -80,7 +81,7 @@ class NavigationService {
       }
     });
 
-    _locationSub = locationStream.listen(
+    _locationSub = locationStream().listen(
       (location) => _controller?.updateLocation(location),
     );
   }

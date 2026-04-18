@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/location_provider.dart';
+import 'login_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -32,10 +33,11 @@ class SettingsScreen extends ConsumerWidget {
                   ref.read(authControllerProvider.notifier).logout(),
             )
           else
-            const ListTile(
-              title: Text('Log in'),
-              subtitle: Text('Coming soon'),
-              enabled: false,
+            ListTile(
+              title: const Text('Log in'),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              ),
             ),
         ],
       ),

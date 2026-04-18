@@ -1,6 +1,8 @@
-import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -19,7 +21,6 @@ import '../screens/settings_screen.dart';
 import '../services/map_style_loader.dart';
 import '../services/route_drawing.dart';
 import '../widgets/arrived_sheet.dart';
-import '../widgets/map_tap_region.dart';
 import '../widgets/recenter_fab.dart';
 import '../widgets/rerouting_toast.dart';
 import '../widgets/route_summary.dart';
@@ -44,24 +45,37 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _ttsEnabled = true;
   bool _rerouting = false;
 
-  Future<void> _handleMapTap(Offset localPosition) async {
+  Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
-    final controller = _mapController;
-    if (controller == null) return;
-    final coords = await controller.toLatLng(
-      Point<double>(localPosition.dx, localPosition.dy),
-    );
     if (!mounted) return;
-    ref.read(routeControllerProvider.notifier).setDestination(
-          Location(
-            id: 'geo:${coords.latitude},${coords.longitude}',
-            name:
-                '${coords.latitude.toStringAsFixed(4)}, ${coords.longitude.toStringAsFixed(4)}',
-            label: 'Dropped pin',
-            lng: coords.longitude,
-            lat: coords.latitude,
-          ),
-        );
+    final notifier = ref.read(routeControllerProvider.notifier);
+    if (ref.read(routeControllerProvider).origin == null) {
+      Position? pos;
+      try {
+        pos = await Geolocator.getLastKnownPosition() ??
+            await Geolocator.getCurrentPosition();
+      } catch (_) {}
+      if (!mounted) return;
+      notifier.setOrigin(
+        Location(
+          id: 'gps',
+          name: 'Current location',
+          label: 'Current location',
+          lng: pos?.longitude ?? 13.4533,
+          lat: pos?.latitude ?? 52.5065,
+        ),
+      );
+    }
+    notifier.setDestination(
+      Location(
+        id: 'geo:${coords.latitude},${coords.longitude}',
+        name:
+            '${coords.latitude.toStringAsFixed(4)}, ${coords.longitude.toStringAsFixed(4)}',
+        label: 'Dropped pin',
+        lng: coords.longitude,
+        lat: coords.latitude,
+      ),
+    );
   }
 
   Future<void> _onRouteStateChanged(
@@ -117,7 +131,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  Future<void> _endNavigationSession() async {
+  Future<void> _endNavigationSession({bool clearRoute = false}) async {
     final service = ref.read(navigationServiceProvider);
     await service.dispose();
     final controller = _mapController;
@@ -128,7 +142,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!mounted) return;
     setState(() => _rerouting = false);
     ref.read(navigationSessionProvider.notifier).state = false;
-    ref.read(routeControllerProvider.notifier).clear();
+    if (clearRoute) {
+      ref.read(routeControllerProvider.notifier).clear();
+    }
   }
 
   Future<void> _handleFirstFix(UserLocation loc) async {
@@ -221,38 +237,44 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           styleAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Failed to load map: $e')),
-            data: (style) => MapTapRegion(
-              onTap: _handleMapTap,
-              child: MapLibreMap(
-                styleString: style,
-                initialCameraPosition: const CameraPosition(
-                  target: LatLng(52.5200, 13.4050),
-                  zoom: 13,
+            data: (style) => MapLibreMap(
+              styleString: style,
+              initialCameraPosition: const CameraPosition(
+                target: LatLng(52.5200, 13.4050),
+                zoom: 13,
+              ),
+              cameraTargetBounds: CameraTargetBounds(_berlinBounds),
+              minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
+              myLocationEnabled: true,
+              myLocationTrackingMode: MyLocationTrackingMode.none,
+              trackCameraPosition: true,
+              // EagerGestureRecognizer: map claims all pointer events so pinch,
+              // rotate and pan work when wrapped in a Scaffold/MaterialApp
+              // that otherwise wins the gesture arena on iOS.
+              gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                Factory<OneSequenceGestureRecognizer>(
+                  () => EagerGestureRecognizer(),
                 ),
-                cameraTargetBounds: CameraTargetBounds(_berlinBounds),
-                minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
-                myLocationEnabled: true,
-                myLocationTrackingMode: MyLocationTrackingMode.none,
-                trackCameraPosition: true,
-                onMapCreated: (controller) {
-                  _mapController = controller;
-                },
-                onCameraTrackingDismissed: () {
+              },
+              onMapCreated: (controller) {
+                _mapController = controller;
+              },
+              onMapClick: _handleMapTap,
+              onCameraTrackingDismissed: () {
+                ref
+                    .read(navigationCameraControllerProvider)
+                    .onTrackingDismissed();
+              },
+              onCameraIdle: () {
+                final c = _mapController;
+                if (c == null) return;
+                final zoom = c.cameraPosition?.zoom;
+                if (zoom != null) {
                   ref
                       .read(navigationCameraControllerProvider)
-                      .onTrackingDismissed();
-                },
-                onCameraIdle: () {
-                  final c = _mapController;
-                  if (c == null) return;
-                  final zoom = c.cameraPosition?.zoom;
-                  if (zoom != null) {
-                    ref
-                        .read(navigationCameraControllerProvider)
-                        .onZoomChanged(zoom);
-                  }
-                },
-              ),
+                      .onZoomChanged(zoom);
+                }
+              },
             ),
           ),
           if (navActive)

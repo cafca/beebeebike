@@ -27,7 +27,12 @@ Stream<UserLocation> _buildLocationStream() async* {
   ).map(positionToUserLocation);
 }
 
-final flutterTtsProvider = Provider<FlutterTts>((ref) => FlutterTts());
+final flutterTtsProvider = Provider<FlutterTts>((ref) {
+  final tts = FlutterTts();
+  // Berlin-only v0.1: instruction text is German.
+  tts.setLanguage('de-DE');
+  return tts;
+});
 
 final navigationServiceProvider = Provider<NavigationService>((ref) {
   final dio = ref.watch(dioProvider);

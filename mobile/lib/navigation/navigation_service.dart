@@ -64,16 +64,27 @@ class NavigationService {
     _deviationSub = _controller!.deviationStream.listen((deviation) async {
       if (_rerouteInProgress) return;
       _rerouteInProgress = true;
+      debugPrint(
+          'NavigationService: deviation ${deviation.deviationM.toStringAsFixed(1)}m, rerouting...');
       try {
         final dest = _destination;
         final controller = _controller;
-        if (dest == null || controller == null) return;
+        if (dest == null || controller == null) {
+          debugPrint(
+              'NavigationService: reroute aborted (dest or controller null)');
+          return;
+        }
         final rerouteJson = await loadNavigationRoute(
           origin: [deviation.userLocation.lng, deviation.userLocation.lat],
           destination: [dest.lng, dest.lat],
         );
-        if (_controller == null) return;
+        if (_controller == null) {
+          debugPrint(
+              'NavigationService: reroute aborted (controller disposed during load)');
+          return;
+        }
         await controller.replaceRoute(rerouteJson);
+        debugPrint('NavigationService: replaceRoute succeeded');
       } catch (e, st) {
         debugPrint('NavigationService reroute error: $e\n$st');
       } finally {

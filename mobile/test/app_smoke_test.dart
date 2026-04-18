@@ -5,6 +5,7 @@ import 'package:beebeebike/app.dart';
 import 'package:beebeebike/api/client.dart';
 import 'package:beebeebike/config/app_config.dart';
 import 'package:beebeebike/providers/search_history_provider.dart';
+import 'package:beebeebike/services/map_style_loader.dart';
 import 'package:dio/dio.dart';
 
 void main() {
@@ -38,9 +39,11 @@ void main() {
           appConfigProvider.overrideWithValue(
             const AppConfig(
               apiBaseUrl: 'http://localhost:3000',
+              tileServerBaseUrl: 'http://localhost:8080',
               tileStyleUrl: 'http://localhost:8080/tiles/assets/styles/colorful/style.json',
             ),
           ),
+          mapStyleProvider.overrideWith((ref) => Future.value('{}')),
           dioProvider.overrideWithValue(dio),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
@@ -83,8 +86,10 @@ void main() {
         overrides: [
           appConfigProvider.overrideWithValue(const AppConfig(
             apiBaseUrl: 'http://localhost:3000',
+            tileServerBaseUrl: 'http://localhost:8080',
             tileStyleUrl: 'http://localhost:8080/tiles/style.json',
           )),
+          mapStyleProvider.overrideWith((ref) => Future.value('{}')),
           dioProvider.overrideWithValue(dio),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],

@@ -18,6 +18,7 @@ void main() {
         appConfigProvider.overrideWithValue(
           const AppConfig(
             apiBaseUrl: 'http://localhost',
+            tileServerBaseUrl: 'http://localhost',
             tileStyleUrl: 'http://localhost/tiles',
           ),
         ),

@@ -4,6 +4,7 @@ import 'package:beebeebike/config/app_config.dart';
 import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/models/route_preview.dart';
 import 'package:beebeebike/providers/search_history_provider.dart';
+import 'package:beebeebike/services/map_style_loader.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,7 +50,8 @@ abstract class TestFixtures {
       ],
     },
     'distance': 5000.0,
-    'time': 1200.0,
+    // GraphHopper returns time in milliseconds. 1200000 ms = 20 min.
+    'time': 1200000.0,
   };
 }
 
@@ -232,8 +234,10 @@ List<Override> testProviderOverrides({
   return [
     appConfigProvider.overrideWithValue(const AppConfig(
       apiBaseUrl: 'http://localhost:3000',
+      tileServerBaseUrl: 'http://localhost:8080',
       tileStyleUrl: 'http://localhost:8080/tiles/assets/styles/colorful/style.json',
     )),
+    mapStyleProvider.overrideWith((ref) => Future.value('{}')),
     dioProvider.overrideWithValue(buildMockDio(
       authenticated: authenticated,
       geocodeReturnsResults: geocodeReturnsResults,

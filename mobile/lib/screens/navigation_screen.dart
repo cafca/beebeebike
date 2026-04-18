@@ -1,10 +1,13 @@
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../navigation/navigation_service.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/route_provider.dart';
+import '../services/map_style_loader.dart';
+import '../services/route_drawing.dart';
 import '../widgets/turn_banner.dart';
 
 class NavigationScreen extends ConsumerStatefulWidget {
@@ -16,6 +19,9 @@ class NavigationScreen extends ConsumerStatefulWidget {
 
 class _NavigationScreenState extends ConsumerState<NavigationScreen> {
   late final NavigationService _navigationService;
+  MapLibreMapController? _mapController;
+  RouteOverlay? _routeOverlay;
+  bool _ttsEnabled = true;
 
   @override
   void initState() {
@@ -38,23 +44,50 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
 
     try {
       await _navigationService.start(
-            origin: WaypointInput(lat: origin.lat, lng: origin.lng),
-            destination:
-                WaypointInput(lat: destination.lat, lng: destination.lng),
-          );
+        origin: WaypointInput(lat: origin.lat, lng: origin.lng),
+        destination:
+            WaypointInput(lat: destination.lat, lng: destination.lng),
+      );
     } catch (e, st) {
       debugPrint('NavigationScreen: failed to start navigation: $e\n$st');
     }
   }
 
+  Future<void> _drawRouteIfReady() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (_routeOverlay != null) return;
+    final preview = ref.read(routeControllerProvider).preview;
+    if (preview == null) return;
+    _routeOverlay = await RouteOverlay.draw(controller, preview);
+  }
+
   @override
   Widget build(BuildContext context) {
     final navState = ref.watch(navigationStateProvider);
+    final styleAsync = ref.watch(mapStyleProvider);
 
     return Scaffold(
       body: Stack(
         children: [
-          Container(color: const Color(0xFFCFE3D3)),
+          styleAsync.when(
+            loading: () => const ColoredBox(color: Color(0xFFCFE3D3)),
+            error: (e, _) => Center(child: Text('Map error: $e')),
+            data: (style) => MapLibreMap(
+              styleString: style,
+              initialCameraPosition: const CameraPosition(
+                target: LatLng(52.5200, 13.4050),
+                zoom: 15,
+              ),
+              myLocationEnabled: true,
+              myLocationTrackingMode: MyLocationTrackingMode.trackingCompass,
+              trackCameraPosition: true,
+              onMapCreated: (controller) async {
+                _mapController = controller;
+                await _drawRouteIfReady();
+              },
+            ),
+          ),
           Align(
             alignment: Alignment.topCenter,
             child: SafeArea(
@@ -109,7 +142,16 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> {
                     ),
                     Row(
                       children: [
-                        const Icon(Icons.volume_up_outlined),
+                        IconButton(
+                          icon: Icon(_ttsEnabled
+                              ? Icons.volume_up
+                              : Icons.volume_off),
+                          onPressed: () {
+                            setState(() => _ttsEnabled = !_ttsEnabled);
+                            // TODO: wire to NavigationService TTS mute when
+                            // the underlying ferrostar plugin exposes it.
+                          },
+                        ),
                         const SizedBox(width: 16),
                         GestureDetector(
                           onTap: () {

@@ -5,15 +5,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
-import '../app.dart';
 import '../models/geocode_result.dart';
 import '../models/location.dart';
+import '../models/route_state.dart';
 import '../providers/route_provider.dart';
 import '../screens/navigation_screen.dart';
 import '../screens/search_screen.dart';
 import '../screens/settings_screen.dart';
+import '../services/map_style_loader.dart';
+import '../services/route_drawing.dart';
+import '../widgets/map_tap_region.dart';
 import '../widgets/route_summary.dart';
 import '../widgets/search_bar.dart';
+
+final _berlinBounds = LatLngBounds(
+  southwest: const LatLng(52.3, 13.0),
+  northeast: const LatLng(52.7, 13.8),
+);
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -24,48 +32,91 @@ class MapScreen extends ConsumerStatefulWidget {
 
 class _MapScreenState extends ConsumerState<MapScreen> {
   MapLibreMapController? _mapController;
+  RouteOverlay? _routeOverlay;
+
+  Future<void> _handleMapTap(Offset localPosition) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    final coords = await controller.toLatLng(
+      Point<double>(localPosition.dx, localPosition.dy),
+    );
+    if (!mounted) return;
+    ref.read(routeControllerProvider.notifier).setDestination(
+          Location(
+            id: 'geo:${coords.latitude},${coords.longitude}',
+            name:
+                '${coords.latitude.toStringAsFixed(4)}, ${coords.longitude.toStringAsFixed(4)}',
+            label: 'Dropped pin',
+            lng: coords.longitude,
+            lat: coords.latitude,
+          ),
+        );
+  }
+
+  Future<void> _onRouteStateChanged(
+      RouteState? previous, RouteState next) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    if (previous?.preview == next.preview) return;
+
+    final existing = _routeOverlay;
+    if (existing != null) {
+      await existing.remove(controller);
+      _routeOverlay = null;
+    }
+    final preview = next.preview;
+    if (preview != null) {
+      _routeOverlay = await RouteOverlay.draw(controller, preview);
+    }
+  }
+
+  Future<void> _flyToCurrentLocation() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    try {
+      final pos = await Geolocator.getLastKnownPosition() ??
+          await Geolocator.getCurrentPosition();
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 16),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not get current location: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final routeState = ref.watch(routeControllerProvider);
     final preview = routeState.preview;
+    final styleAsync = ref.watch(mapStyleProvider);
+
+    ref.listen<RouteState>(routeControllerProvider, _onRouteStateChanged);
 
     return Scaffold(
       body: Stack(
         children: [
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTapUp: (details) async {
-              final controller = _mapController;
-              if (controller == null) return;
-              final point = Point<double>(
-                details.localPosition.dx,
-                details.localPosition.dy,
-              );
-              final coords = await controller.toLatLng(point);
-              if (!mounted) return;
-              ref.read(routeControllerProvider.notifier).setDestination(
-                    Location(
-                      id: 'geo:${coords.latitude},${coords.longitude}',
-                      name:
-                          '${coords.latitude.toStringAsFixed(4)}, ${coords.longitude.toStringAsFixed(4)}',
-                      label: 'Dropped pin',
-                      lng: coords.longitude,
-                      lat: coords.latitude,
-                    ),
-                  );
-            },
-            child: MapLibreMap(
-              styleString: ref.watch(appConfigProvider).tileStyleUrl,
-              initialCameraPosition: const CameraPosition(
-                target: LatLng(52.5200, 13.4050),
-                zoom: 13,
+          styleAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Failed to load map: $e')),
+            data: (style) => MapTapRegion(
+              onTap: _handleMapTap,
+              child: MapLibreMap(
+                styleString: style,
+                initialCameraPosition: const CameraPosition(
+                  target: LatLng(52.5200, 13.4050),
+                  zoom: 13,
+                ),
+                cameraTargetBounds: CameraTargetBounds(_berlinBounds),
+                minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
+                myLocationEnabled: true,
+                myLocationTrackingMode: MyLocationTrackingMode.none,
+                onMapCreated: (controller) {
+                  _mapController = controller;
+                },
               ),
-              myLocationEnabled: true,
-              myLocationTrackingMode: MyLocationTrackingMode.none,
-              onMapCreated: (controller) {
-                _mapController = controller;
-              },
             ),
           ),
           BeeBeeBikeSearchBar(
@@ -116,7 +167,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   FloatingActionButton(
-                    onPressed: () {},
+                    onPressed: _flyToCurrentLocation,
                     child: const Icon(Icons.my_location),
                   ),
                   const SizedBox(height: 8),
@@ -165,8 +216,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                     ],
                                   )
                                 : RouteSummary(
+                                    // GraphHopper returns time in milliseconds.
                                     durationMinutes:
-                                        (preview.time / 60).round(),
+                                        (preview.time / 60000).round(),
                                     distanceKm: preview.distance / 1000,
                                     onStart: () =>
                                         Navigator.of(context).push(

@@ -91,8 +91,11 @@ class RatingOverlayController extends Notifier<void> {
     // Wire up auth *after* a successful attach so we react to login/logout
     // without leaking a listener on a half-initialized overlay.
     ref.listen<AsyncValue<User?>>(authControllerProvider, (prev, next) {
-      final prevId = prev?.value?.id;
-      final nextId = next.value?.id;
+      // `valueOrNull` instead of `.value`: the latter rethrows when the
+      // state is `AsyncError` (e.g. anonymous-auth connection refused in
+      // CI integration tests), which would crash the whole listener.
+      final prevId = prev?.valueOrNull?.id;
+      final nextId = next.valueOrNull?.id;
       _log('rating-overlay: auth change $prevId -> $nextId');
       if (prevId != nextId) {
         _lastFetched = null;
@@ -107,8 +110,10 @@ class RatingOverlayController extends Notifier<void> {
     });
     // Kick off an initial fetch only if auth is already resolved. If it's
     // still loading the listener above handles the first transition, which
-    // avoids a double-fetch on cold start.
-    if (ref.read(authControllerProvider).value != null) {
+    // avoids a double-fetch on cold start. Use `valueOrNull` — plain
+    // `.value` rethrows on `AsyncError`, which happens in CI integration
+    // tests where anonymous-auth gets "connection refused".
+    if (ref.read(authControllerProvider).valueOrNull != null) {
       _evaluateAndFetch();
       _startEventsClient();
     }
@@ -129,7 +134,9 @@ class RatingOverlayController extends Notifier<void> {
       _log('rating-overlay: SSE disabled via client config');
       return;
     }
-    if (ref.read(authControllerProvider).value == null) return;
+    // `valueOrNull`: `.value` rethrows on `AsyncError` (CI integration tests
+    // hit "connection refused" on anonymous auth), which would crash attach.
+    if (ref.read(authControllerProvider).valueOrNull == null) return;
     _eventsClient ??=
         ref.read(ratingEventsClientFactoryProvider)(_onInvalidate);
     _eventsClient!.start();

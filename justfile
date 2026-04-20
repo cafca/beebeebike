@@ -111,3 +111,71 @@ test-ios UDID="":
         xcrun simctl bootstatus "$UDID" -b >/dev/null 2>&1 || xcrun simctl boot "$UDID"
     fi
     cd mobile && flutter test integration_test/navigation_smoke_test.dart -d "$UDID"
+
+# ---------- lint ----------
+
+[group('lint')]
+lint: lint-backend lint-mobile
+
+[group('lint')]
+lint-backend: lint-backend-fmt lint-backend-clippy
+
+[group('lint')]
+lint-backend-fmt:
+    cd backend && cargo fmt --check
+
+[group('lint')]
+lint-backend-clippy:
+    cd backend && cargo clippy --all-targets -- -D warnings
+
+[group('lint')]
+fmt:
+    cd backend && cargo fmt
+
+[group('lint')]
+lint-mobile:
+    cd packages/ferrostar_flutter && flutter analyze
+    cd mobile && flutter analyze
+
+# ---------- build ----------
+
+[group('build')]
+build-web:
+    cd web && npm run build
+
+[group('build')]
+build-mobile-style:
+    cd web && npm run build:mobile-style
+
+[group('build')]
+release:
+    docker compose -f compose.prod.yml up -d --build
+
+[group('build')]
+release-ios-device DEVICE:
+    cd mobile && flutter run --release -d {{DEVICE}} \
+      --dart-define=BEEBEEBIKE_API_BASE_URL={{IOS_DEVICE_API}} \
+      --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL={{IOS_DEVICE_TILES}}
+
+# ---------- clean ----------
+
+[group('clean')]
+clean: clean-backend clean-web clean-mobile clean-docker
+
+[group('clean')]
+clean-backend:
+    cd backend && cargo clean
+
+[group('clean')]
+clean-web:
+    rm -rf web/dist web/node_modules
+
+[group('clean')]
+clean-mobile:
+    cd packages/ferrostar_flutter && flutter clean
+    cd mobile && flutter clean
+
+[group('clean')]
+clean-docker:
+    docker compose -f compose.yml -f compose.dev.yml down -v
+    docker compose -f compose.prod.yml down -v

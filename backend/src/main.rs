@@ -1,4 +1,4 @@
-use beebeebike_backend::{build_router, config::Config, AppState};
+use beebeebike_backend::{build_router, config::Config, ratings_events, AppState};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 
@@ -26,10 +26,22 @@ async fn main() {
         .await
         .expect("Failed to run migrations");
 
+    // Spawn the Postgres LISTEN task only when the SSE pipeline is enabled.
+    // Flipping BEEBEEBIKE_RATINGS_SSE_ENABLED=false and restarting the
+    // backend is the designated kill switch if push traffic becomes a
+    // problem; mobile clients fall back to camera-idle polling.
+    let rating_events = if config.ratings_events_enabled {
+        Some(ratings_events::spawn_listener(db.clone()))
+    } else {
+        tracing::info!("ratings SSE pipeline disabled via BEEBEEBIKE_RATINGS_SSE_ENABLED");
+        None
+    };
+
     let state = Arc::new(AppState {
         db,
         config,
         http_client: reqwest::Client::new(),
+        rating_events,
     });
 
     let app = build_router(state);

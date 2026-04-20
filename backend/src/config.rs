@@ -9,6 +9,12 @@ pub struct Config {
     pub rating_weight: f64,
     pub distance_influence: f64,
     pub max_areas_per_request: usize,
+    /// Kill switch for the rating-change SSE pipeline. When `false` the
+    /// backend neither spawns the Postgres LISTEN task nor registers the
+    /// `/api/ratings/events` route, and paint/undo/redo skip their
+    /// `pg_notify` call. Clients that hit the disabled endpoint get a 404
+    /// and fall back to camera-idle polling.
+    pub ratings_events_enabled: bool,
 }
 
 impl Config {
@@ -35,6 +41,10 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(200),
+            ratings_events_enabled: env::var("BEEBEEBIKE_RATINGS_SSE_ENABLED")
+                .ok()
+                .map(|v| !matches!(v.to_lowercase().as_str(), "0" | "false" | "no"))
+                .unwrap_or(true),
         }
     }
 }
@@ -80,6 +90,7 @@ mod tests {
                 "RATING_WEIGHT",
                 "DISTANCE_INFLUENCE",
                 "MAX_AREAS_PER_REQUEST",
+                "BEEBEEBIKE_RATINGS_SSE_ENABLED",
             ] {
                 env::remove_var(var);
             }
@@ -92,6 +103,31 @@ mod tests {
         assert!((config.rating_weight - 0.5).abs() < 1e-9);
         assert!((config.distance_influence - 70.0).abs() < 1e-9);
         assert_eq!(config.max_areas_per_request, 200);
+        assert!(
+            config.ratings_events_enabled,
+            "SSE should default to enabled"
+        );
+    }
+
+    #[test]
+    fn ratings_events_kill_switch_via_env() {
+        for (value, expected) in [
+            ("0", false),
+            ("false", false),
+            ("FALSE", false),
+            ("no", false),
+            ("1", true),
+            ("true", true),
+            ("anything-else", true),
+        ] {
+            with_env_vars(&[("BEEBEEBIKE_RATINGS_SSE_ENABLED", value)], || {
+                let config = Config::from_env();
+                assert_eq!(
+                    config.ratings_events_enabled, expected,
+                    "env value {value:?} → expected ratings_events_enabled={expected}"
+                );
+            });
+        }
     }
 
     #[test]

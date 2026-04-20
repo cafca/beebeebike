@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
@@ -18,6 +19,7 @@ import '../navigation/nav_constants.dart';
 import '../providers/navigation_camera_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/navigation_session_provider.dart';
+import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
 import '../screens/search_screen.dart';
 import '../screens/settings_screen.dart';
@@ -46,6 +48,7 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   MapLibreMapController? _mapController;
   RouteOverlay? _routeOverlay;
+  RatingOverlayController? _ratingOverlayNotifier;
   bool _ttsEnabled = true;
   bool _rerouting = false;
 
@@ -259,7 +262,25 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   @override
+  void dispose() {
+    // Detach rating overlay before MapLibre tears down its surface to
+    // avoid leaking the source + layers through hot restarts. `dispose`
+    // can't be async, so we explicitly mark the detach future as
+    // fire-and-forget; the work is quick (removeLayer / removeSource) and
+    // safe to race against MapLibre's own teardown because detach swallows
+    // errors from an already-destroyed surface. We use the cached notifier
+    // because `ref` is not usable once the element is being disposed.
+    final notifier = _ratingOverlayNotifier;
+    if (notifier != null) unawaited(notifier.detach());
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Cache the notifier on first build so dispose() can call detach()
+    // without touching `ref` after unmount.
+    _ratingOverlayNotifier ??=
+        ref.read(ratingOverlayControllerProvider.notifier);
     final routeState = ref.watch(routeControllerProvider);
     final preview = routeState.preview;
     final styleAsync = ref.watch(mapStyleProvider);
@@ -307,6 +328,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               onMapCreated: (controller) {
                 _mapController = controller;
               },
+              onStyleLoadedCallback: () {
+                // Attach rating overlay AFTER style is loaded — MapLibre
+                // silently ignores addGeoJsonSource / addLayer calls made
+                // before the style is ready. Route line and markers are
+                // added later via the annotation APIs and sit above all
+                // custom style layers by default, so the overlay stays
+                // visually below them. `attachToMap` is idempotent in case
+                // the style reloads.
+                final c = _mapController;
+                if (c == null) return;
+                ref
+                    .read(ratingOverlayControllerProvider.notifier)
+                    .attachToMap(c);
+              },
               onMapClick: _handleMapTap,
               onCameraTrackingDismissed: () {
                 ref
@@ -322,6 +357,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       .read(navigationCameraControllerProvider)
                       .onZoomChanged(zoom);
                 }
+                ref
+                    .read(ratingOverlayControllerProvider.notifier)
+                    .onCameraIdle();
               },
             ),
           ),

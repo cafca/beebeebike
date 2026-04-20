@@ -190,6 +190,20 @@ Dio buildMockDio({
         return;
       }
 
+      if (path == '/api/ratings') {
+        handler.resolve(Response(
+          requestOptions: options,
+          statusCode: 200,
+          data: const {
+            'type': 'FeatureCollection',
+            'features': [],
+            'can_undo': false,
+            'can_redo': false,
+          },
+        ));
+        return;
+      }
+
       if (path == '/api/locations/home') {
         if (options.method == 'GET') {
           handler.resolve(Response(
@@ -236,6 +250,7 @@ List<Override> testProviderOverrides({
       apiBaseUrl: 'http://localhost:3000',
       tileServerBaseUrl: 'http://localhost:8080',
       tileStyleUrl: 'http://localhost:8080/tiles/assets/styles/colorful/style.json',
+      ratingsSseEnabled: false,
     )),
     mapStyleProvider.overrideWith((ref) => Future.value('{}')),
     dioProvider.overrideWithValue(buildMockDio(

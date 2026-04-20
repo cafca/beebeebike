@@ -20,6 +20,7 @@ void main() {
             apiBaseUrl: 'http://localhost',
             tileServerBaseUrl: 'http://localhost',
             tileStyleUrl: 'http://localhost/tiles',
+            ratingsSseEnabled: false,
           ),
         ),
         flutterTtsProvider.overrideWithValue(mockTts),

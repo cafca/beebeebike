@@ -34,6 +34,7 @@ class NavigationService {
   StreamSubscription<NavigationState>? _stateSub;
   WaypointInput? _destination;
   bool _rerouteInProgress = false;
+  String? _lastSpokenUuid;
 
   final _stateController = StreamController<NavigationState>.broadcast();
   final _rerouteController = StreamController<bool>.broadcast();
@@ -66,6 +67,11 @@ class NavigationService {
 
     _spokenSub = _controller!.spokenInstructionStream.listen(
       (instruction) {
+        // Ferrostar re-emits the current spoken instruction on every GPS tick
+        // while its trigger condition holds. Dedupe by uuid so TTS speaks each
+        // utterance once.
+        if (instruction.uuid == _lastSpokenUuid) return;
+        _lastSpokenUuid = instruction.uuid;
         speakInstruction(instruction.text);
       },
     );
@@ -111,5 +117,6 @@ class NavigationService {
     _stateSub = null;
     _controller = null;
     _rerouteInProgress = false;
+    _lastSpokenUuid = null;
   }
 }

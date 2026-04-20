@@ -79,3 +79,12 @@ jobs:
         run: |
           npm --prefix web run build:mobile-style
           git diff --exit-code mobile/assets/styles/beebeebike-style.json
+
+  ship:
+    needs: [lint, test-backend, test-frontend]
+    if: github.event_name == 'push'
+    uses: ./.github/workflows/cd.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write

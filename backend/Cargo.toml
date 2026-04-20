@@ -21,6 +21,8 @@ geojson = "0.24"
 geo = "0.29"
 dotenvy = "0.15"
 urlencoding = "2"
+async-stream = "0.3"
+futures-util = "0.3"
 
 [dev-dependencies]
 axum-test = "20"

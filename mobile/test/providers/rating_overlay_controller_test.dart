@@ -1,12 +1,16 @@
 import 'dart:async';
 
 import 'package:beebeebike/api/ratings_api.dart';
+import 'package:beebeebike/app.dart';
+import 'package:beebeebike/config/app_config.dart';
 import 'package:beebeebike/models/user.dart';
 import 'package:beebeebike/providers/auth_provider.dart';
 import 'package:beebeebike/providers/rating_overlay_provider.dart';
+import 'package:beebeebike/services/rating_events_client.dart';
 import 'package:beebeebike/services/rating_fetch_policy.dart';
 import 'package:beebeebike/services/rating_overlay.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -96,19 +100,94 @@ typedef _Setup = ({
   ProviderContainer container,
   _FakeRatingsApi api,
   _FakeAuthController auth,
+  _FakeEventsClient? Function() eventsClient,
 });
 
-_Setup _setup({User? initialUser = _anon}) {
+const _sseDisabledConfig = AppConfig(
+  apiBaseUrl: 'http://localhost',
+  tileServerBaseUrl: 'http://localhost',
+  tileStyleUrl: 'http://localhost/tiles',
+  ratingsSseEnabled: false,
+);
+
+const _sseEnabledConfig = AppConfig(
+  apiBaseUrl: 'http://localhost',
+  tileServerBaseUrl: 'http://localhost',
+  tileStyleUrl: 'http://localhost/tiles',
+  ratingsSseEnabled: true,
+);
+
+/// Fake SSE client captured by the factory override so tests can assert on
+/// start/stop calls and drive invalidations synchronously.
+class _FakeEventsClient implements RatingEventsClient {
+  _FakeEventsClient(this._onInvalidate);
+  final VoidCallback _onInvalidate;
+  int starts = 0;
+  int stops = 0;
+  bool _running = false;
+  bool _serverDisabled = false;
+
+  void triggerInvalidate() => _onInvalidate();
+
+  void markServerDisabled() {
+    _serverDisabled = true;
+    _running = false;
+  }
+
+  @override
+  void start() {
+    if (_serverDisabled) return;
+    starts++;
+    _running = true;
+  }
+
+  @override
+  Future<void> stop() async {
+    stops++;
+    _running = false;
+  }
+
+  @override
+  bool get isRunning => _running;
+
+  @override
+  bool get serverDisabled => _serverDisabled;
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+_Setup _setup({
+  User? initialUser = _anon,
+  AppConfig config = _sseDisabledConfig,
+  bool installFakeEventsClient = false,
+}) {
   final api = _FakeRatingsApi();
-  final container = ProviderContainer(overrides: [
+  _FakeEventsClient? capturedClient;
+  final overrides = <Override>[
+    appConfigProvider.overrideWithValue(config),
     ratingsApiProvider.overrideWithValue(api),
     authControllerProvider
         .overrideWith(() => _FakeAuthController(initialUser)),
-  ]);
+  ];
+  if (installFakeEventsClient) {
+    overrides.add(ratingEventsClientFactoryProvider.overrideWithValue(
+      (onInvalidate) {
+        capturedClient = _FakeEventsClient(onInvalidate);
+        return capturedClient!;
+      },
+    ));
+  }
+  final container = ProviderContainer(overrides: overrides);
   // Force the overridden factory to run so we can hand the fake back.
   final auth = container.read(authControllerProvider.notifier)
       as _FakeAuthController;
-  return (container: container, api: api, auth: auth);
+  return (
+    container: container,
+    api: api,
+    auth: auth,
+    eventsClient: () => capturedClient,
+  );
 }
 
 /// Drain microtasks and zero-delay timers so async work inside the
@@ -273,6 +352,7 @@ void main() {
     // never resolves — simulates the cold-start race we want to avoid.
     final api = _FakeRatingsApi();
     final container = ProviderContainer(overrides: [
+      appConfigProvider.overrideWithValue(_sseDisabledConfig),
       ratingsApiProvider.overrideWithValue(api),
       authControllerProvider
           .overrideWith(() => _PendingAuthController()),
@@ -289,6 +369,157 @@ void main() {
     await _pump();
     expect(api.calls, isEmpty,
         reason: 'no fetch until auth resolves');
+  });
+
+  group('SSE integration', () {
+    test('does not start events client when SSE disabled in config',
+        () async {
+      final s = _setup(
+        config: _sseDisabledConfig,
+        installFakeEventsClient: true,
+      );
+      addTearDown(s.container.dispose);
+      await s.container.read(authControllerProvider.future);
+
+      final controller =
+          s.container.read(ratingOverlayControllerProvider.notifier);
+      await controller.attach(
+        cameraProbe: () async =>
+            const CameraState(zoom: 14, viewport: _berlin),
+        attachOverlay: () async => _FakeOverlay(),
+      );
+      await _pump();
+      expect(s.eventsClient(), isNull,
+          reason: 'factory must not be invoked when flag is off');
+    });
+
+    test('starts events client after attach when SSE enabled + logged in',
+        () async {
+      final s = _setup(
+        config: _sseEnabledConfig,
+        installFakeEventsClient: true,
+      );
+      addTearDown(s.container.dispose);
+      await s.container.read(authControllerProvider.future);
+
+      final controller =
+          s.container.read(ratingOverlayControllerProvider.notifier);
+      await controller.attach(
+        cameraProbe: () async =>
+            const CameraState(zoom: 14, viewport: _berlin),
+        attachOverlay: () async => _FakeOverlay(),
+      );
+      await _pump();
+      final client = s.eventsClient();
+      expect(client, isNotNull);
+      expect(client!.starts, 1);
+    });
+
+    test('server invalidate triggers a refetch even without camera move',
+        () async {
+      final s = _setup(
+        config: _sseEnabledConfig,
+        installFakeEventsClient: true,
+      );
+      addTearDown(s.container.dispose);
+      await s.container.read(authControllerProvider.future);
+
+      final controller =
+          s.container.read(ratingOverlayControllerProvider.notifier);
+      await controller.attach(
+        cameraProbe: () async =>
+            const CameraState(zoom: 14, viewport: _berlin),
+        attachOverlay: () async => _FakeOverlay(),
+      );
+      await _pump();
+      expect(s.api.calls, hasLength(1), reason: 'initial fetch');
+
+      // Camera hasn't moved. A server-sent invalidate must still refetch.
+      s.eventsClient()!.triggerInvalidate();
+      await _pump();
+      expect(s.api.calls, hasLength(2),
+          reason: 'SSE invalidate must null lastFetched + refetch');
+    });
+
+    test('auth change restarts the events client', () async {
+      final s = _setup(
+        config: _sseEnabledConfig,
+        installFakeEventsClient: true,
+      );
+      addTearDown(s.container.dispose);
+      await s.container.read(authControllerProvider.future);
+
+      final controller =
+          s.container.read(ratingOverlayControllerProvider.notifier);
+      await controller.attach(
+        cameraProbe: () async =>
+            const CameraState(zoom: 14, viewport: _berlin),
+        attachOverlay: () async => _FakeOverlay(),
+      );
+      await _pump();
+      final first = s.eventsClient();
+      expect(first, isNotNull);
+      expect(first!.starts, 1);
+
+      s.auth.setUser(_named);
+      await _pump();
+      // The old client was stopped; a new one was created and started.
+      expect(first.stops, 1);
+      final second = s.eventsClient();
+      expect(identical(second, first), isFalse);
+      expect(second!.starts, 1);
+    });
+
+    test('detach stops the events client', () async {
+      final s = _setup(
+        config: _sseEnabledConfig,
+        installFakeEventsClient: true,
+      );
+      addTearDown(s.container.dispose);
+      await s.container.read(authControllerProvider.future);
+
+      final controller =
+          s.container.read(ratingOverlayControllerProvider.notifier);
+      await controller.attach(
+        cameraProbe: () async =>
+            const CameraState(zoom: 14, viewport: _berlin),
+        attachOverlay: () async => _FakeOverlay(),
+      );
+      await _pump();
+      final client = s.eventsClient();
+      expect(client!.starts, 1);
+
+      await controller.detach();
+      expect(client.stops, 1);
+    });
+
+    test('does not start events client when auth is still loading',
+        () async {
+      final api = _FakeRatingsApi();
+      _FakeEventsClient? capturedClient;
+      final container = ProviderContainer(overrides: [
+        appConfigProvider.overrideWithValue(_sseEnabledConfig),
+        ratingsApiProvider.overrideWithValue(api),
+        authControllerProvider
+            .overrideWith(() => _PendingAuthController()),
+        ratingEventsClientFactoryProvider.overrideWithValue((onInvalidate) {
+          capturedClient = _FakeEventsClient(onInvalidate);
+          return capturedClient!;
+        }),
+      ]);
+      addTearDown(container.dispose);
+
+      final controller =
+          container.read(ratingOverlayControllerProvider.notifier);
+      await controller.attach(
+        cameraProbe: () async =>
+            const CameraState(zoom: 14, viewport: _berlin),
+        attachOverlay: () async => _FakeOverlay(),
+      );
+      await _pump();
+      expect(capturedClient, isNull,
+          reason: 'should wait for auth to resolve before starting SSE');
+    });
   });
 }
 

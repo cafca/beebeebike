@@ -9,7 +9,7 @@ use sqlx::FromRow;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{auth::require_auth, errors::AppError, AppState};
+use crate::{auth::require_auth, errors::AppError, ratings_events, AppState};
 
 // ---------------------------------------------------------------------------
 // Request / response types
@@ -249,6 +249,29 @@ async fn rebuild_rated_areas_for_user(
     Ok(())
 }
 
+/// Fire `NOTIFY ratings_changed` inside the given transaction. Called by
+/// every handler that mutates `rated_areas`, right before commit — this
+/// makes the notify atomic with the row change (no notify on rollback).
+///
+/// Gated on [`AppState::rating_events`]: when the SSE pipeline is off we
+/// skip the query entirely so a disabled feature costs zero extra DB work.
+async fn notify_change(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    state: &AppState,
+    user_id: Uuid,
+) -> Result<(), AppError> {
+    if state.rating_events.is_none() {
+        return Ok(());
+    }
+    let payload = serde_json::json!({ "user_id": user_id }).to_string();
+    sqlx::query("SELECT pg_notify($1, $2)")
+        .bind(ratings_events::CHANNEL)
+        .bind(payload)
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+}
+
 async fn history_state(db: &sqlx::PgPool, user_id: Uuid) -> Result<(bool, bool), AppError> {
     let can_undo = sqlx::query_scalar::<_, bool>(
         "SELECT EXISTS(SELECT 1 FROM paint_events WHERE user_id = $1 AND status = 0)",
@@ -320,6 +343,7 @@ pub async fn paint(
             return Err(AppError::NotFound);
         }
 
+        notify_change(&mut tx, &state, user_id).await?;
         tx.commit().await?;
 
         let (can_undo, can_redo) = history_state(&state.db, user_id).await?;
@@ -392,6 +416,7 @@ pub async fn paint(
         None
     };
 
+    notify_change(&mut tx, &state, user_id).await?;
     tx.commit().await?;
 
     let (can_undo, can_redo) = history_state(&state.db, user_id).await?;
@@ -432,6 +457,7 @@ pub async fn undo(
 
     if updated.is_some() {
         rebuild_rated_areas_for_user(&mut tx, user_id).await?;
+        notify_change(&mut tx, &state, user_id).await?;
     }
 
     tx.commit().await?;
@@ -470,6 +496,7 @@ pub async fn redo(
             .await?;
 
         apply_paint(&mut tx, user_id, &event.geometry, event.value as i32).await?;
+        notify_change(&mut tx, &state, user_id).await?;
     }
 
     tx.commit().await?;

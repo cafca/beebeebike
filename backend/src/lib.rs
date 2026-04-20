@@ -4,6 +4,7 @@ pub mod errors;
 pub mod geocode;
 pub mod locations;
 pub mod ratings;
+pub mod ratings_events;
 pub mod routing;
 
 use axum::{
@@ -11,6 +12,7 @@ use axum::{
     Router,
 };
 use std::sync::Arc;
+use tokio::sync::broadcast;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 
@@ -18,11 +20,17 @@ pub struct AppState {
     pub db: sqlx::PgPool,
     pub config: config::Config,
     pub http_client: reqwest::Client,
+    /// `Some` when [`config::Config::ratings_events_enabled`] is true and the
+    /// backend has spawned a Postgres LISTEN task. `None` means the SSE
+    /// pipeline is disabled — the `/api/ratings/events` route is absent and
+    /// mutation handlers skip their `pg_notify` call.
+    pub rating_events: Option<broadcast::Sender<ratings_events::Invalidation>>,
 }
 
 pub fn build_router(state: Arc<AppState>) -> Router {
     let static_dir = state.config.static_dir.clone();
-    Router::new()
+    let sse_enabled = state.rating_events.is_some();
+    let router = Router::new()
         .route("/api/health", get(|| async { "ok" }))
         .route("/api/auth/register", post(auth::register))
         .route("/api/auth/anonymous", post(auth::anonymous))
@@ -41,7 +49,16 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/api/ratings/redo", post(ratings::redo))
         .route("/api/route", post(routing::get_route))
         .route("/api/navigate", post(routing::get_navigation_route))
-        .route("/api/geocode", get(geocode::geocode))
+        .route("/api/geocode", get(geocode::geocode));
+    // Only register the SSE route when the feature is on. A disabled server
+    // then returns the same 404 for this path as for any unknown URL, and
+    // the mobile client uses that as its signal to stop retrying.
+    let router = if sse_enabled {
+        router.route("/api/ratings/events", get(ratings_events::events))
+    } else {
+        router
+    };
+    router
         .fallback_service(ServeDir::new(static_dir).append_index_html_on_directories(true))
         .layer(
             CorsLayer::new()

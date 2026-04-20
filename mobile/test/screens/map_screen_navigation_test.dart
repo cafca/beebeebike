@@ -76,6 +76,7 @@ Future<_NavHarness> _pumpNavActive(WidgetTester tester) async {
             apiBaseUrl: 'http://localhost',
             tileServerBaseUrl: 'http://localhost',
             tileStyleUrl: 'http://localhost/tiles',
+            ratingsSseEnabled: false,
           ),
         ),
         mapStyleProvider.overrideWith((ref) => Future.value('{}')),

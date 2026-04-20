@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../api/ratings_api.dart';
+import '../app.dart';
 import '../models/user.dart';
+import '../services/rating_events_client.dart';
 import '../services/rating_fetch_policy.dart';
 import '../services/rating_overlay.dart';
 import 'auth_provider.dart';
@@ -49,11 +53,17 @@ class RatingOverlayController extends Notifier<void> {
   CameraProbe? _cameraProbe;
   Bbox? _lastFetched;
   CancelToken? _inFlight;
+  RatingEventsClient? _eventsClient;
 
   @override
   void build() {
     ref.onDispose(() {
       _inFlight?.cancel();
+      // Fire-and-forget: the client cancels its own in-flight request
+      // synchronously; awaiting the loop to exit isn't worth blocking
+      // dispose.
+      unawaited(_eventsClient?.stop());
+      _eventsClient = null;
     });
   }
 
@@ -87,6 +97,11 @@ class RatingOverlayController extends Notifier<void> {
       if (prevId != nextId) {
         _lastFetched = null;
         _overlay?.clear();
+        // Restart the SSE stream against the new session cookie so
+        // invalidations are filtered for the right user. The client is
+        // keyed to a Dio instance, not a user id, so stopping and starting
+        // is cheap — it just drops the held socket.
+        unawaited(_restartEventsClient());
         if (nextId != null) _evaluateAndFetch();
       }
     });
@@ -95,7 +110,48 @@ class RatingOverlayController extends Notifier<void> {
     // avoids a double-fetch on cold start.
     if (ref.read(authControllerProvider).value != null) {
       _evaluateAndFetch();
+      _startEventsClient();
     }
+  }
+
+  /// Spin up the rating-change SSE listener if:
+  ///   - the client-side kill switch ([AppConfig.ratingsSseEnabled]) is on,
+  ///   - auth has resolved (no point subscribing as a half-authenticated
+  ///     user — the server would just filter everything out),
+  ///   - the overlay is currently attached.
+  ///
+  /// Called during [attach] and on every auth transition. Safe to call
+  /// multiple times — [RatingEventsClient.start] is idempotent.
+  void _startEventsClient() {
+    if (_overlay == null) return;
+    final config = ref.read(appConfigProvider);
+    if (!config.ratingsSseEnabled) {
+      _log('rating-overlay: SSE disabled via client config');
+      return;
+    }
+    if (ref.read(authControllerProvider).value == null) return;
+    _eventsClient ??=
+        ref.read(ratingEventsClientFactoryProvider)(_onInvalidate);
+    _eventsClient!.start();
+  }
+
+  Future<void> _restartEventsClient() async {
+    final existing = _eventsClient;
+    _eventsClient = null;
+    if (existing != null) {
+      await existing.stop();
+    }
+    _startEventsClient();
+  }
+
+  /// Invoked by [RatingEventsClient] when the backend signals that the
+  /// user's painted areas changed (or when the SSE stream reconnects).
+  /// Null the cached bbox so the next evaluate refetches, then evaluate
+  /// immediately — if the camera hasn't moved we still want the refresh.
+  void _onInvalidate() {
+    _log('rating-overlay: invalidate from server');
+    _lastFetched = null;
+    _evaluateAndFetch();
   }
 
   /// Detach the overlay and cancel any pending work. Safe to call multiple
@@ -103,10 +159,13 @@ class RatingOverlayController extends Notifier<void> {
   Future<void> detach() async {
     _inFlight?.cancel();
     _inFlight = null;
+    final client = _eventsClient;
+    _eventsClient = null;
     final overlay = _overlay;
     _overlay = null;
     _cameraProbe = null;
     _lastFetched = null;
+    await client?.stop();
     await overlay?.detach();
   }
 

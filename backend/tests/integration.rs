@@ -47,11 +47,15 @@ async fn setup_with_db() -> Option<(TestServer, sqlx::PgPool)> {
         rating_weight: 1.0,
         distance_influence: 70.0,
         max_areas_per_request: 200,
+        // SSE pipeline not exercised by these tests — keeping it off
+        // avoids spawning a listener task per test run.
+        ratings_events_enabled: false,
     };
     let state = Arc::new(AppState {
         db: db.clone(),
         config,
         http_client: reqwest::Client::new(),
+        rating_events: None,
     });
     Some((TestServer::new(build_router(state)), db))
 }
@@ -82,12 +86,14 @@ async fn setup_with_graphhopper_url(graphhopper_url: String) -> Option<TestServe
         rating_weight: 1.0,
         distance_influence: 70.0,
         max_areas_per_request: 200,
+        ratings_events_enabled: false,
     };
 
     let state = Arc::new(AppState {
         db,
         config,
         http_client: reqwest::Client::new(),
+        rating_events: None,
     });
 
     let app = build_router(state);

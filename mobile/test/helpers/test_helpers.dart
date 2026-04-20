@@ -250,6 +250,7 @@ List<Override> testProviderOverrides({
       apiBaseUrl: 'http://localhost:3000',
       tileServerBaseUrl: 'http://localhost:8080',
       tileStyleUrl: 'http://localhost:8080/tiles/assets/styles/colorful/style.json',
+      ratingsSseEnabled: false,
     )),
     mapStyleProvider.overrideWith((ref) => Future.value('{}')),
     dioProvider.overrideWithValue(buildMockDio(

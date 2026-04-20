@@ -1,3 +1,4 @@
+import 'package:beebeebike/api/client.dart';
 import 'package:beebeebike/app.dart';
 import 'package:beebeebike/config/app_config.dart';
 import 'package:beebeebike/providers/navigation_provider.dart';
@@ -23,6 +24,7 @@ void main() {
             ratingsSseEnabled: false,
           ),
         ),
+        cookieStoragePathProvider.overrideWithValue('/tmp'),
         flutterTtsProvider.overrideWithValue(mockTts),
       ],
     );

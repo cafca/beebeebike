@@ -178,7 +178,7 @@ extension Serialization {
     let devM = (dict["deviation_threshold_m"] as? Double) ?? 50.0
     let snap = (dict["snap_user_location_to_route"] as? Bool) ?? true
     return NavigationControllerConfig(
-      waypointAdvance: .waypointWithinRange(20.0),
+      waypointAdvance: .waypointWithinRange(35.0),
       stepAdvanceCondition: stepAdvanceDistanceToEndOfStep(distance: 10, minimumHorizontalAccuracy: 32),
       arrivalStepAdvanceCondition: stepAdvanceManual(),
       routeDeviationTracking: .staticThreshold(minimumHorizontalAccuracy: 25, maxAcceptableDeviation: devM),

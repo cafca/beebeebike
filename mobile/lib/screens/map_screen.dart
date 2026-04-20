@@ -51,6 +51,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   RatingOverlayController? _ratingOverlayNotifier;
   bool _ttsEnabled = true;
   bool _rerouting = false;
+  bool _browseAutocentered = false;
 
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
@@ -121,6 +122,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
+  Future<void> _autocentreOnFirstBrowseFix() async {
+    if (_browseAutocentered) return;
+    if (ref.read(navigationSessionProvider)) return;
+    final permission = await Geolocator.checkPermission();
+    if (!mounted) return;
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
+    }
+    _browseAutocentered = true;
+    await _flyToCurrentLocation();
+  }
+
   Future<void> _startNavigationSession() async {
     final routeState = ref.read(routeControllerProvider);
     final origin = routeState.origin;
@@ -152,7 +166,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
           .updateMyLocationTrackingMode(MyLocationTrackingMode.none);
     }
     if (!mounted) return;
-    setState(() => _rerouting = false);
+    setState(() {
+      _rerouting = false;
+      _browseAutocentered = false;
+    });
     ref.read(navigationSessionProvider.notifier).state = false;
     if (clearRoute) {
       ref.read(routeControllerProvider.notifier).clear();
@@ -327,6 +344,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               },
               onMapCreated: (controller) {
                 _mapController = controller;
+                _autocentreOnFirstBrowseFix();
               },
               onStyleLoadedCallback: () {
                 // Attach rating overlay AFTER style is loaded — MapLibre

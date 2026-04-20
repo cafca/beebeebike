@@ -3,12 +3,29 @@ import 'package:beebeebike/app.dart';
 import 'package:beebeebike/config/app_config.dart';
 import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/models/route_preview.dart';
+import 'package:beebeebike/models/user.dart';
+import 'package:beebeebike/providers/auth_provider.dart';
 import 'package:beebeebike/providers/search_history_provider.dart';
 import 'package:beebeebike/services/map_style_loader.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _SyncAuthController extends AuthController {
+  _SyncAuthController({required this.authenticated});
+  final bool authenticated;
+
+  @override
+  Future<User?> build() async => authenticated
+      ? const User(
+          id: 'user-1',
+          email: 'test@example.com',
+          displayName: 'Test User',
+          accountType: 'registered',
+        )
+      : const User(id: 'anon-test', accountType: 'anonymous');
+}
 
 abstract class TestFixtures {
   static const Map<String, dynamic> anonymousUser = {
@@ -21,7 +38,7 @@ abstract class TestFixtures {
     'id': 'user-1',
     'email': 'test@example.com',
     'display_name': 'Test User',
-    'account_type': 'standard',
+    'account_type': 'registered',
   };
 
   static const Map<String, dynamic> geocodeResponse = {
@@ -259,6 +276,9 @@ List<Override> testProviderOverrides({
       routeSucceeds: routeSucceeds,
       loginSucceeds: loginSucceeds,
     )),
+    authControllerProvider.overrideWith(
+      () => _SyncAuthController(authenticated: authenticated),
+    ),
     sharedPreferencesProvider.overrideWithValue(prefs),
   ];
 }

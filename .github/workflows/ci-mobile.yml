@@ -85,4 +85,4 @@ jobs:
         run: flutter build ios --no-codesign --simulator
 
       - name: Run integration smoke test
-        run: just test-e2e-ios UDID=$SIM_UDID
+        run: just test-e2e-ios "$SIM_UDID"

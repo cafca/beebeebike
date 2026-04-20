@@ -119,6 +119,19 @@ jobs:
     runs-on: ubuntu-latest
     if: vars.DEPLOY_HOST != ''
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync runtime config to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: |
+            compose.prod.yml
+            backend/graphhopper_config.yml
+          target: beebeebike/
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -127,5 +140,5 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             cd ~/beebeebike
-            docker compose -f compose.prod.yml pull backend
-            docker compose -f compose.prod.yml up -d backend
+            docker compose -f compose.prod.yml pull
+            docker compose -f compose.prod.yml up -d --remove-orphans

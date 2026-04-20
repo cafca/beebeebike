@@ -39,14 +39,43 @@ cargo clippy -- -D warnings
 
 Backend uses `SQLX_OFFLINE=true` for Docker builds (no live DB needed at compile time). Locally, sqlx connects to Postgres at build time for query checking.
 
-### Frontend only
+### Web app (Svelte)
 
 ```bash
-cd frontend
+cd web
 npm ci
 npm run dev        # Vite dev server on :5173, proxies /api → localhost:3000
-npm run build      # production build → frontend/dist/
+npm run build      # production build → web/dist/
 ```
+
+### Mobile app (iOS only)
+
+```bash
+cd mobile
+flutter pub get
+flutter test
+
+# Run on iOS simulator (defaults point to docker dev stack:
+#   api 127.0.0.1:3000, tile server 127.0.0.1:8080)
+flutter run -d ios
+
+# Override for non-default environments:
+flutter run -d ios \
+  --dart-define=BEEBEEBIKE_API_BASE_URL=http://other-host:3000 \
+  --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL=http://other-host:8080
+```
+
+Platform scope: iOS only in v0.1. `ferrostar_flutter` (at `packages/ferrostar_flutter/`) is a path dependency and must be present.
+
+### Map style (web + mobile)
+
+The bicycle-planning visual style lives in [web/src/lib/bicycle-style.js](web/src/lib/bicycle-style.js) as `buildBicycleStyle`. It wraps [`@versatiles/style`](https://github.com/versatiles-org/versatiles-style)'s `colorful` style with a custom palette and adds an extra set of bike-priority layers. Both web (at runtime) and mobile (at build time) call the same function. Mobile bundles a pre-baked artifact at `mobile/assets/styles/beebeebike-style.json` whose URLs use the `{{TILE_BASE}}` placeholder, swapped at runtime for `AppConfig.tileServerBaseUrl`. After editing the shared builder, regenerate the mobile artifact:
+
+```bash
+npm --prefix web run build:mobile-style
+```
+
+CI fails if the committed mobile artifact diverges from what the script produces.
 
 ### Static data (not in repo)
 
@@ -97,7 +126,7 @@ Rating values are discrete: -7, -3, -1, 0 (eraser), 1, 3, 7. The paint endpoint 
 | db | 5432 | PostGIS (spatial queries for rated areas) |
 | graphhopper | 8989 | Bicycle routing with custom model support |
 | tiles | 8080 | VersaTiles vector tile server |
-| frontend (dev only) | 5173 (default) | Vite dev server with API proxy |
+| web (dev only) | 5173 (default) | Vite dev server with API proxy |
 
 ### Migrations
 

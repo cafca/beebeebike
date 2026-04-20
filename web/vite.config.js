@@ -1,5 +1,7 @@
+/// <reference types="vitest" />
 import { defineConfig, loadEnv } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { svelteTesting } from '@testing-library/svelte/vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -9,6 +11,7 @@ export default defineConfig(({ mode }) => {
   return {
   plugins: [
     svelte(),
+    svelteTesting(),
     fathomUrl && {
       name: 'inject-fathom',
       transformIndexHtml: () => [
@@ -38,6 +41,14 @@ export default defineConfig(({ mode }) => {
         rewrite: (path) => path.replace(/^\/tiles/, ''),
       },
     },
+  },
+  test: {
+    environment: 'happy-dom',
+    globals: false,
+    setupFiles: ['./vitest.setup.js'],
+    include: ['src/**/*.{test,spec}.{js,svelte.js}'],
+    exclude: ['node_modules', 'dist', 'tests/e2e/**'],
+    clearMocks: true,
   },
   };
 });

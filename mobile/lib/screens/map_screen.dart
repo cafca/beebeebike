@@ -125,7 +125,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final permission = await Geolocator.checkPermission();
     if (!mounted) return;
     if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) return;
+        permission == LocationPermission.deniedForever) {
+      return;
+    }
     _browseAutocentered = true;
     await _flyToCurrentLocation();
   }

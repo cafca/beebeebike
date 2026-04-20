@@ -108,7 +108,7 @@ jobs:
       - uses: extractions/setup-just@v3
 
       - name: playwright smoke
-        run: just test-e2e
+        run: just test-e2e-web
 
       - name: Upload Playwright report on failure
         if: failure()

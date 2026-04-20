@@ -30,7 +30,7 @@ Backend uses `SQLX_OFFLINE=true` for Docker builds. Locally, sqlx connects to Po
 - `just setup-web` — `npm ci`
 - `just build-web` — production build to `web/dist/`
 - `just test-web` — vitest unit tests + mobile-style parity (run `just build-web` first if build matters)
-- `just test-e2e` — Playwright chromium smoke (webServer builds + serves vite preview). Requires one-time `npx playwright install chromium` from inside `web/`.
+- `just test-e2e-web` — Playwright chromium smoke (webServer builds + serves vite preview). Requires one-time `npx playwright install chromium` from inside `web/`.
 
 ### Mobile app (iOS only)
 
@@ -40,7 +40,7 @@ Backend uses `SQLX_OFFLINE=true` for Docker builds. Locally, sqlx connects to Po
 - `just release-ios-device <DEVICE>` — release-mode run against production URLs (`https://beebeebike.com`)
 - `just test-mobile` — analyze + test for the app
 - `just test-ferrostar-flutter-plugin` — analyze + test for the plugin at `packages/ferrostar_flutter/`
-- `just test-ios [UDID=""]` — iOS sim integration smoke test; auto-picks an available iPhone 17 if `UDID` is empty
+- `just test-e2e-ios [UDID=""]` — flutter integration_test on iOS sim/device; picks first booted simulator if `UDID` is empty
 
 Platform scope: iOS only in v0.1. `ferrostar_flutter` at `packages/ferrostar_flutter/` is a path dependency and must be present.
 

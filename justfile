@@ -75,7 +75,7 @@ test-web:
 
 # playwright chromium smoke (webServer builds + serves vite preview); requires one-time `npx playwright install chromium`
 [group('test')]
-test-e2e:
+test-e2e-web:
     cd web && npm run test:e2e
 
 [group('test')]
@@ -88,25 +88,25 @@ test-ferrostar-flutter-plugin:
     cd packages/ferrostar_flutter && flutter analyze
     cd packages/ferrostar_flutter && flutter test
 
+# flutter integration_test on iOS sim/device; empty UDID picks the first booted simulator
 [group('test')]
-test-ios UDID="":
+test-e2e-ios UDID="":
     #!/usr/bin/env bash
     set -euo pipefail
     UDID="{{UDID}}"
     if [ -z "$UDID" ]; then
-        UDID=$(xcrun simctl list devices available --json | python3 -c "
+        UDID=$(xcrun simctl list devices booted --json | python3 -c "
     import json, sys
     devs = json.load(sys.stdin)['devices']
     for runtime, devices in devs.items():
         for d in devices:
-            if 'iPhone 17' in d['name'] and d['isAvailable']:
+            if d.get('state') == 'Booted':
                 print(d['udid']); exit()
     ")
         if [ -z "$UDID" ]; then
-            echo "No available iPhone 17 simulator found" >&2
+            echo "No booted iOS simulator found. Boot one with 'xcrun simctl boot <UDID>' or pass UDID=<id>." >&2
             exit 1
         fi
-        xcrun simctl bootstatus "$UDID" -b >/dev/null 2>&1 || xcrun simctl boot "$UDID"
     fi
     cd mobile && flutter test integration_test/navigation_smoke_test.dart -d "$UDID"
 

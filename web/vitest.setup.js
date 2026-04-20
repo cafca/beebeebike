@@ -28,5 +28,14 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 beforeEach(() => {
-  window.localStorage.clear();
+  // Node v25 exposes a built-in localStorage that lacks .clear(); use a
+  // key-iteration fallback that works in both Node v25 and happy-dom.
+  const ls = window.localStorage;
+  if (typeof ls?.clear === 'function') {
+    ls.clear();
+  } else if (ls) {
+    const keys = [];
+    for (let i = 0; i < (ls.length ?? 0); i++) keys.push(ls.key(i));
+    keys.forEach(k => ls.removeItem(k));
+  }
 });

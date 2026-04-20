@@ -56,9 +56,10 @@ default:
 
 ### test
 
-- `test` — aggregate: `test-backend`, `test-web`, `test-mobile`, `test-ferrostar-flutter-plugin`
+- `test` — aggregate: `test-backend`, `test-web`, `test-mobile`, `test-ferrostar-flutter-plugin` (e2e excluded — slow, parallel in CI)
 - `test-backend` — `cd backend && cargo test`
-- `test-web` — `cd web && npm run build && npm run build:mobile-style && git diff --exit-code mobile/assets/styles/beebeebike-style.json` (matches CI's test-frontend job)
+- `test-web` — `cd web && npm run build && npm test && npm run build:mobile-style && git diff --exit-code mobile/assets/styles/beebeebike-style.json` (matches CI's `frontend` job)
+- `test-e2e` — `cd web && npm run build && npm run test:e2e` (matches CI's `frontend-e2e` job; assumes `npx playwright install chromium` done)
 - `test-mobile` — `cd mobile && flutter analyze && flutter test` (app only)
 - `test-ferrostar-flutter-plugin` — same in `packages/ferrostar_flutter`
 - `test-ios UDID=""` — iOS sim integration smoke. If `UDID` empty, auto-detect first available `iPhone 17` via `xcrun simctl list --json` and boot it. Then `cd mobile && flutter test integration_test/navigation_smoke_test.dart -d $UDID`. Does NOT run `flutter config --enable-swift-package-manager` or `flutter build ios --no-codesign --simulator` — those are slow, CI does them as raw steps.
@@ -94,8 +95,9 @@ default:
 Each job adds `extractions/setup-just@v3` after checkout, then:
 
 - `lint` job: two steps — `just lint-backend-fmt` and `just lint-backend-clippy` — so the GitHub Actions UI shows each failure type distinctly
-- `test-backend` job: `just test-backend` with `TEST_DATABASE_URL` env from services block
-- `test-frontend` job: `just test-web`
+- `backend` job: `just test-backend` with `TEST_DATABASE_URL` env from services block
+- `frontend` job: `just test-web` (build + vitest + mobile-style parity)
+- `frontend-e2e` job: `just test-e2e`; keep raw `npx playwright install --with-deps chromium` and playwright-browsers cache, and the failure-case `Upload Playwright report` artifact step
 
 ### `.github/workflows/ci-mobile.yml`
 

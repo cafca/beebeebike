@@ -4,8 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../navigation/maneuver_icons.dart';
 
-/// Bottom sheet shown during active navigation. Displays ETA + remaining
-/// minutes, a TTS toggle, and a close button that ends the nav session.
+/// Bottom sheet shown during active navigation. Displays remaining distance,
+/// ETA + remaining minutes, a TTS toggle, and a close button that ends the
+/// nav session.
 class EtaSheet extends StatelessWidget {
   const EtaSheet({
     super.key,
@@ -33,7 +34,20 @@ class EtaSheet extends StatelessWidget {
             data: (state) {
               final p = state.progress;
               if (p == null) return const Text('—');
-              return Text(formatEta(p.durationRemainingMs));
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formatDistance(p.distanceRemainingM),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Text(
+                    formatEta(p.durationRemainingMs),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              );
             },
           ),
           Row(

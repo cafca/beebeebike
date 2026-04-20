@@ -83,4 +83,20 @@ void main() {
     ));
     expect(find.text('Loading...'), findsOneWidget);
   });
+
+  testWidgets('shows remaining distance from distanceRemainingM',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: EtaSheet(
+          navState: AsyncValue.data(_state()),
+          ttsEnabled: true,
+          onToggleTts: () {},
+          onClose: () {},
+        ),
+      ),
+    ));
+    // _state() has distanceRemainingM: 1500, so expect "1.5 km"
+    expect(find.text('1.5 km'), findsOneWidget);
+  });
 }

@@ -19,13 +19,13 @@ jobs:
         with:
           workspaces: backend
 
+      - uses: extractions/setup-just@v3
+
       - name: cargo fmt
-        run: cargo fmt --check
-        working-directory: backend
+        run: just lint-backend-fmt
 
       - name: cargo clippy
-        run: cargo clippy --all-targets -- -D warnings
-        working-directory: backend
+        run: just lint-backend-clippy
 
   backend:
     runs-on: ubuntu-latest
@@ -54,9 +54,10 @@ jobs:
         with:
           workspaces: backend
 
+      - uses: extractions/setup-just@v3
+
       - name: cargo test
-        run: cargo test
-        working-directory: backend
+        run: just test-backend
 
   frontend:
     runs-on: ubuntu-latest
@@ -72,16 +73,10 @@ jobs:
       - run: npm ci
         working-directory: web
 
-      - run: npm run build
-        working-directory: web
+      - uses: extractions/setup-just@v3
 
-      - run: npm test
-        working-directory: web
-
-      - name: regenerate mobile style and verify it matches committed artifact
-        run: |
-          npm --prefix web run build:mobile-style
-          git diff --exit-code mobile/assets/styles/beebeebike-style.json
+      - name: build + vitest + mobile-style parity
+        run: just test-web
 
   frontend-e2e:
     runs-on: ubuntu-latest
@@ -107,11 +102,10 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: web
 
-      - run: npm run build
-        working-directory: web
+      - uses: extractions/setup-just@v3
 
-      - run: npm run test:e2e
-        working-directory: web
+      - name: build + playwright smoke
+        run: just test-e2e
 
       - name: Upload Playwright report on failure
         if: failure()

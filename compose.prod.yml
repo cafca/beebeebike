@@ -1,15 +1,26 @@
+# Orchestration template for the prod host.
+# Host-specific values (secrets, memory limits, ports, tuning) come from
+# ~/beebeebike/.env on the server. See .env.example.
+
 services:
   db:
     image: postgis/postgis:16-3.4
     container_name: beebeebike-db
     environment:
-      POSTGRES_DB: beebeebike
-      POSTGRES_USER: beebeebike
-      POSTGRES_PASSWORD: beebeebike
-    command: postgres -c shared_buffers=64MB -c work_mem=4MB -c effective_cache_size=256MB
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${DB_SHARED_BUFFERS}
+      - -c
+      - work_mem=${DB_WORK_MEM}
+      - -c
+      - effective_cache_size=${DB_EFFECTIVE_CACHE_SIZE}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    mem_limit: 256m
+    mem_limit: ${DB_MEM_LIMIT}
     restart: unless-stopped
 
   graphhopper:
@@ -26,36 +37,33 @@ services:
       - ./data/osm/berlin/berlin.osm.pbf:/data/berlin.osm.pbf:ro
       - ./data/osm/berlin/graphhopper:/data/graphhopper-cache
     environment:
-      JAVA_OPTS: "-Xmx384m -Xms256m"
-    mem_limit: 512m
+      JAVA_OPTS: ${GRAPHHOPPER_JAVA_OPTS}
+    mem_limit: ${GRAPHHOPPER_MEM_LIMIT}
     restart: unless-stopped
 
   tiles:
     image: versatiles/versatiles-frontend:latest-alpine
     container_name: beebeebike-tiles
     ports:
-      - "127.0.0.1:3847:8080"
+      - "127.0.0.1:${TILES_HOST_PORT}:8080"
     volumes:
       - ./data/tiles/berlin.versatiles:/tiles/berlin.versatiles:ro
     command: ["/app/versatiles", "server", "-s", "/app/frontend-dev.br.tar", "[osm]/tiles/berlin.versatiles"]
-    mem_limit: 128m
+    mem_limit: ${TILES_MEM_LIMIT}
     restart: unless-stopped
 
   backend:
     image: ghcr.io/cafca/beebeebike:latest
     container_name: beebeebike-backend
     ports:
-      - "127.0.0.1:3848:3000"
+      - "127.0.0.1:${BACKEND_HOST_PORT}:3000"
     environment:
-      DATABASE_URL: postgres://beebeebike:beebeebike@db:5432/beebeebike
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       GRAPHHOPPER_URL: http://graphhopper:8989
-      PHOTON_URL: https://photon.komoot.io
-      LISTEN_ADDR: 0.0.0.0:3000
-      STATIC_DIR: /app/web/dist
     depends_on:
       - db
       - graphhopper
-    mem_limit: 128m
+    mem_limit: ${BACKEND_MEM_LIMIT}
     restart: unless-stopped
 
 volumes:

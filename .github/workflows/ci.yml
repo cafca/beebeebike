@@ -119,6 +119,17 @@ jobs:
     runs-on: ubuntu-latest
     if: vars.DEPLOY_HOST != ''
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync compose.prod.yml to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: compose.prod.yml
+          target: beebeebike/
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:

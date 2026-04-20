@@ -22,7 +22,7 @@ class _SyncAuthController extends AuthController {
           id: 'user-1',
           email: 'test@example.com',
           displayName: 'Test User',
-          accountType: 'standard',
+          accountType: 'registered',
         )
       : const User(id: 'anon-test', accountType: 'anonymous');
 }
@@ -38,7 +38,7 @@ abstract class TestFixtures {
     'id': 'user-1',
     'email': 'test@example.com',
     'display_name': 'Test User',
-    'account_type': 'standard',
+    'account_type': 'registered',
   };
 
   static const Map<String, dynamic> geocodeResponse = {

@@ -72,6 +72,6 @@ class _FakeAuthController extends AuthController {
       const User(id: 'anon', accountType: 'anonymous');
 
   void simulateLogin() {
-    state = const AsyncData(User(id: 'u1', email: 'a@b.com', accountType: 'user'));
+    state = const AsyncData(User(id: 'u1', email: 'a@b.com', accountType: 'registered'));
   }
 }

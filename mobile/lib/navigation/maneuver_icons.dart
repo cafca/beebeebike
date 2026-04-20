@@ -29,12 +29,3 @@ String formatEta(int durationRemainingMs) {
   final minRemaining = (durationRemainingMs / 60000).round();
   return '$h:$m arrival · $minRemaining min';
 }
-
-/// Formats total remaining distance + ETA: "1.4 km · 14:32".
-String formatTotalRemaining(double distanceRemainingM, int durationRemainingMs) {
-  final dist = formatDistance(distanceRemainingM);
-  final eta = DateTime.now().add(Duration(milliseconds: durationRemainingMs));
-  final h = eta.hour.toString().padLeft(2, '0');
-  final m = eta.minute.toString().padLeft(2, '0');
-  return '$dist · $h:$m';
-}

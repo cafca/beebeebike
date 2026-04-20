@@ -122,17 +122,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  Future<void> _autocentreOnFirstBrowseFix() async {
+  Future<void> _handleBrowseLocationUpdate(double lat, double lng) async {
     if (_browseAutocentered) return;
     if (ref.read(navigationSessionProvider)) return;
-    final permission = await Geolocator.checkPermission();
-    if (!mounted) return;
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return;
-    }
+    final controller = _mapController;
+    if (controller == null) return;
     _browseAutocentered = true;
-    await _flyToCurrentLocation();
+    await controller.animateCamera(
+      CameraUpdate.newLatLngZoom(LatLng(lat, lng), 16),
+    );
   }
 
   Future<void> _startNavigationSession() async {
@@ -344,8 +342,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               },
               onMapCreated: (controller) {
                 _mapController = controller;
-                _autocentreOnFirstBrowseFix();
               },
+              onUserLocationUpdated: (loc) =>
+                  _handleBrowseLocationUpdate(loc.position.latitude, loc.position.longitude),
               onStyleLoadedCallback: () {
                 // Attach rating overlay AFTER style is loaded — MapLibre
                 // silently ignores addGeoJsonSource / addLayer calls made

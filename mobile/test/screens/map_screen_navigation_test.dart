@@ -37,13 +37,21 @@ NavigationState _baseState({
   );
 }
 
-Future<
-    (
-      WidgetTester,
-      StreamController<NavigationState>,
-      NavigationCameraController,
-      StreamController<bool>,
-    )> _pumpNavActive(WidgetTester tester) async {
+class _NavHarness {
+  _NavHarness({
+    required this.tester,
+    required this.navStream,
+    required this.cam,
+    required this.rerouteStream,
+  });
+
+  final WidgetTester tester;
+  final StreamController<NavigationState> navStream;
+  final NavigationCameraController cam;
+  final StreamController<bool> rerouteStream;
+}
+
+Future<_NavHarness> _pumpNavActive(WidgetTester tester) async {
   SharedPreferences.setMockInitialValues({});
   final prefs = await SharedPreferences.getInstance();
 
@@ -84,7 +92,12 @@ Future<
   await tester.pump();
   addTearDown(navStream.close);
   addTearDown(rerouteStream.close);
-  return (tester, navStream, cam, rerouteStream);
+  return _NavHarness(
+    tester: tester,
+    navStream: navStream,
+    cam: cam,
+    rerouteStream: rerouteStream,
+  );
 }
 
 Future<void> _triggerRebuild(
@@ -101,30 +114,30 @@ void main() {
 
   testWidgets('recenter FAB visible when camera enters free mode',
       (tester) async {
-    final (_, stream, cam, __) = await _pumpNavActive(tester);
-    cam.onFirstFix();
-    cam.onTrackingDismissed();
-    await _triggerRebuild(tester, stream);
+    final h = await _pumpNavActive(tester);
+    h.cam.onFirstFix();
+    h.cam.onTrackingDismissed();
+    await _triggerRebuild(tester, h.navStream);
     expect(find.byType(RecenterFab), findsOneWidget);
   });
 
   testWidgets(
       'rerouting toast follows rerouteInProgress stream (shown when true, hidden when false)',
       (tester) async {
-    final (_, __, ___, reroute) = await _pumpNavActive(tester);
-    reroute.add(true);
+    final h = await _pumpNavActive(tester);
+    h.rerouteStream.add(true);
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(ReroutingToast), findsOneWidget);
 
-    reroute.add(false);
+    h.rerouteStream.add(false);
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(ReroutingToast), findsNothing);
   });
 
   testWidgets('arrived sheet replaces ETA sheet on TripStatus.complete',
       (tester) async {
-    final (_, stream, __, ___) = await _pumpNavActive(tester);
-    stream.add(_baseState(status: TripStatus.complete));
+    final h = await _pumpNavActive(tester);
+    h.navStream.add(_baseState(status: TripStatus.complete));
     await tester.pump();
     await tester.pump();
     expect(find.byType(ArrivedSheet), findsOneWidget);
@@ -132,12 +145,12 @@ void main() {
 
   testWidgets('rerouting toast clears when arrival fires while rerouting',
       (tester) async {
-    final (_, stream, __, reroute) = await _pumpNavActive(tester);
-    reroute.add(true);
+    final h = await _pumpNavActive(tester);
+    h.rerouteStream.add(true);
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(ReroutingToast), findsOneWidget);
 
-    stream.add(_baseState(status: TripStatus.complete));
+    h.navStream.add(_baseState(status: TripStatus.complete));
     await tester.pump();
     await tester.pump();
     expect(find.byType(ArrivedSheet), findsOneWidget);

@@ -9,9 +9,9 @@ The app uses those personal ratings when calculating routes, so your trips can b
 You will need Docker and Docker Compose. The local stack expects Berlin OSM and tile data under `data/`; the helper scripts in `scripts/` are there to fetch those.
 
 ```sh
-./scripts/download_berlin_osm.sh
-./scripts/download_berlin_tiles.sh
-docker compose -f compose.yml -f compose.dev.yml up --build
+brew install just   # one-time
+just setup
+just dev
 ```
 
 Then open the app at `http://localhost:5173`.
@@ -31,11 +31,8 @@ Docker Compose files live at the project root and are meant to be run from there
 Flutter client in `mobile/`. Requires the `ferrostar_flutter` plugin at `packages/ferrostar_flutter/`.
 
 ```bash
-cd mobile
-flutter pub get
-flutter run -d ios \
-  --dart-define=BEEBEEBIKE_API_BASE_URL=http://127.0.0.1:3000 \
-  --dart-define=BEEBEEBIKE_TILE_STYLE_URL=http://127.0.0.1:8080/tiles/assets/styles/colorful/style.json
+just setup-mobile
+just dev-ios-sim
 ```
 
 > Android support is planned for a future release.

@@ -25,6 +25,8 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - uses: extractions/setup-just@v3
+
       - name: Install dependencies (plugin)
         working-directory: packages/ferrostar_flutter
         run: flutter pub get
@@ -33,21 +35,11 @@ jobs:
         working-directory: mobile
         run: flutter pub get
 
-      - name: Analyze (plugin)
-        working-directory: packages/ferrostar_flutter
-        run: flutter analyze
+      - name: Test plugin
+        run: just test-ferrostar-flutter-plugin
 
-      - name: Analyze (app)
-        working-directory: mobile
-        run: flutter analyze
-
-      - name: Test (plugin)
-        working-directory: packages/ferrostar_flutter
-        run: flutter test
-
-      - name: Test (app)
-        working-directory: mobile
-        run: flutter test
+      - name: Test app
+        run: just test-mobile
 
   test-mobile-ios:
     name: Flutter integration tests (iOS simulator)
@@ -59,6 +51,8 @@ jobs:
       - uses: flutter-actions/setup-flutter@v3
         with:
           channel: stable
+
+      - uses: extractions/setup-just@v3
 
       - name: Install dependencies (plugin)
         working-directory: packages/ferrostar_flutter
@@ -91,5 +85,4 @@ jobs:
         run: flutter build ios --no-codesign --simulator
 
       - name: Run integration smoke test
-        working-directory: mobile
-        run: flutter test integration_test/navigation_smoke_test.dart -d "$SIM_UDID"
+        run: just test-e2e-ios UDID=$SIM_UDID

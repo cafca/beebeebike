@@ -127,11 +127,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) return;
     _browseAutocentered = true;
-    try {
-      await _flyToCurrentLocation();
-    } catch (_) {
-      _browseAutocentered = false;
-    }
+    await _flyToCurrentLocation();
   }
 
   Future<void> _startNavigationSession() async {

@@ -190,6 +190,20 @@ Dio buildMockDio({
         return;
       }
 
+      if (path == '/api/ratings') {
+        handler.resolve(Response(
+          requestOptions: options,
+          statusCode: 200,
+          data: const {
+            'type': 'FeatureCollection',
+            'features': [],
+            'can_undo': false,
+            'can_redo': false,
+          },
+        ));
+        return;
+      }
+
       if (path == '/api/locations/home') {
         if (options.method == 'GET') {
           handler.resolve(Response(

@@ -66,18 +66,16 @@ test: test-backend test-web test-mobile test-ferrostar-flutter-plugin
 test-backend:
     cd backend && cargo test
 
-# build + vitest unit tests + mobile-style parity (mirrors CI `frontend`)
+# vitest unit tests + mobile-style parity; run `just build-web` first if the build matters
 [group('test')]
 test-web:
-    cd web && npm run build
     cd web && npm test
     cd web && npm run build:mobile-style
     git diff --exit-code mobile/assets/styles/beebeebike-style.json
 
-# playwright chromium smoke (mirrors CI `frontend-e2e`); requires one-time `npx playwright install chromium`
+# playwright chromium smoke; requires `just build-web` first and one-time `npx playwright install chromium`
 [group('test')]
 test-e2e:
-    cd web && npm run build
     cd web && npm run test:e2e
 
 [group('test')]

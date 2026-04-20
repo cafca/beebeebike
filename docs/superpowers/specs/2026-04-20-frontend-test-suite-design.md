@@ -108,8 +108,8 @@ Config: `web/playwright.config.js`.
 Tests in `web/tests/e2e/smoke.spec.js`:
 
 - **`app boots`** — navigate to `/`, assert `.maplibregl-canvas` visible, sign-in button visible.
-- **`auth modal opens`** — click sign-in, modal visible, close restores initial state.
-- **`welcome modal dismisses`** — on first visit modal appears; dismiss persists via `localStorage`.
+
+Every spec registers a `page.on('console', ...)` + `page.on('pageerror', ...)` listener at start and asserts zero `error`-level console messages and zero uncaught exceptions at end. Shared via a fixture in `web/tests/e2e/fixtures.js`.
 
 No backend calls asserted. Network calls are either absent (static assets) or left to 404 without failing the test.
 
@@ -138,6 +138,7 @@ No backend calls asserted. Network calls are either absent (static assets) or le
 - `web/vitest.setup.js`
 - `web/playwright.config.js`
 - `web/tests/e2e/smoke.spec.js`
+- `web/tests/e2e/fixtures.js` (console/pageerror assertion fixture)
 - `web/src/lib/mocks/handlers.js` (MSW request handlers)
 - `web/src/lib/mocks/server.js` (MSW server instance)
 - Per-target `*.test.js` / `*.svelte.test.js` files alongside source.
@@ -161,6 +162,5 @@ No backend calls asserted. Network calls are either absent (static assets) or le
 ## Success criteria
 
 - `npm test` in `web/` runs Vitest and exits 0 with all targets green.
-- `npm run test:e2e` in `web/` boots the app, passes the three smoke specs.
+- `npm run test:e2e` in `web/` boots the app, smoke spec passes, zero console errors, zero uncaught exceptions.
 - `ci.yml` has jobs `lint`, `backend`, `frontend`, `frontend-e2e`, all green on PRs touching `web/`.
-- CD still deploys after a successful CI run.

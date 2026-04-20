@@ -4,87 +4,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Run
 
+All day-to-day commands run through `just`. Install once with `brew install just`, then `just` (no args) lists everything.
+
 ### Full stack (Docker Compose)
 
-```bash
-# Development: all services + hot-reload frontend
-docker compose -f compose.yml -f compose.dev.yml up
-
-# Production (memory-constrained):
-docker compose -f compose.prod.yml up -d --build
-```
+- Dev: `just dev` — full stack with hot-reload frontend (`compose.yml` + `compose.dev.yml`)
+- Prod: `just release` — `compose.prod.yml`, detached, with rebuild
 
 ### Previewing changes when working in a worktree
 
 Always do this when you have completed a unit of work.
 
-To preview your changes for the user: Assume other docker instances of this app are running and start the stack with a custom port. Pick a random port, save time and don't check for other running stacks.
+`just preview` — copies `data/` from the main repo checkout if missing, picks a random port in 20000–30000, echoes the URL, and starts the dev stack with `VITE_DEV_PORT` set. Frontend has HMR — don't restart the stack after changes.
 
-First, copy the data/ directory from the main repo location to current worktree. Then:
+### Backend
 
-VITE_DEV_PORT=<random port> docker compose -f compose.yml -f compose.dev.yml up
+- `just test-backend` — cargo test
+- `just lint-backend` — fmt check + clippy with `-D warnings`
+- `just fmt` — mutating `cargo fmt`
 
-Frontend has HMR, don't restart the stack following changes, it will auto-reload.
-
-### Backend only (local Rust dev)
-
-```bash
-cd backend
-cargo build
-cargo run          # needs DATABASE_URL, GRAPHHOPPER_URL etc. (see config.rs defaults)
-cargo test
-cargo fmt --check
-cargo clippy -- -D warnings
-```
-
-Backend uses `SQLX_OFFLINE=true` for Docker builds (no live DB needed at compile time). Locally, sqlx connects to Postgres at build time for query checking.
+Backend uses `SQLX_OFFLINE=true` for Docker builds. Locally, sqlx connects to Postgres at build time for query checking.
 
 ### Web app (Svelte)
 
-```bash
-cd web
-npm ci
-npm run dev        # Vite dev server on :5173, proxies /api → localhost:3000
-npm run build      # production build → web/dist/
-```
+- `just setup-web` — `npm ci`
+- `just build-web` — production build to `web/dist/`
+- `just test-web` — build + vitest unit tests + mobile-style parity (same as CI `frontend` job)
+- `just test-e2e` — Playwright chromium smoke (same as CI `frontend-e2e`). Requires one-time `npx playwright install chromium` from inside `web/`.
 
 ### Mobile app (iOS only)
 
-```bash
-cd mobile
-flutter pub get
-flutter test
+- `just setup-mobile` — `flutter pub get` for plugin and app
+- `just dev-ios-sim` — run on iOS simulator against local docker stack (defaults to 127.0.0.1)
+- `just dev-ios-device <DEVICE>` — run on physical device against dev stack over LAN (auto-detects host IP via `ipconfig getifaddr en0`)
+- `just release-ios-device <DEVICE>` — release-mode run against production URLs (`https://beebeebike.com`)
+- `just test-mobile` — analyze + test for the app
+- `just test-ferrostar-flutter-plugin` — analyze + test for the plugin at `packages/ferrostar_flutter/`
+- `just test-ios [UDID=""]` — iOS sim integration smoke test; auto-picks an available iPhone 17 if `UDID` is empty
 
-# Run on iOS simulator (defaults point to docker dev stack:
-#   api 127.0.0.1:3000, tile server 127.0.0.1:8080)
-flutter run -d ios
-
-# Override for non-default environments:
-flutter run -d ios \
-  --dart-define=BEEBEEBIKE_API_BASE_URL=http://other-host:3000 \
-  --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL=http://other-host:8080
-```
-
-Platform scope: iOS only in v0.1. `ferrostar_flutter` (at `packages/ferrostar_flutter/`) is a path dependency and must be present.
+Platform scope: iOS only in v0.1. `ferrostar_flutter` at `packages/ferrostar_flutter/` is a path dependency and must be present.
 
 ### Map style (web + mobile)
 
-The bicycle-planning visual style lives in [web/src/lib/bicycle-style.js](web/src/lib/bicycle-style.js) as `buildBicycleStyle`. It wraps [`@versatiles/style`](https://github.com/versatiles-org/versatiles-style)'s `colorful` style with a custom palette and adds an extra set of bike-priority layers. Both web (at runtime) and mobile (at build time) call the same function. Mobile bundles a pre-baked artifact at `mobile/assets/styles/beebeebike-style.json` whose URLs use the `{{TILE_BASE}}` placeholder, swapped at runtime for `AppConfig.tileServerBaseUrl`. After editing the shared builder, regenerate the mobile artifact:
-
-```bash
-npm --prefix web run build:mobile-style
-```
-
-CI fails if the committed mobile artifact diverges from what the script produces.
+The bicycle-planning visual style lives in [web/src/lib/bicycle-style.js](web/src/lib/bicycle-style.js) as `buildBicycleStyle`. Mobile bundles a pre-baked artifact at `mobile/assets/styles/beebeebike-style.json` whose URLs use `{{TILE_BASE}}`, swapped at runtime. After editing the shared builder, regenerate with `just build-mobile-style`. CI (`just test-web`) fails if the committed artifact diverges.
 
 ### Static data (not in repo)
 
-OSM extract and vector tiles must be downloaded before first run:
+OSM extract and vector tiles must be downloaded before first run: `just setup-data` (runs both `scripts/download_berlin_*.sh`).
 
-```bash
-scripts/download_berlin_osm.sh   # → data/osm/berlin/berlin.osm.pbf
-scripts/download_berlin_tiles.sh  # → data/tiles/berlin.versatiles
-```
+### Clean
+
+- `just clean` — clean everything (cargo, web, flutter, docker volumes)
+- Subcommands: `clean-backend`, `clean-web`, `clean-mobile`, `clean-docker`
 
 ## Architecture
 
@@ -134,4 +105,4 @@ SQL migrations in `backend/migrations/`, auto-run on backend startup via `sqlx::
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/ci.yml`): lint → test-backend → test-frontend → publish Docker image to GHCR → deploy via SSH (on push to main).
+GitHub Actions (`.github/workflows/ci.yml`): lint → backend → frontend → frontend-e2e → publish Docker image to GHCR → deploy via SSH (on push to main). All jobs call `just` recipes.

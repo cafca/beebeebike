@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig, loadEnv } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
@@ -38,6 +39,14 @@ export default defineConfig(({ mode }) => {
         rewrite: (path) => path.replace(/^\/tiles/, ''),
       },
     },
+  },
+  test: {
+    environment: 'happy-dom',
+    globals: false,
+    setupFiles: ['./vitest.setup.js'],
+    include: ['src/**/*.{test,spec}.{js,svelte.js}'],
+    exclude: ['node_modules', 'dist', 'tests/e2e/**'],
+    clearMocks: true,
   },
   };
 });

@@ -73,7 +73,7 @@ test-web:
     cd web && npm run build:mobile-style
     git diff --exit-code mobile/assets/styles/beebeebike-style.json
 
-# playwright chromium smoke; requires `just build-web` first and one-time `npx playwright install chromium`
+# playwright chromium smoke (webServer builds + serves vite preview); requires one-time `npx playwright install chromium`
 [group('test')]
 test-e2e:
     cd web && npm run test:e2e

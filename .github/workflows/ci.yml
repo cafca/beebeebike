@@ -107,9 +107,6 @@ jobs:
 
       - uses: extractions/setup-just@v3
 
-      - name: build
-        run: just build-web
-
       - name: playwright smoke
         run: just test-e2e
 

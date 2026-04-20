@@ -30,7 +30,7 @@ Backend uses `SQLX_OFFLINE=true` for Docker builds. Locally, sqlx connects to Po
 - `just setup-web` — `npm ci`
 - `just build-web` — production build to `web/dist/`
 - `just test-web` — vitest unit tests + mobile-style parity (run `just build-web` first if build matters)
-- `just test-e2e` — Playwright chromium smoke. Requires `just build-web` first and one-time `npx playwright install chromium` from inside `web/`.
+- `just test-e2e` — Playwright chromium smoke (webServer builds + serves vite preview). Requires one-time `npx playwright install chromium` from inside `web/`.
 
 ### Mobile app (iOS only)
 

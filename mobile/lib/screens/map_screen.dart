@@ -10,8 +10,11 @@ import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
 
 import '../models/geocode_result.dart';
 import '../models/location.dart';
+import '../models/route_preview.dart';
 import '../models/route_state.dart';
 import '../navigation/camera_controller.dart';
+import '../navigation/maneuver_icons.dart';
+import '../navigation/nav_constants.dart';
 import '../providers/navigation_camera_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/navigation_session_provider.dart';
@@ -21,6 +24,7 @@ import '../screens/settings_screen.dart';
 import '../services/map_style_loader.dart';
 import '../services/route_drawing.dart';
 import '../widgets/arrived_sheet.dart';
+import '../widgets/eta_sheet.dart';
 import '../widgets/recenter_fab.dart';
 import '../widgets/rerouting_toast.dart';
 import '../widgets/route_summary.dart';
@@ -119,12 +123,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final origin = routeState.origin;
     final destination = routeState.destination;
     if (origin == null || destination == null) {
-      debugPrint(
-          'MapScreen: startNavigation aborted (origin or destination null)');
+      debugPrint('nav: start aborted (no origin/destination)');
       return;
     }
-    debugPrint(
-        'MapScreen: starting navigation ${origin.name} -> ${destination.name}');
+    debugPrint('nav: start ${origin.name} -> ${destination.name}');
     final service = ref.read(navigationServiceProvider);
     try {
       await service.start(
@@ -132,14 +134,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         destination:
             WaypointInput(lat: destination.lat, lng: destination.lng),
       );
-      debugPrint('MapScreen: navigation started');
     } catch (e, st) {
-      debugPrint('MapScreen: failed to start navigation: $e\n$st');
+      debugPrint('nav: start failed: $e\n$st');
     }
   }
 
   Future<void> _endNavigationSession({bool clearRoute = false}) async {
-    debugPrint('MapScreen: ending navigation (clearRoute=$clearRoute)');
+    debugPrint('nav: end (clearRoute=$clearRoute)');
     final service = ref.read(navigationServiceProvider);
     await service.dispose();
     final controller = _mapController;
@@ -156,8 +157,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _handleFirstFix(UserLocation loc) async {
-    debugPrint(
-        'MapScreen: first GPS fix ${loc.lat.toStringAsFixed(5)}, ${loc.lng.toStringAsFixed(5)}');
+    debugPrint('nav: first fix');
     final cam = ref.read(navigationCameraControllerProvider);
     cam.onFirstFix();
     final controller = _mapController;
@@ -170,7 +170,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _handleArrival() async {
-    debugPrint('MapScreen: arrival fired');
+    debugPrint('nav: arrived');
     final cam = ref.read(navigationCameraControllerProvider);
     cam.onArrived();
     if (mounted) setState(() => _rerouting = false);
@@ -182,7 +182,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!mounted) return;
     if (destination != null) {
       await controller.animateCamera(CameraUpdate.newLatLngZoom(
-          LatLng(destination.lat, destination.lng), cam.followZoom));
+          LatLng(destination.lat, destination.lng), kArrivalZoom));
     }
   }
 
@@ -213,10 +213,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       _handleFirstFix(nextState.snappedLocation!);
     }
 
-    if ((prevState?.isOffRoute ?? false) != nextState.isOffRoute) {
-      debugPrint('MapScreen: isOffRoute -> ${nextState.isOffRoute}');
-    }
-
     if (prevState?.status != TripStatus.complete &&
         nextState.status == TripStatus.complete) {
       _handleArrival();
@@ -229,7 +225,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final prevInProgress = prev?.value ?? false;
     final inProgress = next.value ?? false;
     if (_rerouting != inProgress) {
-      debugPrint('MapScreen: rerouteInProgress -> $inProgress');
+      debugPrint('nav: reroute ${inProgress ? "start" : "done"}');
       setState(() => _rerouting = inProgress);
     }
     // On reroute completion, refetch the preview polyline so the map
@@ -248,10 +244,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       pos = await Geolocator.getLastKnownPosition() ??
           await Geolocator.getCurrentPosition();
     } catch (e) {
-      debugPrint('MapScreen: refreshPreview GPS error: $e');
+      debugPrint('nav: refresh-preview GPS error: $e');
     }
     if (!mounted || pos == null) return;
-    debugPrint('MapScreen: refreshing preview from GPS after reroute');
     ref.read(routeControllerProvider.notifier).setOrigin(
           Location(
             id: 'gps',
@@ -364,7 +359,7 @@ class _BrowseOverlay extends ConsumerWidget {
   });
 
   final RouteState routeState;
-  final dynamic preview;
+  final RoutePreview? preview;
   final VoidCallback onFlyToMyLocation;
   final VoidCallback onStart;
 
@@ -472,8 +467,8 @@ class _BrowseOverlay extends ConsumerWidget {
                               : RouteSummary(
                                   // GraphHopper returns time in milliseconds.
                                   durationMinutes:
-                                      (preview.time / 60000).round(),
-                                  distanceKm: preview.distance / 1000,
+                                      (preview!.time / 60000).round(),
+                                  distanceKm: preview!.distance / 1000,
                                   onStart: onStart,
                                   onClose: () => ref
                                       .read(routeControllerProvider.notifier)
@@ -531,11 +526,11 @@ class _NavigationOverlay extends ConsumerWidget {
                     primaryText:
                         state.currentVisual?.primaryText ?? 'On route',
                     distanceText: state.progress != null
-                        ? _formatDistance(
+                        ? formatDistance(
                             state.progress!.distanceToNextManeuverM)
                         : '',
                     icon: state.currentVisual != null
-                        ? _iconForManeuver(
+                        ? iconForManeuver(
                             state.currentVisual!.maneuverType,
                             state.currentVisual!.maneuverModifier,
                           )
@@ -552,7 +547,8 @@ class _NavigationOverlay extends ConsumerWidget {
             alignment: Alignment.bottomRight,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.only(right: 16, bottom: 140),
+                padding: const EdgeInsets.only(
+                    right: 16, bottom: kEtaSheetHeight),
                 child: RecenterFab(onTap: onRecenter),
               ),
             ),
@@ -568,7 +564,7 @@ class _NavigationOverlay extends ConsumerWidget {
               ),
               child: cam.mode == CameraMode.arrived
                   ? ArrivedSheet(onDone: onClose)
-                  : _EtaSheet(
+                  : EtaSheet(
                       navState: navState,
                       ttsEnabled: ttsEnabled,
                       onToggleTts: onToggleTts,
@@ -580,80 +576,4 @@ class _NavigationOverlay extends ConsumerWidget {
       ],
     );
   }
-}
-
-class _EtaSheet extends StatelessWidget {
-  const _EtaSheet({
-    required this.navState,
-    required this.ttsEnabled,
-    required this.onToggleTts,
-    required this.onClose,
-  });
-
-  final AsyncValue<NavigationState> navState;
-  final bool ttsEnabled;
-  final VoidCallback onToggleTts;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          navState.when(
-            loading: () => const Text('Loading...'),
-            error: (_, __) => const Text('—'),
-            data: (state) {
-              final p = state.progress;
-              if (p == null) return const Text('—');
-              return Text(_formatEta(p.durationRemainingMs));
-            },
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon:
-                    Icon(ttsEnabled ? Icons.volume_up : Icons.volume_off),
-                onPressed: onToggleTts,
-              ),
-              const SizedBox(width: 16),
-              GestureDetector(
-                onTap: onClose,
-                child: const Icon(Icons.close),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-IconData _iconForManeuver(String type, String? modifier) {
-  final mod = modifier?.replaceAll('_', ' ');
-  if (type == 'turn') {
-    if (mod == 'left') return Icons.turn_left;
-    if (mod == 'right') return Icons.turn_right;
-    if (mod == 'sharp left') return Icons.turn_sharp_left;
-    if (mod == 'sharp right') return Icons.turn_sharp_right;
-    if (mod == 'slight left') return Icons.turn_slight_left;
-    if (mod == 'slight right') return Icons.turn_slight_right;
-  }
-  if (type == 'arrive') return Icons.flag;
-  return Icons.straight;
-}
-
-String _formatDistance(double meters) {
-  if (meters >= 1000) return '${(meters / 1000).toStringAsFixed(1)} km';
-  return '${meters.round()} m';
-}
-
-String _formatEta(int durationRemainingMs) {
-  final eta = DateTime.now().add(Duration(milliseconds: durationRemainingMs));
-  final h = eta.hour.toString().padLeft(2, '0');
-  final m = eta.minute.toString().padLeft(2, '0');
-  final minRemaining = (durationRemainingMs / 60000).round();
-  return '$h:$m arrival · $minRemaining min';
 }

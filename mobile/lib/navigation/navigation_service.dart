@@ -50,18 +50,14 @@ class NavigationService {
     required WaypointInput origin,
     required WaypointInput destination,
   }) async {
-    debugPrint(
-        'NavigationService: start ${origin.lat},${origin.lng} -> ${destination.lat},${destination.lng}');
     await dispose();
     _destination = destination;
     final routeJson = await loadNavigationRoute(
       origin: [origin.lng, origin.lat],
       destination: [destination.lng, destination.lat],
     );
-    debugPrint('NavigationService: initial route fetched');
     final waypoints = [origin, destination];
     _controller = await createController(routeJson, waypoints);
-    debugPrint('NavigationService: controller created, subscriptions wired');
 
     _stateSub = _controller!.stateStream.listen(
       _stateController.add,
@@ -70,7 +66,6 @@ class NavigationService {
 
     _spokenSub = _controller!.spokenInstructionStream.listen(
       (instruction) {
-        debugPrint('NavigationService: spoken "${instruction.text}"');
         speakInstruction(instruction.text);
       },
     );
@@ -80,28 +75,19 @@ class NavigationService {
       _rerouteInProgress = true;
       _rerouteController.add(true);
       debugPrint(
-          'NavigationService: deviation ${deviation.deviationM.toStringAsFixed(1)}m, rerouting...');
+          'nav: deviation ${deviation.deviationM.toStringAsFixed(0)}m, rerouting');
       try {
         final dest = _destination;
         final controller = _controller;
-        if (dest == null || controller == null) {
-          debugPrint(
-              'NavigationService: reroute aborted (dest or controller null)');
-          return;
-        }
+        if (dest == null || controller == null) return;
         final rerouteJson = await loadNavigationRoute(
           origin: [deviation.userLocation.lng, deviation.userLocation.lat],
           destination: [dest.lng, dest.lat],
         );
-        if (_controller == null) {
-          debugPrint(
-              'NavigationService: reroute aborted (controller disposed during load)');
-          return;
-        }
+        if (_controller == null) return;
         await controller.replaceRoute(rerouteJson);
-        debugPrint('NavigationService: replaceRoute succeeded');
       } catch (e, st) {
-        debugPrint('NavigationService reroute error: $e\n$st');
+        debugPrint('nav: reroute error: $e\n$st');
       } finally {
         _rerouteInProgress = false;
         _rerouteController.add(false);
@@ -114,9 +100,6 @@ class NavigationService {
   }
 
   Future<void> dispose() async {
-    if (_controller != null) {
-      debugPrint('NavigationService: disposing controller + subs');
-    }
     await _locationSub?.cancel();
     await _spokenSub?.cancel();
     await _deviationSub?.cancel();

@@ -16,7 +16,7 @@ Stream<UserLocation> _buildLocationStream() async* {
   }
   if (permission == LocationPermission.deniedForever ||
       permission == LocationPermission.denied) {
-    debugPrint('NavigationService: location permission denied');
+    debugPrint('nav: location permission denied');
     return;
   }
   yield* Geolocator.getPositionStream(
@@ -50,8 +50,8 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
     speakInstruction: (text) async {
       try {
         await tts.speak(text);
-      } catch (e, st) {
-        debugPrint('TTS speak error: $e\n$st');
+      } catch (e) {
+        debugPrint('nav: tts error: $e');
       }
     },
   );

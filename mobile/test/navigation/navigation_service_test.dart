@@ -9,10 +9,12 @@ import 'package:beebeebike/navigation/navigation_service.dart';
 class FakeFerrostarFlutterPlatform extends FerrostarFlutterPlatform {
   final _deviationCtrl = StreamController<RouteDeviation>.broadcast();
   final _stateCtrl = StreamController<NavigationState>.broadcast();
+  final _spokenCtrl = StreamController<SpokenInstruction>.broadcast();
   int replaceRouteCalls = 0;
 
   void emitDeviation(RouteDeviation d) => _deviationCtrl.add(d);
   void emitState(NavigationState s) => _stateCtrl.add(s);
+  void emitSpoken(SpokenInstruction s) => _spokenCtrl.add(s);
 
   @override
   Future<String> createController({
@@ -46,7 +48,7 @@ class FakeFerrostarFlutterPlatform extends FerrostarFlutterPlatform {
   @override
   Stream<SpokenInstruction> spokenInstructionStream(
           {required String controllerId}) =>
-      const Stream.empty();
+      _spokenCtrl.stream;
 
   @override
   Stream<RouteDeviation> deviationStream({required String controllerId}) =>
@@ -90,6 +92,59 @@ void main() {
 
     await pumpEventQueue();
     expect(fakePlatform.replaceRouteCalls, 1);
+  });
+
+  test(
+      'speakInstruction is called once per uuid even when the stream re-emits',
+      () async {
+    final fakePlatform = FakeFerrostarFlutterPlatform();
+    final fakeController = FerrostarController('test', fakePlatform);
+
+    final spoken = <String>[];
+    final service = NavigationService(
+      createController: (osrmJson, waypoints) async => fakeController,
+      loadNavigationRoute: ({required origin, required destination}) async => {
+        'routes': [
+          {'distance': 1234}
+        ]
+      },
+      locationStreamFactory: () => const Stream.empty(),
+      speakInstruction: (text) async {
+        spoken.add(text);
+      },
+    );
+    addTearDown(() => service.dispose());
+
+    await service.start(
+      origin: const WaypointInput(lat: 52.52, lng: 13.405),
+      destination: const WaypointInput(lat: 52.51, lng: 13.45),
+    );
+
+    const first = SpokenInstruction(
+      uuid: 'u1',
+      text: 'In 200 meters, turn left.',
+      triggerDistanceM: 200,
+      emittedAtMs: 1,
+    );
+    const second = SpokenInstruction(
+      uuid: 'u2',
+      text: 'Turn right now.',
+      triggerDistanceM: 20,
+      emittedAtMs: 2,
+    );
+
+    // Same uuid emitted many times (one per GPS tick in real usage).
+    fakePlatform.emitSpoken(first);
+    fakePlatform.emitSpoken(first);
+    fakePlatform.emitSpoken(first);
+    await pumpEventQueue();
+
+    // Next instruction with a different uuid.
+    fakePlatform.emitSpoken(second);
+    fakePlatform.emitSpoken(second);
+    await pumpEventQueue();
+
+    expect(spoken, [first.text, second.text]);
   });
 
   test('stateStream forwards NavigationState emitted by the controller', () async {

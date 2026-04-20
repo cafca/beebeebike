@@ -5,6 +5,8 @@ import '../api/routing_api.dart';
 import '../models/location.dart';
 import '../models/route_preview.dart';
 import '../models/route_state.dart';
+import '../models/user.dart';
+import '../providers/auth_provider.dart';
 
 typedef RoutePreviewLoader = Future<RoutePreview> Function({
   required Location origin,
@@ -28,7 +30,18 @@ final routeControllerProvider =
 
 class RouteController extends Notifier<RouteState> {
   @override
-  RouteState build() => const RouteState();
+  RouteState build() {
+    ref.listen<AsyncValue<User?>>(authControllerProvider, (prev, next) {
+      final prevUser = prev?.valueOrNull;
+      final nextUser = next.valueOrNull;
+      if (prevUser?.accountType == 'anonymous' &&
+          nextUser != null &&
+          nextUser.accountType != 'anonymous') {
+        _maybeLoadPreview();
+      }
+    });
+    return const RouteState();
+  }
 
   Future<void> setOrigin(Location origin) async {
     state = state.copyWith(origin: origin, error: null);

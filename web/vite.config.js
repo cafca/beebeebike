@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 import { defineConfig, loadEnv } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { svelteTesting } from '@testing-library/svelte/vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -10,6 +11,7 @@ export default defineConfig(({ mode }) => {
   return {
   plugins: [
     svelte(),
+    svelteTesting(),
     fathomUrl && {
       name: 'inject-fathom',
       transformIndexHtml: () => [

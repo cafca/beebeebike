@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/client.dart';
 import '../api/geocode_api.dart';
 import '../models/geocode_result.dart';
+import '../models/location.dart';
+import '../providers/search_history_provider.dart';
 
 final _geocodeApiProvider =
     Provider<GeocodeApi>((ref) => GeocodeApi(ref.watch(dioProvider)));
@@ -54,8 +56,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
+  void _selectLocation(Location location) {
+    Navigator.of(context).pop(location);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final history = ref.watch(searchHistoryProvider);
+    final hasQuery = _controller.text.trim().isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
@@ -63,7 +72,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           controller: _controller,
           autofocus: true,
           decoration: const InputDecoration(
-            hintText: 'Search here...',
+            hintText: 'Suche...',
             border: InputBorder.none,
           ),
           onChanged: _onChanged,
@@ -73,20 +82,58 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           },
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: _results.length,
-              itemBuilder: (context, index) {
-                final r = _results[index];
-                return ListTile(
-                  leading: const Icon(Icons.place_outlined),
-                  title: Text(r.name),
-                  subtitle: r.label.isNotEmpty ? Text(r.label) : null,
-                  onTap: () => Navigator.of(context).pop(r),
-                );
-              },
-            ),
+      body: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.my_location),
+            title: const Text('Mein Standort'),
+            onTap: () => _selectLocation(const Location(
+              id: 'gps',
+              name: 'Mein Standort',
+              label: 'Mein Standort',
+              lng: 0,
+              lat: 0,
+            )),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: hasQuery
+                ? _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.builder(
+                        itemCount: _results.length,
+                        itemBuilder: (context, index) {
+                          final r = _results[index];
+                          return ListTile(
+                            leading: const Icon(Icons.place_outlined),
+                            title: Text(r.name),
+                            subtitle:
+                                r.label.isNotEmpty ? Text(r.label) : null,
+                            onTap: () => _selectLocation(Location(
+                              id: r.id,
+                              name: r.name,
+                              label: r.label,
+                              lng: r.lng,
+                              lat: r.lat,
+                            )),
+                          );
+                        },
+                      )
+                : ListView.builder(
+                    itemCount: history.length,
+                    itemBuilder: (context, index) {
+                      final h = history[index];
+                      return ListTile(
+                        leading: const Icon(Icons.history),
+                        title: Text(h.name),
+                        subtitle: h.label.isNotEmpty ? Text(h.label) : null,
+                        onTap: () => _selectLocation(h),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

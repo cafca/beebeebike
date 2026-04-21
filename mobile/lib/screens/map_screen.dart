@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
 
-import '../models/geocode_result.dart';
 import '../models/location.dart';
 import '../models/route_preview.dart';
 import '../models/route_state.dart';
@@ -21,7 +20,6 @@ import '../providers/navigation_provider.dart';
 import '../providers/navigation_session_provider.dart';
 import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
-import '../screens/search_screen.dart';
 import '../screens/settings_screen.dart';
 import '../services/map_style_loader.dart';
 import '../services/route_drawing.dart';
@@ -29,8 +27,8 @@ import '../widgets/arrived_sheet.dart';
 import '../widgets/eta_sheet.dart';
 import '../widgets/recenter_fab.dart';
 import '../widgets/rerouting_toast.dart';
+import '../widgets/route_card.dart';
 import '../widgets/route_summary.dart';
-import '../widgets/search_bar.dart';
 import '../widgets/turn_banner.dart';
 
 final _berlinBounds = LatLngBounds(
@@ -67,8 +65,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       notifier.setOrigin(
         Location(
           id: 'gps',
-          name: 'Current location',
-          label: 'Current location',
+          name: 'Mein Standort',
+          label: 'Mein Standort',
           lng: pos?.longitude ?? 13.4533,
           lat: pos?.latitude ?? 52.5065,
         ),
@@ -268,8 +266,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     ref.read(routeControllerProvider.notifier).setOrigin(
           Location(
             id: 'gps',
-            name: 'Current location',
-            label: 'Current location',
+            name: 'Mein Standort',
+            label: 'Mein Standort',
             lat: pos.latitude,
             lng: pos.longitude,
           ),
@@ -422,44 +420,25 @@ class _BrowseOverlay extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Stack(
       children: [
-        BeeBeeBikeSearchBar(
-          onTap: () async {
-            final result = await Navigator.of(context).push<GeocodeResult>(
-              MaterialPageRoute(builder: (_) => const SearchScreen()),
-            );
-            if (result == null || !context.mounted) return;
-
-            Position? pos;
-            try {
-              pos = await Geolocator.getLastKnownPosition() ??
-                  await Geolocator.getCurrentPosition();
-            } catch (_) {}
-            if (!context.mounted) return;
-            ref.read(routeControllerProvider.notifier).setOrigin(
-                  Location(
-                    id: 'gps',
-                    name: 'Current location',
-                    label: 'Current location',
-                    lng: pos?.longitude ?? 13.4533,
-                    lat: pos?.latitude ?? 52.5065,
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Expanded(child: RouteCard()),
+                const SizedBox(width: 12),
+                CircleAvatar(
+                  child: IconButton(
+                    icon: const Icon(Icons.person_outline),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const SettingsScreen()),
+                    ),
                   ),
-                );
-            if (!context.mounted) return;
-            ref.read(routeControllerProvider.notifier).setDestination(
-                  Location(
-                    id: result.id,
-                    name: result.name,
-                    label: result.label,
-                    lng: result.lng,
-                    lat: result.lat,
-                  ),
-                );
-          },
-          onAvatarTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SettingsScreen()),
-            );
-          },
+                ),
+              ],
+            ),
+          ),
         ),
         Align(
           alignment: Alignment.bottomCenter,

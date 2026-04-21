@@ -65,8 +65,12 @@ class RouteCard extends ConsumerWidget {
     final origin = routeState.origin;
     final destination = routeState.destination;
 
-    final isGpsOrigin = origin == null || origin.id == 'gps';
-    final originLabel = isGpsOrigin ? 'Mein Standort' : origin!.name;
+    final String originLabel;
+    if (origin == null || origin.id == 'gps') {
+      originLabel = 'Mein Standort';
+    } else {
+      originLabel = origin.name;
+    }
     final destLabel = destination?.name;
 
     return Material(

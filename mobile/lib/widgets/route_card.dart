@@ -56,6 +56,11 @@ class RouteCard extends ConsumerWidget {
     if (result.id != 'gps') {
       ref.read(searchHistoryProvider.notifier).remember(result);
     }
+    if (ref.read(routeControllerProvider).origin == null) {
+      final gpsOrigin = await _resolveGps();
+      if (!context.mounted) return;
+      ref.read(routeControllerProvider.notifier).setOrigin(gpsOrigin);
+    }
     ref.read(routeControllerProvider.notifier).setDestination(destination);
   }
 

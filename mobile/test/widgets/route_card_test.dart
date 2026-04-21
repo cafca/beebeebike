@@ -120,4 +120,55 @@ void main() {
     expect(find.text('Alexanderplatz'), findsOneWidget);
     expect(find.text('Wohin?'), findsNothing);
   });
+
+  test('setDestination with null origin does not trigger route preview', () {
+    // Regression: _openDestinationSearch must set GPS origin before calling
+    // setDestination, otherwise _maybeLoadPreview returns early (origin==null)
+    // and no route is computed.
+    //
+    // This unit test verifies the provider contract: calling setDestination
+    // with no origin leaves preview null and isLoading false.
+    SharedPreferences.setMockInitialValues({});
+    final container = ProviderContainer(overrides: []);
+    addTearDown(container.dispose);
+
+    // No origin set — destination alone must not compute a route
+    container.read(routeControllerProvider.notifier).setDestination(
+          const Location(
+            id: 'N:42',
+            name: 'Alexanderplatz',
+            label: 'Mitte · station',
+            lng: 13.4050,
+            lat: 52.5200,
+          ),
+        );
+
+    final state = container.read(routeControllerProvider);
+    expect(state.origin, isNull);
+    expect(state.preview, isNull);
+    expect(state.isLoading, isFalse);
+  });
+
+  test('setOrigin then setDestination triggers route preview load', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: testProviderOverrides(prefs: prefs, routeSucceeds: true),
+    );
+    addTearDown(container.dispose);
+
+    await container.read(routeControllerProvider.notifier).setOrigin(
+          fakeOrigin(),
+        );
+    // After setting origin only: no preview yet
+    expect(container.read(routeControllerProvider).preview, isNull);
+
+    await container.read(routeControllerProvider.notifier).setDestination(
+          fakeDest(),
+        );
+    // After setting destination: preview should be loaded
+    final state = container.read(routeControllerProvider);
+    expect(state.preview, isNotNull);
+    expect(state.isLoading, isFalse);
+  });
 }

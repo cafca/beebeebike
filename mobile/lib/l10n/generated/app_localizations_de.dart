@@ -9,31 +9,31 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
-  String get appTitle => 'BeeBeeBike';
+  String get appTitle => 'beebeebike';
 
   @override
   String get commonLoading => 'Lädt…';
 
   @override
-  String get loginTitle => 'Anmelden';
+  String get loginTitle => 'Anmeldung';
 
   @override
-  String get loginSubmit => 'Anmelden';
+  String get loginSubmit => 'Einloggen';
 
   @override
-  String get loginEmail => 'E-Mail';
+  String get loginEmail => 'Email';
 
   @override
   String get loginPassword => 'Passwort';
 
   @override
-  String get loginErrorEmptyEmail => 'E-Mail eingeben';
+  String get loginErrorEmptyEmail => 'Email eingeben';
 
   @override
   String get loginErrorEmptyPassword => 'Passwort eingeben';
 
   @override
-  String get loginErrorInvalid => 'Ungültige E-Mail oder ungültiges Passwort';
+  String get loginErrorInvalid => 'Ungültige Email oder ungültiges Passwort';
 
   @override
   String get settingsTitle => 'Einstellungen';
@@ -45,10 +45,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsHome => 'Zuhause';
 
   @override
-  String get settingsLogOut => 'Abmelden';
+  String get settingsLogOut => 'Ausloggen';
 
   @override
-  String get settingsLogIn => 'Anmelden';
+  String get settingsLogIn => 'Einloggen';
 
   @override
   String get settingsLanguage => 'Sprache';
@@ -63,7 +63,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLanguageGerman => 'Deutsch';
 
   @override
-  String get searchHint => 'Hier suchen…';
+  String get searchHint => 'Wohin?';
 
   @override
   String get searchSavedPlaces => 'Gespeicherte Orte';

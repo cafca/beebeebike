@@ -1,7 +1,7 @@
 {
   "@@locale": "en",
 
-  "appTitle": "BeeBeeBike",
+  "appTitle": "beebeebike",
 
   "commonLoading": "Loading...",
 
@@ -23,7 +23,7 @@
   "settingsLanguageEnglish": "English",
   "settingsLanguageGerman": "Deutsch",
 
-  "searchHint": "Search here...",
+  "searchHint": "Where to?",
   "searchSavedPlaces": "Saved places",
 
   "locationCurrent": "Current location",

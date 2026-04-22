@@ -1,29 +1,29 @@
 {
   "@@locale": "de",
 
-  "appTitle": "BeeBeeBike",
+  "appTitle": "beebeebike",
 
   "commonLoading": "Lädt…",
 
-  "loginTitle": "Anmelden",
-  "loginSubmit": "Anmelden",
-  "loginEmail": "E-Mail",
+  "loginTitle": "Anmeldung",
+  "loginSubmit": "Einloggen",
+  "loginEmail": "Email",
   "loginPassword": "Passwort",
-  "loginErrorEmptyEmail": "E-Mail eingeben",
+  "loginErrorEmptyEmail": "Email eingeben",
   "loginErrorEmptyPassword": "Passwort eingeben",
-  "loginErrorInvalid": "Ungültige E-Mail oder ungültiges Passwort",
+  "loginErrorInvalid": "Ungültige Email oder ungültiges Passwort",
 
   "settingsTitle": "Einstellungen",
   "settingsGuest": "Gast",
   "settingsHome": "Zuhause",
-  "settingsLogOut": "Abmelden",
-  "settingsLogIn": "Anmelden",
+  "settingsLogOut": "Ausloggen",
+  "settingsLogIn": "Einloggen",
   "settingsLanguage": "Sprache",
   "settingsLanguageSystem": "Systemstandard",
   "settingsLanguageEnglish": "English",
   "settingsLanguageGerman": "Deutsch",
 
-  "searchHint": "Hier suchen…",
+  "searchHint": "Wohin?",
   "searchSavedPlaces": "Gespeicherte Orte",
 
   "locationCurrent": "Aktueller Standort",

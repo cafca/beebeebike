@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'BeeBeeBike';
+  String get appTitle => 'beebeebike';
 
   @override
   String get commonLoading => 'Loading...';
@@ -63,7 +63,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguageGerman => 'Deutsch';
 
   @override
-  String get searchHint => 'Search here...';
+  String get searchHint => 'Where to?';
 
   @override
   String get searchSavedPlaces => 'Saved places';

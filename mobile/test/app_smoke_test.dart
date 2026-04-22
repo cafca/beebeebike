@@ -53,7 +53,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Search here...'), findsOneWidget);
+    expect(find.text('Where to?'), findsOneWidget);
   });
 
   testWidgets('auth provider begins initialising on startup', (tester) async {

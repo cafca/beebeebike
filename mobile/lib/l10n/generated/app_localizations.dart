@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'BeeBeeBike'**
+  /// **'beebeebike'**
   String get appTitle;
 
   /// No description provided for @commonLoading.
@@ -209,7 +209,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchHint.
   ///
   /// In en, this message translates to:
-  /// **'Search here...'**
+  /// **'Where to?'**
   String get searchHint;
 
   /// No description provided for @searchSavedPlaces.

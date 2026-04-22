@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
 
+import '../l10n/generated/app_localizations.dart';
 import '../models/geocode_result.dart';
 import '../models/location.dart';
 import '../models/route_preview.dart';
@@ -56,6 +57,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final notifier = ref.read(routeControllerProvider.notifier);
     if (ref.read(routeControllerProvider).origin == null) {
       Position? pos;
@@ -67,8 +69,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       notifier.setOrigin(
         Location(
           id: 'gps',
-          name: 'Current location',
-          label: 'Current location',
+          name: l10n.locationCurrent,
+          label: l10n.locationCurrent,
           lng: pos?.longitude ?? 13.4533,
           lat: pos?.latitude ?? 52.5065,
         ),
@@ -79,7 +81,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         id: 'geo:${coords.latitude},${coords.longitude}',
         name:
             '${coords.latitude.toStringAsFixed(4)}, ${coords.longitude.toStringAsFixed(4)}',
-        label: 'Dropped pin',
+        label: l10n.locationDroppedPin,
         lng: coords.longitude,
         lat: coords.latitude,
       ),
@@ -116,8 +118,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not get current location: $e')),
+        SnackBar(content: Text(l10n.locationFetchError(e.toString()))),
       );
     }
   }
@@ -265,11 +268,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       debugPrint('nav: refresh-preview GPS error: $e');
     }
     if (!mounted || pos == null) return;
+    final l10n = AppLocalizations.of(context)!;
     ref.read(routeControllerProvider.notifier).setOrigin(
           Location(
             id: 'gps',
-            name: 'Current location',
-            label: 'Current location',
+            name: l10n.locationCurrent,
+            label: l10n.locationCurrent,
             lat: pos.latitude,
             lng: pos.longitude,
           ),
@@ -292,6 +296,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Cache the notifier on first build so dispose() can call detach()
     // without touching `ref` after unmount.
     _ratingOverlayNotifier ??=
@@ -320,7 +325,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         children: [
           styleAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Failed to load map: $e')),
+            error: (e, _) =>
+                Center(child: Text(l10n.mapLoadError(e.toString()))),
             data: (style) => MapLibreMap(
               styleString: style,
               initialCameraPosition: const CameraPosition(
@@ -420,6 +426,7 @@ class _BrowseOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Stack(
       children: [
         BeeBeeBikeSearchBar(
@@ -438,8 +445,8 @@ class _BrowseOverlay extends ConsumerWidget {
             ref.read(routeControllerProvider.notifier).setOrigin(
                   Location(
                     id: 'gps',
-                    name: 'Current location',
-                    label: 'Current location',
+                    name: l10n.locationCurrent,
+                    label: l10n.locationCurrent,
                     lng: pos?.longitude ?? 13.4533,
                     lat: pos?.latitude ?? 52.5065,
                   ),
@@ -495,7 +502,7 @@ class _BrowseOverlay extends ConsumerWidget {
                                     color: Colors.red),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'Could not load route',
+                                  l10n.routeLoadError,
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodyMedium,
@@ -503,20 +510,20 @@ class _BrowseOverlay extends ConsumerWidget {
                               ],
                             )
                           : preview == null
-                              ? const Column(
+                              ? Column(
                                   mainAxisSize: MainAxisSize.min,
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
                                   children: [
-                                    Center(
+                                    const Center(
                                       child: SizedBox(
                                         width: 36,
                                         child: Divider(thickness: 4),
                                       ),
                                     ),
-                                    SizedBox(height: 12),
-                                    Text('Home'),
-                                    Text('Saved places'),
+                                    const SizedBox(height: 12),
+                                    Text(l10n.settingsHome),
+                                    Text(l10n.searchSavedPlaces),
                                   ],
                                 )
                               : RouteSummary(
@@ -556,6 +563,7 @@ class _NavigationOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final navState = ref.watch(navigationStateProvider);
     final cam = ref.watch(navigationCameraControllerProvider);
 
@@ -568,18 +576,18 @@ class _NavigationOverlay extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 navState.when(
-                  loading: () => const TurnBanner(
-                    primaryText: 'Starting navigation...',
+                  loading: () => TurnBanner(
+                    primaryText: l10n.navStarting,
                     distanceText: '',
                   ),
-                  error: (e, _) => const TurnBanner(
-                    primaryText: 'Navigation error',
+                  error: (e, _) => TurnBanner(
+                    primaryText: l10n.navError,
                     distanceText: '',
                     icon: Icons.error_outline,
                   ),
                   data: (state) => TurnBanner(
                     primaryText:
-                        state.currentVisual?.primaryText ?? 'On route',
+                        state.currentVisual?.primaryText ?? l10n.navOnRoute,
                     distanceText: state.progress != null
                         ? formatDistance(
                             state.progress!.distanceToNextManeuverM)

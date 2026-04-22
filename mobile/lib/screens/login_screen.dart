@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../providers/auth_provider.dart';
+
+enum _LoginErrorKind { invalidCredentials }
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -15,7 +18,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
-  String? _error;
+  _LoginErrorKind? _errorKind;
 
   @override
   void dispose() {
@@ -28,7 +31,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() {
       _loading = true;
-      _error = null;
+      _errorKind = null;
     });
 
     await ref.read(authControllerProvider.notifier).login(
@@ -41,7 +44,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final result = ref.read(authControllerProvider);
     if (result is AsyncError) {
       setState(() {
-        _error = 'Invalid email or password';
+        _errorKind = _LoginErrorKind.invalidCredentials;
         _loading = false;
       });
     } else {
@@ -51,8 +54,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Log in')),
+      appBar: AppBar(title: Text(l10n.loginTitle)),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -64,25 +68,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 key: const Key('login_email'),
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter your email' : null,
+                decoration: InputDecoration(labelText: l10n.loginEmail),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? l10n.loginErrorEmptyEmail
+                    : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 key: const Key('login_password'),
                 controller: _passwordController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Password'),
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Enter your password' : null,
+                decoration: InputDecoration(labelText: l10n.loginPassword),
+                validator: (v) => (v == null || v.isEmpty)
+                    ? l10n.loginErrorEmptyPassword
+                    : null,
               ),
               const SizedBox(height: 8),
-              if (_error != null)
+              if (_errorKind != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    _error!,
+                    l10n.loginErrorInvalid,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.error),
                   ),
@@ -96,7 +102,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Log in'),
+                    : Text(l10n.loginTitle),
               ),
             ],
           ),

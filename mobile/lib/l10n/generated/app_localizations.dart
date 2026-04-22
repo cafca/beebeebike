@@ -98,11 +98,221 @@ abstract class AppLocalizations {
     Locale('en')
   ];
 
-  /// App name in app switcher / task list.
+  /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
   /// **'BeeBeeBike'**
   String get appTitle;
+
+  /// No description provided for @commonLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get commonLoading;
+
+  /// No description provided for @loginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in'**
+  String get loginTitle;
+
+  /// No description provided for @loginEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get loginEmail;
+
+  /// No description provided for @loginPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get loginPassword;
+
+  /// No description provided for @loginErrorEmptyEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email'**
+  String get loginErrorEmptyEmail;
+
+  /// No description provided for @loginErrorEmptyPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password'**
+  String get loginErrorEmptyPassword;
+
+  /// No description provided for @loginErrorInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid email or password'**
+  String get loginErrorInvalid;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsGuest.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest'**
+  String get settingsGuest;
+
+  /// No description provided for @settingsHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get settingsHome;
+
+  /// No description provided for @settingsLogOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out'**
+  String get settingsLogOut;
+
+  /// No description provided for @settingsLogIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in'**
+  String get settingsLogIn;
+
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsLanguage;
+
+  /// No description provided for @settingsLanguageSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get settingsLanguageSystem;
+
+  /// No description provided for @settingsLanguageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get settingsLanguageEnglish;
+
+  /// No description provided for @settingsLanguageGerman.
+  ///
+  /// In en, this message translates to:
+  /// **'Deutsch'**
+  String get settingsLanguageGerman;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search here...'**
+  String get searchHint;
+
+  /// No description provided for @searchSavedPlaces.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved places'**
+  String get searchSavedPlaces;
+
+  /// No description provided for @locationCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current location'**
+  String get locationCurrent;
+
+  /// No description provided for @locationDroppedPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Dropped pin'**
+  String get locationDroppedPin;
+
+  /// No description provided for @locationFetchError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not get current location: {error}'**
+  String locationFetchError(String error);
+
+  /// No description provided for @mapLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load map: {error}'**
+  String mapLoadError(String error);
+
+  /// No description provided for @routeLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load route'**
+  String get routeLoadError;
+
+  /// No description provided for @routeClearTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear route'**
+  String get routeClearTooltip;
+
+  /// No description provided for @routeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get routeStart;
+
+  /// No description provided for @routeSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'🚲 {minutes} min · {distance} km'**
+  String routeSummary(int minutes, String distance);
+
+  /// No description provided for @navStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting navigation...'**
+  String get navStarting;
+
+  /// No description provided for @navError.
+  ///
+  /// In en, this message translates to:
+  /// **'Navigation error'**
+  String get navError;
+
+  /// No description provided for @navOnRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'On route'**
+  String get navOnRoute;
+
+  /// No description provided for @navMuteVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Mute voice'**
+  String get navMuteVoice;
+
+  /// No description provided for @navEnableVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable voice'**
+  String get navEnableVoice;
+
+  /// No description provided for @navEndNavigation.
+  ///
+  /// In en, this message translates to:
+  /// **'End navigation'**
+  String get navEndNavigation;
+
+  /// No description provided for @navRerouting.
+  ///
+  /// In en, this message translates to:
+  /// **'Rerouting…'**
+  String get navRerouting;
+
+  /// No description provided for @arrivedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrived'**
+  String get arrivedTitle;
+
+  /// No description provided for @arrivedDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get arrivedDone;
 }
 
 class _AppLocalizationsDelegate

@@ -1,3 +1,4 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/models/route_state.dart';
 import 'package:beebeebike/providers/navigation_session_provider.dart';
 import 'package:beebeebike/providers/route_provider.dart';
@@ -42,7 +43,12 @@ void main() {
           ...testProviderOverrides(prefs: prefs),
           routeControllerProvider.overrideWith(_LoadingRouteController.new),
         ],
-        child: const MaterialApp(home: MapScreen()),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const MapScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -59,7 +65,12 @@ void main() {
           ...testProviderOverrides(prefs: prefs),
           routeControllerProvider.overrideWith(_ErrorRouteController.new),
         ],
-        child: const MaterialApp(home: MapScreen()),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const MapScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -76,7 +87,12 @@ void main() {
           ...testProviderOverrides(prefs: prefs),
           routeControllerProvider.overrideWith(_PreviewRouteController.new),
         ],
-        child: const MaterialApp(home: MapScreen()),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const MapScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -101,7 +117,12 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: MapScreen()),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const MapScreen(),
+        ),
       ),
     );
     await tester.pump();

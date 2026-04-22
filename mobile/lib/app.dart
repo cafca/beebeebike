@@ -19,12 +19,11 @@ class BeeBeeBikeApp extends ConsumerWidget {
     // after human interaction, giving the session time to settle.
     ref.watch(authControllerProvider);
 
-    ref.watch(localeProvider);
-    final controller = ref.watch(localeProvider.notifier);
+    final localePref = ref.watch(localeProvider);
 
     return MaterialApp(
       onGenerateTitle: (ctx) => AppLocalizations.of(ctx)!.appTitle,
-      locale: controller.materialLocale,
+      locale: localePref.materialLocale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       theme: ThemeData(

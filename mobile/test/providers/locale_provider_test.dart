@@ -21,25 +21,28 @@ void main() {
   test('defaults to LocalePref.system with no stored value', () async {
     final prefs = await SharedPreferences.getInstance();
     final c = _container(prefs);
-    expect(c.read(localeProvider), LocalePref.system);
-    expect(c.read(localeProvider.notifier).materialLocale, isNull);
+    final pref = c.read(localeProvider);
+    expect(pref, LocalePref.system);
+    expect(pref.materialLocale, isNull);
   });
 
   test('reads stored de on construction', () async {
     SharedPreferences.setMockInitialValues({'locale_pref': 'de'});
     final prefs = await SharedPreferences.getInstance();
     final c = _container(prefs);
-    expect(c.read(localeProvider), LocalePref.de);
-    expect(c.read(localeProvider.notifier).materialLocale, const Locale('de'));
+    final pref = c.read(localeProvider);
+    expect(pref, LocalePref.de);
+    expect(pref.materialLocale, const Locale('de'));
   });
 
   test('setPref persists and updates state', () async {
     final prefs = await SharedPreferences.getInstance();
     final c = _container(prefs);
     await c.read(localeProvider.notifier).setPref(LocalePref.en);
-    expect(c.read(localeProvider), LocalePref.en);
+    final pref = c.read(localeProvider);
+    expect(pref, LocalePref.en);
     expect(prefs.getString('locale_pref'), 'en');
-    expect(c.read(localeProvider.notifier).materialLocale, const Locale('en'));
+    expect(pref.materialLocale, const Locale('en'));
   });
 
   test('setPref(system) stores "system", materialLocale is null', () async {
@@ -47,9 +50,10 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     final c = _container(prefs);
     await c.read(localeProvider.notifier).setPref(LocalePref.system);
-    expect(c.read(localeProvider), LocalePref.system);
+    final pref = c.read(localeProvider);
+    expect(pref, LocalePref.system);
     expect(prefs.getString('locale_pref'), 'system');
-    expect(c.read(localeProvider.notifier).materialLocale, isNull);
+    expect(pref.materialLocale, isNull);
   });
 
   test('unknown stored value falls back to system', () async {

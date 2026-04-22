@@ -7,6 +7,14 @@ import 'search_history_provider.dart';
 /// `de` pin the app.
 enum LocalePref { system, en, de }
 
+extension LocalePrefX on LocalePref {
+  Locale? get materialLocale => switch (this) {
+    LocalePref.system => null,
+    LocalePref.en => const Locale('en'),
+    LocalePref.de => const Locale('de'),
+  };
+}
+
 const _storageKey = 'locale_pref';
 
 final localeProvider =
@@ -17,17 +25,6 @@ class LocaleController extends Notifier<LocalePref> {
   LocalePref build() {
     final prefs = ref.read(sharedPreferencesProvider);
     return _decode(prefs.getString(_storageKey));
-  }
-
-  Locale? get materialLocale {
-    switch (state) {
-      case LocalePref.system:
-        return null;
-      case LocalePref.en:
-        return const Locale('en');
-      case LocalePref.de:
-        return const Locale('de');
-    }
   }
 
   Future<void> setPref(LocalePref next) async {

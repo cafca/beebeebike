@@ -18,6 +18,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loginTitle => 'Anmelden';
 
   @override
+  String get loginSubmit => 'Anmelden';
+
+  @override
   String get loginEmail => 'E-Mail';
 
   @override

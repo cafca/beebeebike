@@ -6,6 +6,7 @@
   "commonLoading": "Loading...",
 
   "loginTitle": "Log in",
+  "loginSubmit": "Log in",
   "loginEmail": "Email",
   "loginPassword": "Password",
   "loginErrorEmptyEmail": "Enter your email",

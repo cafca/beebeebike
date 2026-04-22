@@ -116,6 +116,12 @@ abstract class AppLocalizations {
   /// **'Log in'**
   String get loginTitle;
 
+  /// No description provided for @loginSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in'**
+  String get loginSubmit;
+
   /// No description provided for @loginEmail.
   ///
   /// In en, this message translates to:

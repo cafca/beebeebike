@@ -6,9 +6,17 @@ import 'package:beebeebike/main.dart' as app;
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('app launches and renders the map screen', (tester) async {
-    app.main();
-    await tester.pumpAndSettle(const Duration(seconds: 5));
-    expect(find.byType(Scaffold), findsWidgets);
-  });
+  testWidgets(
+    'app launches and renders the map screen',
+    (tester) async {
+      app.main();
+      // MapLibre keeps frames coming, so pumpAndSettle can hang. Pump a
+      // bounded number of frames instead and then assert the scaffold.
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 250));
+      }
+      expect(find.byType(Scaffold), findsWidgets);
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }

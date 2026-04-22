@@ -85,4 +85,5 @@ jobs:
         run: flutter build ios --no-codesign --simulator
 
       - name: Run integration smoke test
+        timeout-minutes: 10
         run: just test-e2e-ios "$SIM_UDID"

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../models/route_preview.dart';
@@ -40,7 +41,7 @@ class RouteOverlay {
   static Future<RouteOverlay> draw(
     MapLibreMapController controller,
     RoutePreview preview, {
-    bool fitCamera = true,
+    EdgeInsets? fitPadding,
   }) async {
     final coords = _decodeLineString(preview.geometry);
     final line = await controller.addLine(LineOptions(
@@ -63,14 +64,14 @@ class RouteOverlay {
       circleStrokeColor: _markerStrokeColor,
       circleStrokeWidth: 2.0,
     ));
-    if (fitCamera) {
+    if (fitPadding != null) {
       await controller.animateCamera(
         CameraUpdate.newLatLngBounds(
           _boundsFor(coords),
-          left: 40,
-          top: 100,
-          right: 40,
-          bottom: 240,
+          left: fitPadding.left,
+          top: fitPadding.top,
+          right: fitPadding.right,
+          bottom: fitPadding.bottom,
         ),
       );
     }

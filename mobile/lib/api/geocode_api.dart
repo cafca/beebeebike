@@ -13,7 +13,17 @@ class GeocodeApi {
     return features.map((f) {
       final props = f['properties'] as Map<String, dynamic>;
       final coords = (f['geometry']?['coordinates'] as List?) ?? [0.0, 0.0];
-      final name = (props['name'] as String?) ?? '';
+      final rawName = (props['name'] as String?) ?? '';
+      final street = (props['street'] as String?) ?? '';
+      final housenumber = (props['housenumber'] as String?) ?? '';
+      final String name;
+      if (rawName.isNotEmpty) {
+        name = rawName;
+      } else if (street.isNotEmpty) {
+        name = housenumber.isNotEmpty ? '$street $housenumber' : street;
+      } else {
+        name = '';
+      }
       final parts = <String>[
         if (props['district'] != null) props['district'] as String
         else if (props['city'] != null) props['city'] as String,

@@ -135,8 +135,7 @@ void main() {
     expect(container.read(navigationSessionProvider), isTrue);
   });
 
-  testWidgets('empty state shows Home and Saved places placeholders',
-      (tester) async {
+  testWidgets('empty state shows drag handle', (tester) async {
     final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
@@ -144,7 +143,19 @@ void main() {
     );
     await tester.pump();
 
+    // No route, no home saved — just the drag handle container, no chips
+    expect(find.text('Saved places'), findsNothing);
+    expect(find.text('Home'), findsNothing);
+  });
+
+  testWidgets('empty state shows Home chip when home is saved', (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      buildTestWidget(const MapScreen(), prefs: prefs, homeLocation: fakeHome()),
+    );
+    await tester.pump();
+
     expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Saved places'), findsOneWidget);
   });
 }

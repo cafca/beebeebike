@@ -23,6 +23,7 @@ dependencies:
   flutter_compass: ^0.8.1
   flutter_tts: ^4.0.2
   shared_preferences: ^2.3.2
+  url_launcher: ^6.3.0
   path_provider: ^2.1.5
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0

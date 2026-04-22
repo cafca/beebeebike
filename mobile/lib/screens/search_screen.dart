@@ -7,6 +7,9 @@ import '../api/client.dart';
 import '../api/geocode_api.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/geocode_result.dart';
+import '../models/location.dart';
+import '../providers/location_provider.dart';
+import '../providers/search_history_provider.dart';
 
 final _geocodeApiProvider =
     Provider<GeocodeApi>((ref) => GeocodeApi(ref.watch(dioProvider)));
@@ -55,9 +58,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
+  void _selectLocation(Location location) {
+    Navigator.of(context).pop(location);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final history = ref.watch(searchHistoryProvider);
+    final homeLocation = ref.watch(homeLocationProvider).valueOrNull;
+    final hasQuery = _controller.text.trim().isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
@@ -75,20 +86,67 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           },
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: _results.length,
-              itemBuilder: (context, index) {
-                final r = _results[index];
-                return ListTile(
-                  leading: const Icon(Icons.place_outlined),
-                  title: Text(r.name),
-                  subtitle: r.label.isNotEmpty ? Text(r.label) : null,
-                  onTap: () => Navigator.of(context).pop(r),
-                );
-              },
+      body: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.my_location),
+            title: Text(l10n.locationCurrent),
+            onTap: () => _selectLocation(Location(
+              id: 'gps',
+              name: l10n.locationCurrent,
+              label: l10n.locationCurrent,
+              lng: 0,
+              lat: 0,
+            )),
+          ),
+          if (homeLocation != null)
+            ListTile(
+              leading: const Icon(Icons.home_outlined),
+              title: Text(l10n.settingsHome),
+              subtitle: homeLocation.label.isNotEmpty
+                  ? Text(homeLocation.label)
+                  : null,
+              onTap: () => _selectLocation(homeLocation),
             ),
+          const Divider(height: 1),
+          Expanded(
+            child: hasQuery
+                ? _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.builder(
+                        itemCount: _results.length,
+                        itemBuilder: (context, index) {
+                          final r = _results[index];
+                          return ListTile(
+                            leading: const Icon(Icons.place_outlined),
+                            title: Text(r.name),
+                            subtitle:
+                                r.label.isNotEmpty ? Text(r.label) : null,
+                            onTap: () => _selectLocation(Location(
+                              id: r.id,
+                              name: r.name,
+                              label: r.label,
+                              lng: r.lng,
+                              lat: r.lat,
+                            )),
+                          );
+                        },
+                      )
+                : ListView.builder(
+                    itemCount: history.length,
+                    itemBuilder: (context, index) {
+                      final h = history[index];
+                      return ListTile(
+                        leading: const Icon(Icons.history),
+                        title: Text(h.name),
+                        subtitle: h.label.isNotEmpty ? Text(h.label) : null,
+                        onTap: () => _selectLocation(h),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

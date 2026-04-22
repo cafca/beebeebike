@@ -2,6 +2,7 @@ import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../navigation/maneuver_icons.dart';
 
 /// Bottom sheet shown during active navigation. Displays remaining distance,
@@ -23,13 +24,14 @@ class EtaSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           navState.when(
-            loading: () => const Text('Loading...'),
+            loading: () => Text(l10n.commonLoading),
             error: (_, __) => const Text('—'),
             data: (state) {
               final p = state.progress;
@@ -53,13 +55,13 @@ class EtaSheet extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                tooltip: ttsEnabled ? 'Mute voice' : 'Enable voice',
+                tooltip: ttsEnabled ? l10n.navMuteVoice : l10n.navEnableVoice,
                 icon: Icon(ttsEnabled ? Icons.volume_up : Icons.volume_off),
                 onPressed: onToggleTts,
               ),
               const SizedBox(width: 8),
               IconButton(
-                tooltip: 'End navigation',
+                tooltip: l10n.navEndNavigation,
                 icon: const Icon(Icons.close),
                 onPressed: onClose,
               ),

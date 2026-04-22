@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
+
 class RouteSummary extends StatelessWidget {
   const RouteSummary({
     super.key,
@@ -16,6 +18,7 @@ class RouteSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -25,12 +28,12 @@ class RouteSummary extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                '🚲 $durationMinutes min · ${distanceKm.toStringAsFixed(1)} km',
+                l10n.routeSummary(durationMinutes, distanceKm.toStringAsFixed(1)),
               ),
             ),
             if (onClose != null)
               IconButton(
-                tooltip: 'Clear route',
+                tooltip: l10n.routeClearTooltip,
                 icon: const Icon(Icons.close),
                 onPressed: onClose,
                 padding: EdgeInsets.zero,
@@ -42,7 +45,7 @@ class RouteSummary extends StatelessWidget {
         const SizedBox(height: 12),
         FilledButton(
           onPressed: onStart,
-          child: const Text('Start'),
+          child: Text(l10n.routeStart),
         ),
       ],
     );

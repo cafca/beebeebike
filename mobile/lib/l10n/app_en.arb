@@ -1,0 +1,5 @@
+{
+  "@@locale": "en",
+  "appTitle": "BeeBeeBike",
+  "@appTitle": { "description": "App name in app switcher / task list." }
+}

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/location.dart';
 import '../models/route_preview.dart';
@@ -670,22 +671,39 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
                         Text('Caveats',
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
-                        const Text(
-                          'BeeBeeBike is an early-stage app. Routes are suggestions based on your ratings — always use your own judgement and follow local traffic laws. Map data may be incomplete or outdated.',
+                        RichText(
+                          text: TextSpan(
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            children: [
+                              const TextSpan(
+                                text:
+                                    "You can't edit your painted areas yet in the mobile app. Do that on ",
+                              ),
+                              TextSpan(
+                                text: 'beebeebike.com',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () => launchUrl(
+                                        Uri.parse('https://beebeebike.com'),
+                                        mode: LaunchMode.externalApplication,
+                                      ),
+                              ),
+                              const TextSpan(
+                                text:
+                                    ', then zoom out a lot and back in to load updates in the app.',
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 20),
                         Text('How to use',
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
                         const Text(
-                          'Tap "Wohin?" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in your account settings to get one-tap navigation.',
-                        ),
-                        const SizedBox(height: 20),
-                        Text('Report an issue',
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Found a bug or have a suggestion? Send an email to hello@beebeebike.com and we\'ll take a look.',
+                          'Tap "Wohin?" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in the web app to get one-tap navigation.',
                         ),
                       ],
                     ),

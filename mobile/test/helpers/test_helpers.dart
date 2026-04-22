@@ -5,12 +5,21 @@ import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/models/route_preview.dart';
 import 'package:beebeebike/models/user.dart';
 import 'package:beebeebike/providers/auth_provider.dart';
+import 'package:beebeebike/providers/location_provider.dart';
 import 'package:beebeebike/providers/search_history_provider.dart';
 import 'package:beebeebike/services/map_style_loader.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _SyncHomeController extends HomeLocationController {
+  _SyncHomeController(this._home);
+  final Location? _home;
+
+  @override
+  Future<Location?> build() async => _home;
+}
 
 class _SyncAuthController extends AuthController {
   _SyncAuthController({required this.authenticated});
@@ -261,6 +270,7 @@ List<Override> testProviderOverrides({
   bool geocodeReturnsResults = true,
   bool routeSucceeds = true,
   bool loginSucceeds = true,
+  Location? homeLocation,
 }) {
   return [
     appConfigProvider.overrideWithValue(const AppConfig(
@@ -278,6 +288,9 @@ List<Override> testProviderOverrides({
     )),
     authControllerProvider.overrideWith(
       () => _SyncAuthController(authenticated: authenticated),
+    ),
+    homeLocationProvider.overrideWith(
+      () => _SyncHomeController(homeLocation),
     ),
     sharedPreferencesProvider.overrideWithValue(prefs),
   ];
@@ -298,6 +311,7 @@ Widget buildTestWidget(
   bool geocodeReturnsResults = true,
   bool routeSucceeds = true,
   bool loginSucceeds = true,
+  Location? homeLocation,
 }) {
   return ProviderScope(
     overrides: testProviderOverrides(
@@ -306,6 +320,7 @@ Widget buildTestWidget(
       geocodeReturnsResults: geocodeReturnsResults,
       routeSucceeds: routeSucceeds,
       loginSucceeds: loginSucceeds,
+      homeLocation: homeLocation,
     ),
     child: MaterialApp(home: child),
   );

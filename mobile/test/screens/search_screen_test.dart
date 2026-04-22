@@ -56,6 +56,71 @@ void main() {
     expect(poppedResult!.name, 'Mein Standort');
   });
 
+  testWidgets('shows home location tile when homeLocation provided',
+      (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+    const home = Location(
+      id: 'home',
+      name: 'Zuhause',
+      label: 'Meine Straße 1, Neukölln',
+      lng: 13.4333,
+      lat: 52.4833,
+    );
+    await tester.pumpWidget(
+      buildTestWidget(
+        const SearchScreen(),
+        prefs: prefs,
+        homeLocation: home,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.home_outlined), findsOneWidget);
+    expect(find.text('Zuhause'), findsOneWidget);
+    expect(find.text('Meine Straße 1, Neukölln'), findsOneWidget);
+  });
+
+  testWidgets('tapping home location pops with home Location', (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+    const home = Location(
+      id: 'home',
+      name: 'Zuhause',
+      label: 'Meine Straße 1, Neukölln',
+      lng: 13.4333,
+      lat: 52.4833,
+    );
+    Location? poppedResult;
+
+    await tester.pumpWidget(
+      buildTestWidget(
+        Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () async {
+              final result = await Navigator.of(context).push<Location>(
+                MaterialPageRoute(builder: (_) => const SearchScreen()),
+              );
+              poppedResult = result;
+            },
+            child: const Text('Open Search'),
+          ),
+        ),
+        prefs: prefs,
+        homeLocation: home,
+      ),
+    );
+
+    await tester.tap(find.text('Open Search'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Zuhause'));
+    await tester.pumpAndSettle();
+
+    expect(poppedResult, isNotNull);
+    expect(poppedResult!.id, 'home');
+    expect(poppedResult!.lng, 13.4333);
+    expect(poppedResult!.lat, 52.4833);
+  });
+
   testWidgets('shows history items when no query typed', (tester) async {
     SharedPreferences.setMockInitialValues({
       'beebeebike.recentSearches': [

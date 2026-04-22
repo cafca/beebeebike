@@ -7,6 +7,7 @@ import '../api/client.dart';
 import '../api/geocode_api.dart';
 import '../models/geocode_result.dart';
 import '../models/location.dart';
+import '../providers/location_provider.dart';
 import '../providers/search_history_provider.dart';
 
 final _geocodeApiProvider =
@@ -63,6 +64,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final history = ref.watch(searchHistoryProvider);
+    final homeLocation = ref.watch(homeLocationProvider).valueOrNull;
     final hasQuery = _controller.text.trim().isNotEmpty;
 
     return Scaffold(
@@ -95,6 +97,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               lat: 0,
             )),
           ),
+          if (homeLocation != null)
+            ListTile(
+              leading: const Icon(Icons.home_outlined),
+              title: const Text('Zuhause'),
+              subtitle: homeLocation.label.isNotEmpty
+                  ? Text(homeLocation.label)
+                  : null,
+              onTap: () => _selectLocation(homeLocation),
+            ),
           const Divider(height: 1),
           Expanded(
             child: hasQuery

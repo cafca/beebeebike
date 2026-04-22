@@ -121,6 +121,54 @@ void main() {
     expect(find.text('Wohin?'), findsNothing);
   });
 
+  testWidgets('shows person icon on origin row and swap icon on destination row',
+      (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(
+      buildTestWidget(const Scaffold(body: RouteCard()), prefs: prefs),
+    );
+
+    expect(find.byIcon(Icons.person_outline), findsOneWidget);
+    expect(find.byIcon(Icons.swap_vert), findsOneWidget);
+  });
+
+  testWidgets('swap button is disabled when no destination', (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+    await tester.pumpWidget(
+      buildTestWidget(const Scaffold(body: RouteCard()), prefs: prefs),
+    );
+
+    final swapButton = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.swap_vert),
+    );
+    expect(swapButton.onPressed, isNull);
+  });
+
+  testWidgets('swap button is enabled when destination is set', (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: testProviderOverrides(prefs: prefs),
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: Scaffold(body: RouteCard())),
+      ),
+    );
+
+    container.read(routeControllerProvider.notifier).setDestination(
+          fakeDest(),
+        );
+    await tester.pump();
+
+    final swapButton = tester.widget<IconButton>(
+      find.widgetWithIcon(IconButton, Icons.swap_vert),
+    );
+    expect(swapButton.onPressed, isNotNull);
+  });
+
   test('setDestination with null origin does not trigger route preview', () {
     // Regression: _openDestinationSearch must set GPS origin before calling
     // setDestination, otherwise _maybeLoadPreview returns early (origin==null)

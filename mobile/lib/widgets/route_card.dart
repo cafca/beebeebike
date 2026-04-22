@@ -6,6 +6,7 @@ import '../models/location.dart';
 import '../providers/route_provider.dart';
 import '../providers/search_history_provider.dart';
 import '../screens/search_screen.dart';
+import '../screens/settings_screen.dart';
 
 class RouteCard extends ConsumerWidget {
   const RouteCard({super.key});
@@ -64,6 +65,24 @@ class RouteCard extends ConsumerWidget {
     ref.read(routeControllerProvider.notifier).setDestination(destination);
   }
 
+  Future<void> _swap(BuildContext context, WidgetRef ref) async {
+    final routeState = ref.read(routeControllerProvider);
+    final origin = routeState.origin;
+    final destination = routeState.destination;
+    if (destination == null) return;
+
+    final newOrigin = destination;
+    final Location newDestination;
+    if (origin == null || origin.id == 'gps') {
+      newDestination = await _resolveGps();
+    } else {
+      newDestination = origin;
+    }
+    if (!context.mounted) return;
+    ref.read(routeControllerProvider.notifier).setOrigin(newOrigin);
+    ref.read(routeControllerProvider.notifier).setDestination(newDestination);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final routeState = ref.watch(routeControllerProvider);
@@ -77,6 +96,7 @@ class RouteCard extends ConsumerWidget {
       originLabel = origin.name;
     }
     final destLabel = destination?.name;
+    final hasDestination = destination != null;
 
     return Material(
       color: Colors.white,
@@ -89,8 +109,7 @@ class RouteCard extends ConsumerWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             onTap: () => _openOriginSearch(context, ref),
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
                   const Icon(Icons.my_location, size: 20, color: Colors.blue),
@@ -103,35 +122,58 @@ class RouteCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    icon: const Icon(Icons.person_outline),
+                    iconSize: 20,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    color: Colors.grey.shade600,
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const SettingsScreen()),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-          const Divider(height: 1, indent: 48),
+          const Divider(height: 1, indent: 48, endIndent: 48),
           InkWell(
             borderRadius:
                 const BorderRadius.vertical(bottom: Radius.circular(16)),
             onTap: () => _openDestinationSearch(context, ref),
             child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
                   Icon(
                     Icons.location_on_outlined,
                     size: 20,
-                    color: destLabel != null ? Colors.red : Colors.grey,
+                    color: hasDestination ? Colors.red : Colors.grey,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       destLabel ?? 'Wohin?',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: destLabel != null ? null : Colors.grey,
+                            color: hasDestination ? null : Colors.grey,
                           ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    icon: const Icon(Icons.swap_vert),
+                    iconSize: 20,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    color: hasDestination
+                        ? Colors.grey.shade600
+                        : Colors.grey.shade300,
+                    onPressed:
+                        hasDestination ? () => _swap(context, ref) : null,
                   ),
                 ],
               ),

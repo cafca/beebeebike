@@ -20,7 +20,6 @@ import '../providers/navigation_provider.dart';
 import '../providers/navigation_session_provider.dart';
 import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
-import '../screens/settings_screen.dart';
 import '../services/map_style_loader.dart';
 import '../services/route_drawing.dart';
 import '../widgets/arrived_sheet.dart';
@@ -420,24 +419,10 @@ class _BrowseOverlay extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Stack(
       children: [
-        SafeArea(
+        const SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Expanded(child: RouteCard()),
-                const SizedBox(width: 12),
-                CircleAvatar(
-                  child: IconButton(
-                    icon: const Icon(Icons.person_outline),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const SettingsScreen()),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            padding: EdgeInsets.all(16),
+            child: RouteCard(),
           ),
         ),
         Align(

@@ -92,6 +92,10 @@ Location fakeDest() => const Location(
     id: 'N:42', name: 'Alexanderplatz', label: 'Mitte · station',
     lng: 13.4050, lat: 52.5200);
 
+Location fakeHome() => const Location(
+    id: 'home-uuid', name: 'home', label: 'Meine Straße 1, Neukölln',
+    lng: 13.4333, lat: 52.4833);
+
 Dio buildMockDio({
   bool authenticated = false,
   bool geocodeReturnsResults = true,

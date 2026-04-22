@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/foundation.dart';
@@ -18,6 +19,7 @@ import '../navigation/nav_constants.dart';
 import '../providers/navigation_camera_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/navigation_session_provider.dart';
+import '../providers/location_provider.dart';
 import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
 import '../services/map_style_loader.dart';
@@ -45,6 +47,7 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   MapLibreMapController? _mapController;
   RouteOverlay? _routeOverlay;
+  Symbol? _homeMarker;
   RatingOverlayController? _ratingOverlayNotifier;
   bool _ttsEnabled = true;
   bool _rerouting = false;
@@ -87,18 +90,61 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       RouteState? previous, RouteState next) async {
     final controller = _mapController;
     if (controller == null) return;
+
+    final inNav = ref.read(navigationSessionProvider);
+    final mq = MediaQuery.of(context);
+
+    // Fly to origin+destination immediately when destination is first set,
+    // so the map moves while the route is still calculating.
+    if (!inNav &&
+        previous?.destination != next.destination &&
+        next.destination != null) {
+      final origin = next.origin;
+      final dest = next.destination!;
+      if (origin != null) {
+        await controller.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(
+                math.min(origin.lat, dest.lat),
+                math.min(origin.lng, dest.lng),
+              ),
+              northeast: LatLng(
+                math.max(origin.lat, dest.lat),
+                math.max(origin.lng, dest.lng),
+              ),
+            ),
+            left: 40.0,
+            top: mq.padding.top + 117.0,
+            right: 40.0,
+            bottom: mq.padding.bottom + 224.0,
+          ),
+        );
+      }
+    }
+
     if (previous?.preview == next.preview) return;
+
+    EdgeInsets? fitPadding;
+    if (!inNav && previous?.preview == null && next.preview != null) {
+      fitPadding = EdgeInsets.only(
+        top: mq.padding.top + 117.0,
+        bottom: mq.padding.bottom + 224.0,
+        left: 40.0,
+        right: 40.0,
+      );
+    }
 
     final existing = _routeOverlay;
     if (existing != null) {
       await existing.remove(controller);
       _routeOverlay = null;
     }
+    if (!mounted) return;
     final preview = next.preview;
     if (preview != null) {
-      final fit = !ref.read(navigationSessionProvider);
       _routeOverlay =
-          await RouteOverlay.draw(controller, preview, fitCamera: fit);
+          await RouteOverlay.draw(controller, preview, fitPadding: fitPadding);
     }
   }
 
@@ -116,6 +162,80 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not get current location: $e')),
       );
+    }
+  }
+
+  Future<void> _navigateHome() async {
+    final home = ref.read(homeLocationProvider).valueOrNull;
+    if (home == null) return;
+    final notifier = ref.read(routeControllerProvider.notifier);
+    if (ref.read(routeControllerProvider).origin == null) {
+      Position? pos;
+      try {
+        pos = await Geolocator.getLastKnownPosition() ??
+            await Geolocator.getCurrentPosition();
+      } catch (_) {}
+      if (!mounted) return;
+      notifier.setOrigin(Location(
+        id: 'gps',
+        name: 'Mein Standort',
+        label: 'Mein Standort',
+        lng: pos?.longitude ?? 13.4533,
+        lat: pos?.latitude ?? 52.5065,
+      ));
+    }
+    notifier.setDestination(Location(
+      id: home.id,
+      name: 'Zuhause',
+      label: home.label,
+      lng: home.lng,
+      lat: home.lat,
+    ));
+  }
+
+  static Future<Uint8List> _createHomeMarkerImage() async {
+    const double size = 52;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawCircle(
+      const Offset(size / 2, size / 2),
+      size / 2,
+      Paint()..color = const Color(0xFF3B82F6),
+    );
+    final tp = TextPainter(textDirection: TextDirection.ltr)
+      ..text = TextSpan(
+        text: String.fromCharCode(Icons.home.codePoint),
+        style: TextStyle(
+          fontSize: size * 0.72,
+          fontFamily: Icons.home.fontFamily,
+          package: Icons.home.fontPackage,
+          color: Colors.white,
+        ),
+      )
+      ..layout();
+    tp.paint(canvas, Offset((size - tp.width) / 2, (size - tp.height) / 2));
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(size.toInt(), size.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return data!.buffer.asUint8List();
+  }
+
+  Future<void> _updateHomeMarker(Location? home) async {
+    final controller = _mapController;
+    if (controller == null) return;
+    final existing = _homeMarker;
+    if (existing != null) {
+      await controller.removeSymbol(existing);
+      _homeMarker = null;
+    }
+    if (home != null) {
+      await controller.addImage('home-marker', await _createHomeMarkerImage());
+      _homeMarker = await controller.addSymbol(SymbolOptions(
+        geometry: LatLng(home.lat, home.lng),
+        iconImage: 'home-marker',
+        iconSize: 1.0,
+        iconAnchor: 'center',
+      ));
     }
   }
 
@@ -297,7 +417,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final preview = routeState.preview;
     final styleAsync = ref.watch(mapStyleProvider);
     final navActive = ref.watch(navigationSessionProvider);
+    final routeActive = routeState.isLoading ||
+        routeState.error != null ||
+        preview != null;
 
+    ref.listen<AsyncValue<Location?>>(homeLocationProvider, (_, next) {
+      _updateHomeMarker(next.valueOrNull);
+    });
     ref.listen<RouteState>(routeControllerProvider, _onRouteStateChanged);
     ref.listen<AsyncValue<NavigationState>>(
         navigationStateProvider, _onNavStateChange);
@@ -340,8 +466,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               onMapCreated: (controller) {
                 _mapController = controller;
               },
-              onUserLocationUpdated: (loc) =>
-                  _handleBrowseLocationUpdate(loc.position.latitude, loc.position.longitude),
+              onUserLocationUpdated: (loc) => _handleBrowseLocationUpdate(
+                  loc.position.latitude, loc.position.longitude),
               onStyleLoadedCallback: () {
                 // Attach rating overlay AFTER style is loaded — MapLibre
                 // silently ignores addGeoJsonSource / addLayer calls made
@@ -355,6 +481,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ref
                     .read(ratingOverlayControllerProvider.notifier)
                     .attachToMap(c);
+                _updateHomeMarker(ref.read(homeLocationProvider).valueOrNull);
               },
               onMapClick: _handleMapTap,
               onCameraTrackingDismissed: () {
@@ -377,33 +504,210 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               },
             ),
           ),
+          if (!navActive)
+            const SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: RouteCard(),
+              ),
+            ),
           if (navActive)
-            _NavigationOverlay(
+            _NavTopBar(
               ttsEnabled: _ttsEnabled,
               rerouting: _rerouting,
-              onToggleTts: () =>
-                  setState(() => _ttsEnabled = !_ttsEnabled),
+              onToggleTts: () => setState(() => _ttsEnabled = !_ttsEnabled),
               onRecenter: _handleRecenterTap,
-              onClose: () =>
-                  ref.read(navigationSessionProvider.notifier).state = false,
-            )
-          else
-            _BrowseOverlay(
-              routeState: routeState,
-              preview: preview,
-              onFlyToMyLocation: _flyToCurrentLocation,
-              onStart: () {
-                ref.read(navigationSessionProvider.notifier).state = true;
-              },
             ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            transitionBuilder: (child, animation) => SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                  parent: animation, curve: Curves.easeOut)),
+              child: child,
+            ),
+            child: navActive
+                ? _NavigationSheet(
+                    key: const ValueKey('nav'),
+                    ttsEnabled: _ttsEnabled,
+                    onToggleTts: () =>
+                        setState(() => _ttsEnabled = !_ttsEnabled),
+                    onClose: () =>
+                        ref.read(navigationSessionProvider.notifier).state =
+                            false,
+                  )
+                : routeActive
+                    ? _RouteSheet(
+                        key: const ValueKey('route'),
+                        routeState: routeState,
+                        preview: preview,
+                        onFlyToMyLocation: _flyToCurrentLocation,
+                        onStart: () =>
+                            ref.read(navigationSessionProvider.notifier).state =
+                                true,
+                      )
+                    : _HomeSheet(
+                        key: const ValueKey('home'),
+                        onFlyToMyLocation: _flyToCurrentLocation,
+                        onNavigateHome: _navigateHome,
+                      ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _BrowseOverlay extends ConsumerWidget {
-  const _BrowseOverlay({
+// ---------------------------------------------------------------------------
+// Home sheet — always the base layer. DraggableScrollableSheet with home chip
+// collapsed; caveats/how-to/report-issue revealed on swipe-up.
+// ---------------------------------------------------------------------------
+
+class _HomeSheet extends ConsumerStatefulWidget {
+  const _HomeSheet({
+    super.key,
+    required this.onFlyToMyLocation,
+    required this.onNavigateHome,
+  });
+
+  final VoidCallback onFlyToMyLocation;
+  final VoidCallback onNavigateHome;
+
+  @override
+  ConsumerState<_HomeSheet> createState() => _HomeSheetState();
+}
+
+class _HomeSheetState extends ConsumerState<_HomeSheet> {
+  static const double _idleSize = 0.18;
+  static const double _maxSize = 0.88;
+
+  final _sheetController = DraggableScrollableController();
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final home = ref.watch(homeLocationProvider).valueOrNull;
+    final mq = MediaQuery.of(context);
+
+    return Stack(
+      children: [
+        AnimatedBuilder(
+          animation: _sheetController,
+          builder: (context, _) {
+            final size = _sheetController.isAttached
+                ? _sheetController.size
+                : _idleSize;
+            final sheetPx = size * mq.size.height;
+            return Positioned(
+              right: 16,
+              bottom: sheetPx + 8,
+              child: FloatingActionButton(
+                heroTag: 'home-sheet-fab',
+                onPressed: widget.onFlyToMyLocation,
+                child: const Icon(Icons.my_location),
+              ),
+            );
+          },
+        ),
+        DraggableScrollableSheet(
+          controller: _sheetController,
+          initialChildSize: _idleSize,
+          minChildSize: _idleSize,
+          maxChildSize: _maxSize,
+          snap: true,
+          snapSizes: const [_idleSize, _maxSize],
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: ListView(
+                controller: scrollController,
+                padding: EdgeInsets.zero,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        if (home != null)
+                          ActionChip(
+                            avatar: const Icon(Icons.home, size: 16),
+                            label: const Text('Home'),
+                            onPressed: widget.onNavigateHome,
+                          ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        EdgeInsets.fromLTRB(24, 8, 24, mq.padding.bottom + 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Divider(),
+                        const SizedBox(height: 16),
+                        Text('Caveats',
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'BeeBeeBike is an early-stage app. Routes are suggestions based on your ratings — always use your own judgement and follow local traffic laws. Map data may be incomplete or outdated.',
+                        ),
+                        const SizedBox(height: 20),
+                        Text('How to use',
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Tap "Wohin?" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in your account settings to get one-tap navigation.',
+                        ),
+                        const SizedBox(height: 20),
+                        Text('Report an issue',
+                            style: Theme.of(context).textTheme.titleMedium),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Found a bug or have a suggestion? Send an email to hello@beebeebike.com and we\'ll take a look.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Route sheet — slides up over home sheet when a route is active (loading,
+// error, or preview ready). Fixed height; not draggable.
+// ---------------------------------------------------------------------------
+
+class _RouteSheet extends ConsumerWidget {
+  const _RouteSheet({
+    super.key,
     required this.routeState,
     required this.preview,
     required this.onFlyToMyLocation,
@@ -417,106 +721,142 @@ class _BrowseOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Stack(
-      children: [
-        const SafeArea(
-          child: Padding(
-            padding: EdgeInsets.all(16),
-            child: RouteCard(),
-          ),
-        ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                FloatingActionButton(
-                  heroTag: 'browse-my-location-fab',
-                  onPressed: onFlyToMyLocation,
-                  child: const Icon(Icons.my_location),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: routeState.isLoading
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      : routeState.error != null
-                          ? Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.error_outline,
-                                    color: Colors.red),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Could not load route',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium,
-                                ),
-                              ],
-                            )
-                          : preview == null
-                              ? const Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Center(
-                                      child: SizedBox(
-                                        width: 36,
-                                        child: Divider(thickness: 4),
-                                      ),
-                                    ),
-                                    SizedBox(height: 12),
-                                    Text('Home'),
-                                    Text('Saved places'),
-                                  ],
-                                )
-                              : RouteSummary(
-                                  // GraphHopper returns time in milliseconds.
-                                  durationMinutes:
-                                      (preview!.time / 60000).round(),
-                                  distanceKm: preview!.distance / 1000,
-                                  onStart: onStart,
-                                  onClose: () => ref
-                                      .read(routeControllerProvider.notifier)
-                                      .clear(),
-                                ),
-                ),
-              ],
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
+            child: FloatingActionButton(
+              heroTag: 'route-sheet-fab',
+              onPressed: onFlyToMyLocation,
+              child: const Icon(Icons.my_location),
             ),
           ),
-        ),
-      ],
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (routeState.isLoading)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else if (routeState.error != null)
+                    Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text('Could not load route',
+                              style: Theme.of(context).textTheme.bodyMedium),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => ref
+                              .read(routeControllerProvider.notifier)
+                              .clear(),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    )
+                  else if (preview != null)
+                    RouteSummary(
+                      durationMinutes: (preview!.time / 60000).round(),
+                      distanceKm: preview!.distance / 1000,
+                      onStart: onStart,
+                      onClose: () =>
+                          ref.read(routeControllerProvider.notifier).clear(),
+                    ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _NavigationOverlay extends ConsumerWidget {
-  const _NavigationOverlay({
+// ---------------------------------------------------------------------------
+// Navigation sheet — slides up over route sheet during active navigation.
+// Fixed height; not draggable.
+// ---------------------------------------------------------------------------
+
+class _NavigationSheet extends ConsumerWidget {
+  const _NavigationSheet({
+    super.key,
+    required this.ttsEnabled,
+    required this.onToggleTts,
+    required this.onClose,
+  });
+
+  final bool ttsEnabled;
+  final VoidCallback onToggleTts;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final navState = ref.watch(navigationStateProvider);
+    final cam = ref.watch(navigationCameraControllerProvider);
+
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: cam.mode == CameraMode.arrived
+              ? ArrivedSheet(onDone: onClose)
+              : EtaSheet(
+                  navState: navState,
+                  ttsEnabled: ttsEnabled,
+                  onToggleTts: onToggleTts,
+                  onClose: onClose,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Nav top bar — TurnBanner + RecenterFab, shown during navigation above
+// the navigation sheet.
+// ---------------------------------------------------------------------------
+
+class _NavTopBar extends ConsumerWidget {
+  const _NavTopBar({
     required this.ttsEnabled,
     required this.rerouting,
     required this.onToggleTts,
     required this.onRecenter,
-    required this.onClose,
   });
 
   final bool ttsEnabled;
   final bool rerouting;
   final VoidCallback onToggleTts;
   final VoidCallback onRecenter;
-  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -542,8 +882,7 @@ class _NavigationOverlay extends ConsumerWidget {
                     icon: Icons.error_outline,
                   ),
                   data: (state) => TurnBanner(
-                    primaryText:
-                        state.currentVisual?.primaryText ?? 'On route',
+                    primaryText: state.currentVisual?.primaryText ?? 'On route',
                     distanceText: state.progress != null
                         ? formatDistance(
                             state.progress!.distanceToNextManeuverM)
@@ -566,32 +905,12 @@ class _NavigationOverlay extends ConsumerWidget {
             alignment: Alignment.bottomRight,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.only(
-                    right: 16, bottom: kEtaSheetHeight),
+                padding:
+                    const EdgeInsets.only(right: 16, bottom: kEtaSheetHeight),
                 child: RecenterFab(onTap: onRecenter),
               ),
             ),
           ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: SafeArea(
-            top: false,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: cam.mode == CameraMode.arrived
-                  ? ArrivedSheet(onDone: onClose)
-                  : EtaSheet(
-                      navState: navState,
-                      ttsEnabled: ttsEnabled,
-                      onToggleTts: onToggleTts,
-                      onClose: onClose,
-                    ),
-            ),
-          ),
-        ),
       ],
     );
   }

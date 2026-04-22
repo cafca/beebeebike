@@ -1,4 +1,49 @@
 {
   "@@locale": "de",
-  "appTitle": "BeeBeeBike"
+
+  "appTitle": "BeeBeeBike",
+
+  "commonLoading": "Lädt…",
+
+  "loginTitle": "Anmelden",
+  "loginEmail": "E-Mail",
+  "loginPassword": "Passwort",
+  "loginErrorEmptyEmail": "E-Mail eingeben",
+  "loginErrorEmptyPassword": "Passwort eingeben",
+  "loginErrorInvalid": "Ungültige E-Mail oder ungültiges Passwort",
+
+  "settingsTitle": "Einstellungen",
+  "settingsGuest": "Gast",
+  "settingsHome": "Zuhause",
+  "settingsLogOut": "Abmelden",
+  "settingsLogIn": "Anmelden",
+  "settingsLanguage": "Sprache",
+  "settingsLanguageSystem": "Systemstandard",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageGerman": "Deutsch",
+
+  "searchHint": "Hier suchen…",
+  "searchSavedPlaces": "Gespeicherte Orte",
+
+  "locationCurrent": "Aktueller Standort",
+  "locationDroppedPin": "Markierung",
+  "locationFetchError": "Standort konnte nicht ermittelt werden: {error}",
+
+  "mapLoadError": "Karte konnte nicht geladen werden: {error}",
+
+  "routeLoadError": "Route konnte nicht geladen werden",
+  "routeClearTooltip": "Route löschen",
+  "routeStart": "Start",
+  "routeSummary": "🚲 {minutes} Min · {distance} km",
+
+  "navStarting": "Navigation wird gestartet…",
+  "navError": "Navigationsfehler",
+  "navOnRoute": "Auf der Route",
+  "navMuteVoice": "Stimme aus",
+  "navEnableVoice": "Stimme an",
+  "navEndNavigation": "Navigation beenden",
+  "navRerouting": "Route wird neu berechnet…",
+
+  "arrivedTitle": "Angekommen",
+  "arrivedDone": "Fertig"
 }

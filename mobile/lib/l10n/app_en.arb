@@ -1,5 +1,61 @@
 {
   "@@locale": "en",
+
   "appTitle": "BeeBeeBike",
-  "@appTitle": { "description": "App name in app switcher / task list." }
+
+  "commonLoading": "Loading...",
+
+  "loginTitle": "Log in",
+  "loginEmail": "Email",
+  "loginPassword": "Password",
+  "loginErrorEmptyEmail": "Enter your email",
+  "loginErrorEmptyPassword": "Enter your password",
+  "loginErrorInvalid": "Invalid email or password",
+
+  "settingsTitle": "Settings",
+  "settingsGuest": "Guest",
+  "settingsHome": "Home",
+  "settingsLogOut": "Log out",
+  "settingsLogIn": "Log in",
+  "settingsLanguage": "Language",
+  "settingsLanguageSystem": "System default",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageGerman": "Deutsch",
+
+  "searchHint": "Search here...",
+  "searchSavedPlaces": "Saved places",
+
+  "locationCurrent": "Current location",
+  "locationDroppedPin": "Dropped pin",
+  "locationFetchError": "Could not get current location: {error}",
+  "@locationFetchError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "mapLoadError": "Failed to load map: {error}",
+  "@mapLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "routeLoadError": "Could not load route",
+  "routeClearTooltip": "Clear route",
+  "routeStart": "Start",
+  "routeSummary": "🚲 {minutes} min · {distance} km",
+  "@routeSummary": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "distance": { "type": "String" }
+    }
+  },
+
+  "navStarting": "Starting navigation...",
+  "navError": "Navigation error",
+  "navOnRoute": "On route",
+  "navMuteVoice": "Mute voice",
+  "navEnableVoice": "Enable voice",
+  "navEndNavigation": "End navigation",
+  "navRerouting": "Rerouting…",
+
+  "arrivedTitle": "Arrived",
+  "arrivedDone": "Done"
 }

@@ -106,6 +106,24 @@ fn resolve_distance_influence(requested: Option<f64>, default: f64) -> f64 {
     requested.unwrap_or(default).clamp(0.0, 100.0)
 }
 
+fn resolve_gh_locale(headers: &axum::http::HeaderMap) -> &'static str {
+    let raw = headers
+        .get(axum::http::header::ACCEPT_LANGUAGE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let primary = raw.split([',', ';']).next().unwrap_or("");
+    let lang = primary
+        .split('-')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+    match lang.as_str() {
+        "de" => "de",
+        _ => "en",
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
@@ -149,6 +167,7 @@ fn build_graphhopper_request(
     body: &RouteRequest,
     rows: &[RatedAreaRow],
     mode: GraphhopperMode,
+    locale: &str,
 ) -> Result<Value, AppError> {
     let rating_weight = body
         .rating_weight
@@ -160,7 +179,7 @@ fn build_graphhopper_request(
     let mut gh_request = json!({
         "points": [body.origin, body.destination],
         "profile": "bike",
-        "locale": "de",
+        "locale": locale,
         "ch.disable": true,
     });
 
@@ -252,8 +271,10 @@ pub async fn get_route(
     Json(body): Json<RouteRequest>,
 ) -> Result<Json<RouteResponse>, AppError> {
     let user_id = require_auth(&state.db, &headers).await?;
+    let locale = resolve_gh_locale(&headers);
     let rows = load_rated_areas(&state, user_id, body.origin, body.destination).await?;
-    let gh_request = build_graphhopper_request(&state, &body, &rows, GraphhopperMode::Preview)?;
+    let gh_request =
+        build_graphhopper_request(&state, &body, &rows, GraphhopperMode::Preview, locale)?;
     let gh_json = post_graphhopper(&state, GraphhopperMode::Preview, gh_request).await?;
 
     let path = gh_json
@@ -297,8 +318,10 @@ pub async fn get_navigation_route(
     Json(body): Json<RouteRequest>,
 ) -> Result<Json<Value>, AppError> {
     let user_id = require_auth(&state.db, &headers).await?;
+    let locale = resolve_gh_locale(&headers);
     let rows = load_rated_areas(&state, user_id, body.origin, body.destination).await?;
-    let gh_request = build_graphhopper_request(&state, &body, &rows, GraphhopperMode::Navigate)?;
+    let gh_request =
+        build_graphhopper_request(&state, &body, &rows, GraphhopperMode::Navigate, locale)?;
     let gh_json = post_graphhopper(&state, GraphhopperMode::Navigate, gh_request).await?;
 
     Ok(Json(gh_json))
@@ -442,5 +465,41 @@ mod tests {
         assert!((resolve_distance_influence(None, 70.0) - 70.0).abs() < 1e-9);
         assert!((resolve_distance_influence(Some(-10.0), 70.0) - 0.0).abs() < 1e-9);
         assert!((resolve_distance_influence(Some(130.0), 70.0) - 100.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn resolve_locale_defaults_to_en_when_missing() {
+        let h = axum::http::HeaderMap::new();
+        assert_eq!(resolve_gh_locale(&h), "en");
+    }
+
+    #[test]
+    fn resolve_locale_recognises_de() {
+        let mut h = axum::http::HeaderMap::new();
+        h.insert(
+            axum::http::header::ACCEPT_LANGUAGE,
+            axum::http::HeaderValue::from_static("de"),
+        );
+        assert_eq!(resolve_gh_locale(&h), "de");
+    }
+
+    #[test]
+    fn resolve_locale_parses_weighted_tag() {
+        let mut h = axum::http::HeaderMap::new();
+        h.insert(
+            axum::http::header::ACCEPT_LANGUAGE,
+            axum::http::HeaderValue::from_static("de-DE,en;q=0.8"),
+        );
+        assert_eq!(resolve_gh_locale(&h), "de");
+    }
+
+    #[test]
+    fn resolve_locale_unknown_tag_falls_back_to_en() {
+        let mut h = axum::http::HeaderMap::new();
+        h.insert(
+            axum::http::header::ACCEPT_LANGUAGE,
+            axum::http::HeaderValue::from_static("fr"),
+        );
+        assert_eq!(resolve_gh_locale(&h), "en");
     }
 }

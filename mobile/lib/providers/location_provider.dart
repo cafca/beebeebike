@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/client.dart';
 import '../api/locations_api.dart';
 import '../models/location.dart';
+import 'auth_provider.dart';
 
 final locationsApiProvider = Provider<LocationsApi>(
   (ref) => LocationsApi(ref.watch(dioProvider)),
@@ -13,7 +14,12 @@ final homeLocationProvider =
 
 class HomeLocationController extends AsyncNotifier<Location?> {
   @override
-  Future<Location?> build() => ref.read(locationsApiProvider).getHome();
+  Future<Location?> build() async {
+    final auth = ref.watch(authControllerProvider);
+    final user = auth.valueOrNull;
+    if (user == null || user.accountType == 'anonymous') return null;
+    return ref.read(locationsApiProvider).getHome();
+  }
 
   Future<void> save(Location location) async {
     state = const AsyncLoading();

@@ -59,6 +59,14 @@ class RouteController extends Notifier<RouteState> {
     final origin = state.origin;
     final destination = state.destination;
     if (origin == null || destination == null) return;
+    if (origin.lat == destination.lat && origin.lng == destination.lng) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Origin and destination are the same',
+        preview: null,
+      );
+      return;
+    }
 
     final generation = ++_loadGeneration;
     state = state.copyWith(isLoading: true, error: null, preview: null);

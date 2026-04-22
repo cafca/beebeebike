@@ -109,7 +109,7 @@ class RouteCard extends ConsumerWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             onTap: () => _openOriginSearch(context, ref),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(
                 children: [
                   const Icon(Icons.my_location, size: 20, color: Colors.blue),
@@ -144,7 +144,7 @@ class RouteCard extends ConsumerWidget {
                 const BorderRadius.vertical(bottom: Radius.circular(16)),
             onTap: () => _openDestinationSearch(context, ref),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(
                 children: [
                   Icon(

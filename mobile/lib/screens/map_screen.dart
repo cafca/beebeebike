@@ -671,9 +671,8 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
                         Text('Caveats',
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
-                        RichText(
-                          text: TextSpan(
-                            style: Theme.of(context).textTheme.bodyMedium,
+                        Text.rich(
+                          TextSpan(
                             children: [
                               const TextSpan(
                                 text:

@@ -775,8 +775,8 @@ class _CompassFabInline extends ConsumerWidget {
             customBorder: const CircleBorder(),
             onTap: onResetBearing,
             child: Container(
-              width: 40,
-              height: 40,
+              width: 52,
+              height: 52,
               decoration: const BoxDecoration(
                 color: BbbColors.panel,
                 shape: BoxShape.circle,
@@ -786,7 +786,7 @@ class _CompassFabInline extends ConsumerWidget {
                 angle: -bearing * math.pi / 180,
                 child: const Icon(
                   Icons.navigation,
-                  size: 18,
+                  size: 22,
                   color: BbbColors.ink,
                 ),
               ),

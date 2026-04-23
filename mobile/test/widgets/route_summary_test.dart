@@ -80,6 +80,9 @@ void main() {
 
   testWidgets('heart button toggles saved icon state', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: RouteSummary(
           durationMinutes: 12,
@@ -100,6 +103,9 @@ void main() {
 
   testWidgets('data strip shows ETA hh:mm formatted from now', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: RouteSummary(
           durationMinutes: 20,

@@ -84,6 +84,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCreditPhoton => 'Geocoding by Photon, hosted by Komoot';
 
   @override
+  String get settingsSectionLegal => 'Legal';
+
+  @override
+  String get settingsLegalPrivacy => 'Privacy policy';
+
+  @override
+  String get settingsLegalImprint => 'Imprint';
+
+  @override
   String get settingsSectionDanger => 'Danger zone';
 
   @override

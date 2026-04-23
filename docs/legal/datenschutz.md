@@ -6,8 +6,7 @@
 
 Verantwortlicher im Sinne der DSGVO:
 
-<!-- Das Bild wird vor Veröffentlichung durch die tatsächlichen Kontaktdaten ersetzt. -->
-![Verantwortlicher: Name, Anschrift und E-Mail](/legal/provider.svg)
+![Verantwortlicher: Name, Anschrift und E-Mail](/legal/provider.png)
 
 ## 2. Überblick
 

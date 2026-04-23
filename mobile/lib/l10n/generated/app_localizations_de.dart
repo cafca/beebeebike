@@ -85,6 +85,15 @@ class AppLocalizationsDe extends AppLocalizations {
       'Geocoding mit Photon, gehostet von Komoot';
 
   @override
+  String get settingsSectionLegal => 'Rechtliches';
+
+  @override
+  String get settingsLegalPrivacy => 'Datenschutz';
+
+  @override
+  String get settingsLegalImprint => 'Impressum';
+
+  @override
   String get settingsSectionDanger => 'Gefahrenzone';
 
   @override

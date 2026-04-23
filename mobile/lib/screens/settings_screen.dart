@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../app.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/location_provider.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
 import '../widgets/language_picker.dart';
+import 'legal_document_screen.dart';
 import 'login_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -33,6 +35,8 @@ class SettingsScreen extends ConsumerWidget {
           _AccountSection(),
           _SectionDivider(),
           _LanguageSection(),
+          _SectionDivider(),
+          _LegalSection(),
           _SectionDivider(),
           _DangerSection(),
           _CreditsSection(),
@@ -174,6 +178,73 @@ class _LanguageSection extends StatelessWidget {
         const LanguagePicker(),
         const SizedBox(height: 6),
       ],
+    );
+  }
+}
+
+class _LegalSection extends ConsumerWidget {
+  const _LegalSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final config = ref.watch(appConfigProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(l10n.settingsSectionLegal),
+        _LegalTile(
+          label: l10n.settingsLegalPrivacy,
+          icon: Icons.shield_outlined,
+          title: l10n.onboardingPrivacyTitle,
+          url: config.privacyPolicyUrl,
+        ),
+        _LegalTile(
+          label: l10n.settingsLegalImprint,
+          icon: Icons.description_outlined,
+          title: l10n.settingsLegalImprint,
+          url: config.imprintUrl,
+        ),
+        const SizedBox(height: 6),
+      ],
+    );
+  }
+}
+
+class _LegalTile extends StatelessWidget {
+  const _LegalTile({
+    required this.label,
+    required this.icon,
+    required this.title,
+    required this.url,
+  });
+
+  final String label;
+  final IconData icon;
+  final String title;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => LegalDocumentScreen(title: title, url: url),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: BbbColors.inkMuted),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label, style: BbbText.cardTitle()),
+            ),
+            const Icon(Icons.chevron_right, color: BbbColors.inkFaint),
+          ],
+        ),
+      ),
     );
   }
 }

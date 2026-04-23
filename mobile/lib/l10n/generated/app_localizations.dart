@@ -248,6 +248,24 @@ abstract class AppLocalizations {
   /// **'Geocoding by Photon, hosted by Komoot'**
   String get settingsCreditPhoton;
 
+  /// No description provided for @settingsSectionLegal.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal'**
+  String get settingsSectionLegal;
+
+  /// No description provided for @settingsLegalPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get settingsLegalPrivacy;
+
+  /// No description provided for @settingsLegalImprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Imprint'**
+  String get settingsLegalImprint;
+
   /// No description provided for @settingsSectionDanger.
   ///
   /// In en, this message translates to:

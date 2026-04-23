@@ -2,8 +2,7 @@
 
 *Angaben gemäß § 5 TMG und § 18 Abs. 2 MStV*
 
-<!-- Das Bild wird vor Veröffentlichung durch die tatsächlichen Kontaktdaten ersetzt. -->
-![Anbieter: Name, Anschrift und Kontakt](/legal/provider.svg)
+![Anbieter: Name, Anschrift und Kontakt](/legal/provider.png)
 
 ## Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV
 

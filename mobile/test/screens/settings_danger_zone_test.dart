@@ -14,6 +14,11 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  Future<void> pumpTall(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  }
+
   testWidgets('danger zone hidden when anonymous', (tester) async {
     final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
@@ -46,6 +51,7 @@ void main() {
 
   testWidgets('confirm dialog cancels do not call delete', (tester) async {
     final prefs = await SharedPreferences.getInstance();
+    await pumpTall(tester);
     int deleteCalls = 0;
     final dio = _mockDioForDelete(onDelete: () => deleteCalls++);
 
@@ -82,6 +88,7 @@ void main() {
   testWidgets('confirm dialog proceed dispatches delete + snackbar',
       (tester) async {
     final prefs = await SharedPreferences.getInstance();
+    await pumpTall(tester);
     int deleteCalls = 0;
     final dio = _mockDioForDelete(onDelete: () => deleteCalls++);
 
@@ -114,6 +121,7 @@ void main() {
 
   testWidgets('delete failure surfaces error snackbar', (tester) async {
     final prefs = await SharedPreferences.getInstance();
+    await pumpTall(tester);
     final dio = _mockDioForDelete(fail: true);
 
     await tester.pumpWidget(

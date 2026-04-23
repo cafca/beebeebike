@@ -11,7 +11,6 @@ import '../providers/route_provider.dart';
 import '../providers/search_history_provider.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
-import 'map_attribution.dart';
 import 'paint_roller_icon.dart';
 import 'saved_item.dart';
 
@@ -63,10 +62,6 @@ class _HomeSheetState extends ConsumerState<HomeSheet> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                 child: _GoHomeRow(onNavigateHome: widget.onNavigateHome),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: MapAttribution(),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),

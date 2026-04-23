@@ -206,6 +206,30 @@ abstract class AppLocalizations {
   /// **'Deutsch'**
   String get settingsLanguageGerman;
 
+  /// No description provided for @settingsSectionAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsSectionAccount;
+
+  /// No description provided for @settingsSectionLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsSectionLanguage;
+
+  /// No description provided for @settingsSectionCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'Built with'**
+  String get settingsSectionCredits;
+
+  /// No description provided for @settingsCreditPhoton.
+  ///
+  /// In en, this message translates to:
+  /// **'Photon service hosted by Komoot'**
+  String get settingsCreditPhoton;
+
   /// No description provided for @searchHint.
   ///
   /// In en, this message translates to:
@@ -325,12 +349,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset to north'**
   String get mapResetNorth;
-
-  /// No description provided for @mapAttributionOsm.
-  ///
-  /// In en, this message translates to:
-  /// **'© OpenStreetMap contributors'**
-  String get mapAttributionOsm;
 
   /// No description provided for @homeCaveatsTitle.
   ///

@@ -22,6 +22,10 @@
   "settingsLanguageSystem": "Systemstandard",
   "settingsLanguageEnglish": "English",
   "settingsLanguageGerman": "Deutsch",
+  "settingsSectionAccount": "Konto",
+  "settingsSectionLanguage": "Sprache",
+  "settingsSectionCredits": "Gebaut mit",
+  "settingsCreditPhoton": "Photon-Dienst gehostet von Komoot",
 
   "searchHint": "Wohin?",
   "searchSavedPlaces": "Gespeicherte Orte",

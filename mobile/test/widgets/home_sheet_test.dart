@@ -73,9 +73,6 @@ void main() {
     await tester.pumpWidget(_host(prefs: prefs, controller: controller));
     await tester.pump();
 
-    controller.jumpTo(0.92);
-    await tester.pump();
-
     expect(find.text('RECENT'), findsOneWidget);
     expect(find.text('Alexanderplatz'), findsOneWidget);
     expect(find.text('Brandenburger Tor'), findsOneWidget);

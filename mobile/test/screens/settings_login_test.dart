@@ -40,13 +40,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final loginTile = tester.widget<ListTile>(
+      final loginTap = tester.widget<InkWell>(
         find.ancestor(
           of: find.text('Log in'),
-          matching: find.byType(ListTile),
+          matching: find.byType(InkWell),
         ),
       );
-      expect(loginTile.onTap, isNotNull);
+      expect(loginTap.onTap, isNotNull);
     });
 
     testWidgets('tapping Log in navigates to LoginScreen', (tester) async {

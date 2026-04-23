@@ -63,6 +63,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguageGerman => 'Deutsch';
 
   @override
+  String get settingsSectionAccount => 'Account';
+
+  @override
+  String get settingsSectionLanguage => 'Language';
+
+  @override
+  String get settingsSectionCredits => 'Built with';
+
+  @override
+  String get settingsCreditPhoton => 'Photon service hosted by Komoot';
+
+  @override
   String get searchHint => 'Where to?';
 
   @override
@@ -127,9 +139,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapResetNorth => 'Reset to north';
-
-  @override
-  String get mapAttributionOsm => '© OpenStreetMap contributors';
 
   @override
   String get homeCaveatsTitle => 'Caveats';

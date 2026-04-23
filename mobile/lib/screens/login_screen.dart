@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/generated/app_localizations.dart';
@@ -34,6 +35,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _errorKind = null;
     });
 
+    TextInput.finishAutofillContext();
+
     await ref.read(authControllerProvider.notifier).login(
           _emailController.text.trim(),
           _passwordController.text,
@@ -61,50 +64,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                key: const Key('login_email'),
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(labelText: l10n.loginEmail),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? l10n.loginErrorEmptyEmail
-                    : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                key: const Key('login_password'),
-                controller: _passwordController,
-                obscureText: true,
-                decoration: InputDecoration(labelText: l10n.loginPassword),
-                validator: (v) => (v == null || v.isEmpty)
-                    ? l10n.loginErrorEmptyPassword
-                    : null,
-              ),
-              const SizedBox(height: 8),
-              if (_errorKind != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    l10n.loginErrorInvalid,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.error),
-                  ),
+          child: AutofillGroup(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  key: const Key('login_email'),
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [
+                    AutofillHints.username,
+                    AutofillHints.email,
+                  ],
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(labelText: l10n.loginEmail),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? l10n.loginErrorEmptyEmail
+                      : null,
                 ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: _loading ? null : _submit,
-                child: _loading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.loginSubmit),
-              ),
-            ],
+                const SizedBox(height: 16),
+                TextFormField(
+                  key: const Key('login_password'),
+                  controller: _passwordController,
+                  obscureText: true,
+                  autofillHints: const [AutofillHints.password],
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                  decoration: InputDecoration(labelText: l10n.loginPassword),
+                  validator: (v) => (v == null || v.isEmpty)
+                      ? l10n.loginErrorEmptyPassword
+                      : null,
+                ),
+                const SizedBox(height: 8),
+                if (_errorKind != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      l10n.loginErrorInvalid,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: _loading ? null : _submit,
+                  child: _loading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(l10n.loginSubmit),
+                ),
+              ],
+            ),
           ),
         ),
       ),

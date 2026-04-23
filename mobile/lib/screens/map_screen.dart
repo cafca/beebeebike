@@ -9,7 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
-import 'package:url_launcher/url_launcher.dart';
+
+import '../theme/tokens.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import '../models/location.dart';
@@ -28,6 +29,7 @@ import '../services/map_style_loader.dart';
 import '../services/route_drawing.dart';
 import '../widgets/arrived_sheet.dart';
 import '../widgets/eta_sheet.dart';
+import '../widgets/home_sheet.dart';
 import '../widgets/recenter_fab.dart';
 import '../widgets/rerouting_toast.dart';
 import '../widgets/route_card.dart';
@@ -570,8 +572,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Home sheet — always the base layer. DraggableScrollableSheet with home chip
-// collapsed; caveats/how-to/report-issue revealed on swipe-up.
+// Home sheet wrapper — hosts the HomeSheet widget plus a recenter FAB whose
+// vertical position tracks the sheet's current snap size.
 // ---------------------------------------------------------------------------
 
 class _HomeSheet extends ConsumerStatefulWidget {
@@ -589,9 +591,6 @@ class _HomeSheet extends ConsumerStatefulWidget {
 }
 
 class _HomeSheetState extends ConsumerState<_HomeSheet> {
-  static const double _idleSize = 0.18;
-  static const double _maxSize = 0.88;
-
   final _sheetController = DraggableScrollableController();
 
   @override
@@ -602,8 +601,6 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final home = ref.watch(homeLocationProvider).valueOrNull;
     final mq = MediaQuery.of(context);
 
     return Stack(
@@ -611,109 +608,50 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
         AnimatedBuilder(
           animation: _sheetController,
           builder: (context, _) {
-            final size = _sheetController.isAttached
-                ? _sheetController.size
-                : _idleSize;
+            final size =
+                _sheetController.isAttached ? _sheetController.size : 0.16;
             final sheetPx = size * mq.size.height;
             return Positioned(
               right: 16,
               bottom: sheetPx + 8,
-              child: FloatingActionButton(
-                heroTag: 'home-sheet-fab',
-                onPressed: widget.onFlyToMyLocation,
-                child: const Icon(Icons.my_location),
-              ),
+              child: _RecenterCircleFab(onTap: widget.onFlyToMyLocation),
             );
           },
         ),
-        DraggableScrollableSheet(
-          controller: _sheetController,
-          initialChildSize: _idleSize,
-          minChildSize: _idleSize,
-          maxChildSize: _maxSize,
-          snap: true,
-          snapSizes: const [_idleSize, _maxSize],
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: ListView(
-                controller: scrollController,
-                padding: EdgeInsets.zero,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 36,
-                            height: 4,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        if (home != null)
-                          ActionChip(
-                            avatar: const Icon(Icons.home, size: 16),
-                            label: Text(l10n.settingsHome),
-                            onPressed: widget.onNavigateHome,
-                          ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding:
-                        EdgeInsets.fromLTRB(24, 8, 24, mq.padding.bottom + 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Divider(),
-                        const SizedBox(height: 16),
-                        Text(l10n.homeCaveatsTitle,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(text: l10n.homeCaveatsBefore),
-                              TextSpan(
-                                text: 'beebeebike.com',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  decoration: TextDecoration.underline,
-                                ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () => launchUrl(
-                                        Uri.parse('https://beebeebike.com'),
-                                        mode: LaunchMode.externalApplication,
-                                      ),
-                              ),
-                              TextSpan(text: l10n.homeCaveatsAfter),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(l10n.homeHowToTitle,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        Text(l10n.homeHowToBody),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+        HomeSheet(
+          onNavigateHome: widget.onNavigateHome,
+          sheetController: _sheetController,
         ),
       ],
+    );
+  }
+}
+
+class _RecenterCircleFab extends StatelessWidget {
+  const _RecenterCircleFab({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      shape: const CircleBorder(),
+      elevation: 0,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: BbbShadow.sm,
+          ),
+          child: const Icon(Icons.my_location, color: BbbColors.inkMuted, size: 22),
+        ),
+      ),
     );
   }
 }
@@ -748,18 +686,16 @@ class _RouteSheet extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
-            child: FloatingActionButton(
-              heroTag: 'route-sheet-fab',
-              onPressed: onFlyToMyLocation,
-              child: const Icon(Icons.my_location),
-            ),
+            child: _RecenterCircleFab(onTap: onFlyToMyLocation),
           ),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
             decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              color: BbbColors.panel,
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
+              boxShadow: BbbShadow.panel,
             ),
             child: SafeArea(
               top: false,
@@ -767,6 +703,17 @@ class _RouteSheet extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: BbbColors.grabber,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
                   if (routeState.isLoading)
                     const Center(
                       child: Padding(
@@ -840,8 +787,10 @@ class _NavigationSheet extends ConsumerWidget {
       child: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          color: BbbColors.panel,
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
+          boxShadow: BbbShadow.panel,
         ),
         child: SafeArea(
           top: false,

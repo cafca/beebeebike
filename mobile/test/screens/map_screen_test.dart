@@ -98,7 +98,7 @@ void main() {
     await tester.pump();
 
     // RouteSummary shows a Start button
-    expect(find.text('Start'), findsOneWidget);
+    expect(find.text('Start ride'), findsOneWidget);
 
     // time=1200s → 20 min, distance=5000m → 5.0 km
     expect(find.textContaining('20 min'), findsOneWidget);
@@ -128,14 +128,14 @@ void main() {
     await tester.pump();
 
     expect(container.read(navigationSessionProvider), isFalse);
-    expect(find.text('Start'), findsOneWidget);
-    await tester.tap(find.text('Start'));
+    expect(find.text('Start ride'), findsOneWidget);
+    await tester.tap(find.text('Start ride'));
     await tester.pump();
 
     expect(container.read(navigationSessionProvider), isTrue);
   });
 
-  testWidgets('empty state shows drag handle', (tester) async {
+  testWidgets('empty state shows disabled Go home button', (tester) async {
     final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
@@ -143,12 +143,14 @@ void main() {
     );
     await tester.pump();
 
-    // No route, no home saved — just the drag handle container, no chips
-    expect(find.text('Saved places'), findsNothing);
-    expect(find.text('Home'), findsNothing);
+    // Landing sheet always renders the Go home button; without a saved home
+    // the button is visually disabled and omits the ETA subtitle.
+    expect(find.text('Go home'), findsOneWidget);
+    expect(find.text('Set home to enable'), findsNothing);
   });
 
-  testWidgets('empty state shows Home chip when home is saved', (tester) async {
+  testWidgets('Go home subtitle shows calculating state while ETA resolves',
+      (tester) async {
     final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
@@ -156,6 +158,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Go home'), findsOneWidget);
+    expect(find.text('Calculating ETA…'), findsOneWidget);
   });
 }

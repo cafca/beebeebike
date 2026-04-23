@@ -35,7 +35,7 @@ void main() {
         ),
       ),
     ));
-    await tester.tap(find.widgetWithText(FilledButton, 'Start'));
+    await tester.tap(find.text('Start ride'));
     await tester.pumpAndSettle();
     expect(tapped, 1);
   });

@@ -103,6 +103,7 @@ class RatingEventsClient {
   RatingEventsClient({
     required this.opener,
     required this.onInvalidate,
+    this.onServerDisabled,
     Duration Function(int attempt)? backoff,
     // Hook for tests to pump the event loop; real code uses Future.delayed.
     Future<void> Function(Duration)? sleep,
@@ -111,6 +112,10 @@ class RatingEventsClient {
 
   final RatingEventsOpener opener;
   final VoidCallback onInvalidate;
+  /// Fired exactly once when the server latches the kill switch (404 on
+  /// `/api/ratings/events`). Lets the controller surface a "live sync off"
+  /// signal to the UI without polling `serverDisabled`.
+  final VoidCallback? onServerDisabled;
   final Duration Function(int attempt) backoff;
   final Future<void> Function(Duration) _sleep;
 
@@ -182,6 +187,11 @@ class RatingEventsClient {
         if (e.response?.statusCode == 404) {
           _log('rating-events: server returned 404, disabling client');
           _serverDisabled = true;
+          try {
+            onServerDisabled?.call();
+          } catch (e) {
+            _log('rating-events: onServerDisabled threw: $e');
+          }
           return;
         }
         _log('rating-events: connect failed: ${e.message}');
@@ -275,13 +285,14 @@ Duration _defaultBackoff(int attempt) {
 /// tests to return a fake client that records start/stop and drives
 /// invalidations synchronously.
 typedef RatingEventsClientFactory = RatingEventsClient Function(
-  VoidCallback onInvalidate,
-);
+  VoidCallback onInvalidate, {
+  VoidCallback? onServerDisabled,
+});
 
 final ratingEventsClientFactoryProvider =
     Provider<RatingEventsClientFactory>((ref) {
   final dio = ref.watch(dioProvider);
-  return (onInvalidate) => RatingEventsClient(
+  return (onInvalidate, {onServerDisabled}) => RatingEventsClient(
         opener: ({required cancelToken}) async {
           final response = await dio.get<ResponseBody>(
             '/api/ratings/events',
@@ -305,5 +316,6 @@ final ratingEventsClientFactoryProvider =
           return body.stream.cast<List<int>>();
         },
         onInvalidate: onInvalidate,
+        onServerDisabled: onServerDisabled,
       );
 });

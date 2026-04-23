@@ -7,25 +7,11 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../api/ratings_api.dart';
 import '../app.dart';
+import '../config/berlin_bounds.dart';
 import '../models/user.dart';
 import '../services/rating_events_client.dart';
-import '../services/rating_fetch_policy.dart';
 import '../services/rating_overlay.dart';
 import 'auth_provider.dart';
-
-/// Snapshot of the map camera needed to decide whether to refetch the
-/// rating overlay. Pulled by the caller (usually a wrapper around a live
-/// `MapLibreMapController`) and handed to the controller so the controller
-/// itself stays unaware of MapLibre.
-class CameraState {
-  const CameraState({required this.zoom, required this.viewport});
-  final double zoom;
-  final Bbox viewport;
-}
-
-/// Async function that returns the current camera state, or null when it
-/// can't be read (e.g. the map hasn't finished its first layout).
-typedef CameraProbe = Future<CameraState?> Function();
 
 /// Async function that builds and attaches a [RatingOverlaySurface]. Called
 /// once from [RatingOverlayController.attach]; allowed to throw if the
@@ -36,56 +22,61 @@ void _log(String message) {
   if (kDebugMode) debugPrint(message);
 }
 
-/// Coordinates fetching the user's rating polygons and updating the
-/// [RatingOverlaySurface] render state. Holds no direct reference to
-/// MapLibre — the caller supplies a [CameraProbe] and [OverlayAttacher],
-/// which keeps the controller testable with pure Dart fakes.
+/// Observable state for [RatingOverlayController]. Kept minimal — the only
+/// UI-relevant bit today is whether live sync is degraded, which drives a
+/// one-shot toast in the map screen.
+@immutable
+class RatingOverlayState {
+  const RatingOverlayState({this.liveSyncDegraded = false});
+  final bool liveSyncDegraded;
+
+  RatingOverlayState copyWith({bool? liveSyncDegraded}) => RatingOverlayState(
+        liveSyncDegraded: liveSyncDegraded ?? this.liveSyncDegraded,
+      );
+}
+
+/// Coordinates the user's rating polygons.
 ///
-/// Lifecycle:
-///   1. `onStyleLoadedCallback`: call [attach] with probe + attacher (see
-///      [RatingOverlayControllerMap.attachToMap] for the MapLibre adapter).
-///   2. `onCameraIdle`: call [onCameraIdle].
-///   3. Auth changes: the controller itself watches [authControllerProvider]
-///      and clears the overlay on login/logout.
-///   4. Screen disposed: call [detach] (Riverpod auto-disposes the notifier).
-class RatingOverlayController extends Notifier<void> {
+/// Sync model:
+///   - One full fetch over [kBerlinSyncBbox] on attach (when auth is ready)
+///     and on every auth transition to a logged-in user.
+///   - Subsequent updates arrive via SSE ([RatingEventsClient]); every
+///     `invalidate` (including reconnects) triggers a fresh full fetch.
+///   - No camera-idle polling. Panning/zooming never hits the network.
+///
+/// If SSE is disabled (server 404 or client config flag off) the overlay
+/// stays whatever it was at the last full fetch until the next app start.
+/// [RatingOverlayState.liveSyncDegraded] flips true in that case so the UI
+/// can surface a toast.
+class RatingOverlayController extends Notifier<RatingOverlayState> {
   RatingOverlaySurface? _overlay;
-  CameraProbe? _cameraProbe;
-  Bbox? _lastFetched;
   CancelToken? _inFlight;
   RatingEventsClient? _eventsClient;
 
   @override
-  void build() {
+  RatingOverlayState build() {
     ref.onDispose(() {
       _inFlight?.cancel();
-      // Fire-and-forget: the client cancels its own in-flight request
-      // synchronously; awaiting the loop to exit isn't worth blocking
-      // dispose.
       unawaited(_eventsClient?.stop());
       _eventsClient = null;
     });
+    return const RatingOverlayState();
   }
 
   /// Attach the overlay. Idempotent — a second call while already attached
   /// is a no-op, which matters because MapLibre's `onStyleLoadedCallback`
   /// can fire more than once (style reload on theme change, retry, etc.).
-  Future<void> attach({
-    required CameraProbe cameraProbe,
-    required OverlayAttacher attachOverlay,
-  }) async {
+  Future<void> attach({required OverlayAttacher attachOverlay}) async {
     if (_overlay != null) {
       _log('rating-overlay: attach skipped (already attached)');
       return;
     }
     _log('rating-overlay: attach start');
-    _cameraProbe = cameraProbe;
     try {
       _overlay = await attachOverlay();
       _log('rating-overlay: attach ok');
     } catch (e, st) {
       _log('rating-overlay: attach FAILED: $e\n$st');
-      _cameraProbe = null;
       return;
     }
     // Wire up auth *after* a successful attach so we react to login/logout
@@ -98,14 +89,13 @@ class RatingOverlayController extends Notifier<void> {
       final nextId = next.valueOrNull?.id;
       _log('rating-overlay: auth change $prevId -> $nextId');
       if (prevId != nextId) {
-        _lastFetched = null;
         _overlay?.clear();
         // Restart the SSE stream against the new session cookie so
         // invalidations are filtered for the right user. The client is
         // keyed to a Dio instance, not a user id, so stopping and starting
         // is cheap — it just drops the held socket.
         unawaited(_restartEventsClient());
-        if (nextId != null) _evaluateAndFetch();
+        if (nextId != null) _fullSync();
       }
     });
     // Kick off an initial fetch only if auth is already resolved. If it's
@@ -114,15 +104,14 @@ class RatingOverlayController extends Notifier<void> {
     // `.value` rethrows on `AsyncError`, which happens in CI integration
     // tests where anonymous-auth gets "connection refused".
     if (ref.read(authControllerProvider).valueOrNull != null) {
-      _evaluateAndFetch();
+      _fullSync();
       _startEventsClient();
     }
   }
 
   /// Spin up the rating-change SSE listener if:
   ///   - the client-side kill switch ([AppConfig.ratingsSseEnabled]) is on,
-  ///   - auth has resolved (no point subscribing as a half-authenticated
-  ///     user — the server would just filter everything out),
+  ///   - auth has resolved,
   ///   - the overlay is currently attached.
   ///
   /// Called during [attach] and on every auth transition. Safe to call
@@ -132,13 +121,16 @@ class RatingOverlayController extends Notifier<void> {
     final config = ref.read(appConfigProvider);
     if (!config.ratingsSseEnabled) {
       _log('rating-overlay: SSE disabled via client config');
+      _markLiveSyncDegraded();
       return;
     }
     // `valueOrNull`: `.value` rethrows on `AsyncError` (CI integration tests
     // hit "connection refused" on anonymous auth), which would crash attach.
     if (ref.read(authControllerProvider).valueOrNull == null) return;
-    _eventsClient ??=
-        ref.read(ratingEventsClientFactoryProvider)(_onInvalidate);
+    _eventsClient ??= ref.read(ratingEventsClientFactoryProvider)(
+      _onInvalidate,
+      onServerDisabled: _markLiveSyncDegraded,
+    );
     _eventsClient!.start();
   }
 
@@ -152,13 +144,17 @@ class RatingOverlayController extends Notifier<void> {
   }
 
   /// Invoked by [RatingEventsClient] when the backend signals that the
-  /// user's painted areas changed (or when the SSE stream reconnects).
-  /// Null the cached bbox so the next evaluate refetches, then evaluate
-  /// immediately — if the camera hasn't moved we still want the refresh.
+  /// user's painted areas changed (or when the SSE stream reconnects —
+  /// which triggers a forced invalidate as a missed-event hedge; see
+  /// [RatingEventsClient]). Every invalidate triggers one full sync.
   void _onInvalidate() {
     _log('rating-overlay: invalidate from server');
-    _lastFetched = null;
-    _evaluateAndFetch();
+    _fullSync();
+  }
+
+  void _markLiveSyncDegraded() {
+    if (state.liveSyncDegraded) return;
+    state = state.copyWith(liveSyncDegraded: true);
   }
 
   /// Detach the overlay and cancel any pending work. Safe to call multiple
@@ -170,71 +166,35 @@ class RatingOverlayController extends Notifier<void> {
     _eventsClient = null;
     final overlay = _overlay;
     _overlay = null;
-    _cameraProbe = null;
-    _lastFetched = null;
     await client?.stop();
     await overlay?.detach();
   }
 
-  /// Hook for `MapLibreMap.onCameraIdle`. Evaluates the fetch policy and
-  /// refreshes the overlay if needed. No-op until [attach] has wired up
-  /// the camera probe and overlay.
-  ///
-  /// Camera-idle already acts as a natural debouncer — MapLibre only fires
-  /// it once the user stops panning/zooming — so we evaluate synchronously
-  /// and rely on [decideFetch] + [CancelToken] to drop redundant requests.
-  void onCameraIdle() {
-    if (_overlay == null || _cameraProbe == null) return;
-    _evaluateAndFetch();
-  }
-
-  Future<void> _evaluateAndFetch() async {
+  Future<void> _fullSync() async {
     final overlay = _overlay;
-    final probe = _cameraProbe;
-    if (overlay == null || probe == null) {
-      _log('rating-overlay: eval skip (detached)');
+    if (overlay == null) {
+      _log('rating-overlay: sync skip (detached)');
       return;
     }
-
-    final camera = await probe();
-    if (camera == null) {
-      _log('rating-overlay: eval skip (no camera state)');
-      return;
-    }
-
-    final decision = decideFetch(
-      zoom: camera.zoom,
-      viewport: camera.viewport,
-      lastFetched: _lastFetched,
-    );
-    _log('rating-overlay: eval zoom=${camera.zoom} '
-        'viewport=${camera.viewport.toQueryString()} '
-        'fetch=${decision.shouldFetch}');
-    if (!decision.shouldFetch) return;
-
-    // Cancel any previous request — we only care about the latest viewport.
     _inFlight?.cancel();
     final token = CancelToken();
     _inFlight = token;
-
-    final fetchBbox = decision.fetchBbox!;
     try {
       final api = ref.read(ratingsApiProvider);
       final data = await api.getOverlay(
-        fetchBbox.toQueryString(),
+        kBerlinSyncBbox.toQueryString(),
         cancelToken: token,
       );
       if (token.isCancelled) return;
       final features = data['features'] as List<dynamic>? ?? const [];
-      _log('rating-overlay: fetch ok, features=${features.length}');
+      _log('rating-overlay: sync ok, features=${features.length}');
       await overlay.update(data);
-      _lastFetched = fetchBbox;
     } on DioException catch (e) {
       if (CancelToken.isCancel(e)) return;
-      _log('rating-overlay: fetch failed status=${e.response?.statusCode} '
+      _log('rating-overlay: sync failed status=${e.response?.statusCode} '
           'type=${e.type} msg=${e.message}');
     } catch (e) {
-      _log('rating-overlay: fetch failed: $e');
+      _log('rating-overlay: sync failed: $e');
     } finally {
       if (identical(_inFlight, token)) {
         _inFlight = null;
@@ -247,28 +207,11 @@ class RatingOverlayController extends Notifier<void> {
 /// live `MapLibreMapController`. Lives here (not on the controller) so the
 /// controller itself stays free of MapLibre imports used only for this glue.
 extension RatingOverlayControllerMap on RatingOverlayController {
-  /// Attach against a real MapLibre controller. [belowLayerId] is forwarded
-  /// to [RatingOverlay.attach] so the caller can keep other overlays (route
-  /// line, markers) rendered on top.
   Future<void> attachToMap(
     MapLibreMapController controller, {
     String? belowLayerId,
   }) {
     return attach(
-      cameraProbe: () async {
-        final zoom = controller.cameraPosition?.zoom;
-        if (zoom == null) return null;
-        try {
-          final visible = await controller.getVisibleRegion();
-          return CameraState(
-            zoom: zoom,
-            viewport: Bbox.fromLatLngBounds(visible),
-          );
-        } catch (e) {
-          _log('rating-overlay: getVisibleRegion failed: $e');
-          return null;
-        }
-      },
       attachOverlay: () =>
           RatingOverlay.attach(controller, belowLayerId: belowLayerId),
     );
@@ -276,5 +219,5 @@ extension RatingOverlayControllerMap on RatingOverlayController {
 }
 
 final ratingOverlayControllerProvider =
-    NotifierProvider<RatingOverlayController, void>(
+    NotifierProvider<RatingOverlayController, RatingOverlayState>(
         RatingOverlayController.new);

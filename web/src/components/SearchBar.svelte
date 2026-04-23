@@ -132,7 +132,7 @@
         title="Preferences"
         onclick={() => showPreferences = !showPreferences}
       >
-        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"/>
         </svg>
@@ -278,16 +278,15 @@
   }
   .panel-actions {
     position: absolute;
-    top: 50%;
-    right: 6px;
-    transform: translateY(-50%);
+    top: 11px;
+    right: 11px;
     display: flex;
     gap: 4px;
     z-index: 2;
   }
   .icon-btn {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     border: none;
     border-radius: 8px;
@@ -310,7 +309,7 @@
     font: 500 15px/1.4 var(--font-sans);
     color: var(--ink);
     padding: 6px 0;
-    width: calc(100% - 84px);
+    width: calc(100% - 68px);
   }
   input::placeholder {
     color: var(--ink-faint);
@@ -321,7 +320,7 @@
     gap: 8px;
     font: 600 14px/1.3 var(--font-sans);
     color: var(--ink);
-    padding: 4px 84px 4px 0;
+    padding: 4px 68px 4px 0;
   }
   .dot {
     width: 10px;

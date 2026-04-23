@@ -170,6 +170,11 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
     await overlay?.detach();
   }
 
+  /// Trigger an immediate full sync. Called by brush after a successful
+  /// paint so the overlay reflects the user's own change without waiting
+  /// for the SSE roundtrip.
+  Future<void> refreshAfterPaint() => _fullSync();
+
   Future<void> _fullSync() async {
     final overlay = _overlay;
     if (overlay == null) {

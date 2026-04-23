@@ -221,13 +221,31 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSectionCredits.
   ///
   /// In en, this message translates to:
-  /// **'Built with'**
+  /// **'Shout outs'**
   String get settingsSectionCredits;
+
+  /// No description provided for @settingsCreditOsm.
+  ///
+  /// In en, this message translates to:
+  /// **'Map data © OpenStreetMap contributors'**
+  String get settingsCreditOsm;
+
+  /// No description provided for @settingsCreditMaplibre.
+  ///
+  /// In en, this message translates to:
+  /// **'Map rendering by MapLibre'**
+  String get settingsCreditMaplibre;
+
+  /// No description provided for @settingsCreditGraphhopper.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing by GraphHopper'**
+  String get settingsCreditGraphhopper;
 
   /// No description provided for @settingsCreditPhoton.
   ///
   /// In en, this message translates to:
-  /// **'Photon service hosted by Komoot'**
+  /// **'Geocoding by Photon, hosted by Komoot'**
   String get settingsCreditPhoton;
 
   /// No description provided for @searchHint.

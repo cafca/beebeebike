@@ -24,8 +24,11 @@
   "settingsLanguageGerman": "Deutsch",
   "settingsSectionAccount": "Account",
   "settingsSectionLanguage": "Language",
-  "settingsSectionCredits": "Built with",
-  "settingsCreditPhoton": "Photon service hosted by Komoot",
+  "settingsSectionCredits": "Shout outs",
+  "settingsCreditOsm": "Map data © OpenStreetMap contributors",
+  "settingsCreditMaplibre": "Map rendering by MapLibre",
+  "settingsCreditGraphhopper": "Routing by GraphHopper",
+  "settingsCreditPhoton": "Geocoding by Photon, hosted by Komoot",
 
   "searchHint": "Where to?",
   "searchSavedPlaces": "Saved places",

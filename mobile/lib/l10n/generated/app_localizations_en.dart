@@ -69,10 +69,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSectionLanguage => 'Language';
 
   @override
-  String get settingsSectionCredits => 'Built with';
+  String get settingsSectionCredits => 'Shout outs';
 
   @override
-  String get settingsCreditPhoton => 'Photon service hosted by Komoot';
+  String get settingsCreditOsm => 'Map data © OpenStreetMap contributors';
+
+  @override
+  String get settingsCreditMaplibre => 'Map rendering by MapLibre';
+
+  @override
+  String get settingsCreditGraphhopper => 'Routing by GraphHopper';
+
+  @override
+  String get settingsCreditPhoton => 'Geocoding by Photon, hosted by Komoot';
 
   @override
   String get searchHint => 'Where to?';

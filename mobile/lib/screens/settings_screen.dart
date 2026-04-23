@@ -201,18 +201,18 @@ class _CreditsList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _CreditLink(
-          label: 'OpenStreetMap',
+        _CreditLink(
+          label: l10n.settingsCreditOsm,
           url: 'https://www.openstreetmap.org/copyright',
         ),
         const SizedBox(height: 8),
-        const _CreditLink(
-          label: 'MapLibre',
+        _CreditLink(
+          label: l10n.settingsCreditMaplibre,
           url: 'https://maplibre.org/',
         ),
         const SizedBox(height: 8),
-        const _CreditLink(
-          label: 'GraphHopper',
+        _CreditLink(
+          label: l10n.settingsCreditGraphhopper,
           url: 'https://www.graphhopper.com/',
         ),
         const SizedBox(height: 8),

@@ -80,6 +80,6 @@ pub fn build_router(state: Arc<AppState>) -> Router {
 // application/json and the path has no extension, so we serve it as a
 // dedicated route rather than through ServeDir.
 async fn apple_app_site_association() -> impl IntoResponse {
-    const BODY: &str = r#"{"webcredentials":{"apps":["37FTP2QTRQ.com.beebeebike"]}}"#;
+    const BODY: &str = r#"{"webcredentials":{"apps":["37FTP2QTRQ.com.beebeebike.app"]}}"#;
     ([(header::CONTENT_TYPE, "application/json")], BODY)
 }

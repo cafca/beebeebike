@@ -68,7 +68,7 @@ void main() {
       expect(geom, isNotNull);
     });
 
-    test('polygon winding: signed area non-zero (CW orientation)', () {
+    test('outer ring is CCW (RFC 7946 right-hand rule)', () {
       final geom = BrushGeometry.buildPolygon(
         points: const [
           LatLng(52.5, 13.400),
@@ -81,16 +81,7 @@ void main() {
       expect(geom, isNotNull);
       final coords = (geom!['coordinates'] as List).first as List;
       expect(coords.length, greaterThanOrEqualTo(4));
-
-      // Calculate signed area using shoelace formula
-      final signedArea = _signedArea(coords);
-      // Verify polygon has non-zero area (not degenerate)
-      expect(signedArea, isNot(0));
-      // TODO: Currently the ring is oriented CW (signedArea < 0).
-      // Once GeoJSON right-hand-rule enforcement is needed, update the ring
-      // orientation in buildPolygon to produce CCW rings (signedArea > 0).
-      // Observed sign: negative (CW), magnitude ~-0.0000026 for test case.
-      expect(signedArea, lessThan(0));
+      expect(_signedArea(coords), greaterThan(0));
     });
 
     test('returns null for all-equal points (degenerate dedupe)', () {

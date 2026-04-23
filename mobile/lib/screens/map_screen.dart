@@ -34,8 +34,10 @@ import '../services/map_style_loader.dart';
 import '../services/rating_overlay.dart';
 import '../services/route_drawing.dart';
 import '../widgets/arrived_sheet.dart';
+import '../widgets/brush_fab.dart';
 import '../widgets/eta_sheet.dart';
 import '../widgets/home_sheet.dart';
+import '../widgets/paint_pan_recognizer.dart';
 import '../widgets/paint_sheet.dart';
 import '../widgets/recenter_fab.dart';
 import '../widgets/rerouting_toast.dart';
@@ -43,7 +45,6 @@ import '../widgets/route_card.dart';
 import '../widgets/route_summary.dart';
 import '../widgets/tts_toggle_fab.dart';
 import '../widgets/turn_banner.dart';
-import '../widgets/undo_redo_fabs.dart';
 
 final _berlinBounds = LatLngBounds(
   southwest: const LatLng(52.3, 13.0),
@@ -68,6 +69,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _rerouting = false;
   bool _browseAutocentered = false;
   double? _lastLoggedZoom;
+  double? _pinchStartZoom;
+  double? _pinchLastZoom;
 
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
@@ -550,11 +553,39 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 if (b == null) return;
                 await b.endStroke(tapFeatureLookup: _probeRatingFeature);
               },
+              onPanCancel: () {
+                _brushNotifier?.cancelStroke();
+              },
               onTap: (latLng) async {
                 final b = _brushNotifier;
                 if (b == null) return;
                 b.startStroke(latLng);
                 await b.endStroke(tapFeatureLookup: _probeRatingFeature);
+              },
+              onScaleStart: (_) {
+                final c = _mapController;
+                if (c == null) return;
+                final z = c.cameraPosition?.zoom ?? 14;
+                _pinchStartZoom = z;
+                _pinchLastZoom = z;
+                _brushNotifier?.cancelStroke();
+              },
+              onScaleUpdate: (details) {
+                final c = _mapController;
+                final start = _pinchStartZoom;
+                final last = _pinchLastZoom;
+                if (c == null || start == null || last == null) return;
+                if (details.scale <= 0) return;
+                final newZoom = start + math.log(details.scale) / math.ln2;
+                final delta = newZoom - last;
+                _pinchLastZoom = newZoom;
+                c.moveCamera(
+                  CameraUpdate.zoomBy(delta, details.localFocalPoint),
+                );
+                final pan = details.focalPointDelta;
+                if (pan != Offset.zero) {
+                  c.moveCamera(CameraUpdate.scrollBy(-pan.dx, -pan.dy));
+                }
               },
               toLatLng: (p) async {
                 final c = _mapController;
@@ -575,18 +606,23 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 scrollGesturesEnabled: !paintMode,
                 rotateGesturesEnabled: !paintMode,
                 tiltGesturesEnabled: !paintMode,
+                zoomGesturesEnabled: !paintMode,
                 // Hide built-in compass + attribution chrome. Compass is
                 // redrawn inline above each RecenterFab (_CompassFabInline);
                 // attribution is inlined under each sheet's CTA.
                 compassEnabled: false,
                 attributionButtonMargins: const math.Point(-1000, -1000),
-                // EagerGestureRecognizer: map claims all pointer events so
-                // pinch/rotate/pan work when wrapped in a Scaffold that
-                // otherwise wins the gesture arena on iOS. Dropped in paint
-                // mode so the outer GestureDetector receives single-pointer
-                // pans for brush strokes while MapLibre still handles pinch
-                // (two-pointer scale is not declined by the scroll/rotate
-                // flags).
+                // Non-paint mode: EagerGestureRecognizer so the map claims
+                // every pointer event (pan/pinch/rotate) when wrapped in a
+                // Scaffold that otherwise wins the gesture arena on iOS.
+                //
+                // Paint mode: empty set so no platform-view recognizer joins
+                // the Flutter arena. Any recognizer added here also claims
+                // single-pointer events via `startTrackingPointer` in its
+                // `addAllowedPointer`, which blocks the outer
+                // PaintPanGestureRecognizer from winning single-finger
+                // arenas. Instead, pinch is driven manually from the outer
+                // RawGestureDetector's MultiPointerScaleGestureRecognizer.
                 gestureRecognizers: paintMode
                     ? const <Factory<OneSequenceGestureRecognizer>>{}
                     : <Factory<OneSequenceGestureRecognizer>>{
@@ -680,7 +716,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             false,
                   )
                 : paintMode
-                    ? const PaintSheet(key: ValueKey('paint'))
+                    ? _PaintSheetWrapper(
+                        key: const ValueKey('paint'),
+                        onFlyToMyLocation: _flyToCurrentLocation,
+                        onResetBearing: _resetBearingToNorth,
+                      )
                     : routeActive
                         ? _RouteSheet(
                             key: const ValueKey('route'),
@@ -702,8 +742,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             onNavigateHome: _navigateHome,
                           ),
           ),
-          if (paintMode && !navActive)
-            const UndoRedoFabs(bottomOffset: 112),
         ],
       ),
     );
@@ -755,13 +793,9 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
             return Positioned(
               right: 16,
               bottom: sheetPx + 8,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  _CompassFabInline(onResetBearing: widget.onResetBearing),
-                  _RecenterCircleFab(onTap: widget.onFlyToMyLocation),
-                ],
+              child: _MapFabColumn(
+                onFlyToMyLocation: widget.onFlyToMyLocation,
+                onResetBearing: widget.onResetBearing,
               ),
             );
           },
@@ -902,6 +936,108 @@ class _CompassFabInline extends ConsumerWidget {
 
 
 // ---------------------------------------------------------------------------
+// Shared right-side FAB column — rendered by every non-nav sheet. Order from
+// top to bottom: undo, redo (paint mode only), compass (when bearing ≠ 0),
+// recenter, brush. Brush sits at the bottom so it stays at a predictable spot
+// as the column above it grows or shrinks.
+// ---------------------------------------------------------------------------
+
+class _MapFabColumn extends ConsumerWidget {
+  const _MapFabColumn({
+    required this.onFlyToMyLocation,
+    required this.onResetBearing,
+  });
+
+  final VoidCallback onFlyToMyLocation;
+  final VoidCallback onResetBearing;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final brush = ref.watch(brushControllerProvider);
+    final notifier = ref.read(brushControllerProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (brush.paintMode) ...[
+          Tooltip(
+            message: l10n.paintUndo,
+            child: FloatingActionButton.small(
+              key: const ValueKey('undo-fab'),
+              heroTag: 'brush-undo-fab',
+              onPressed: brush.canUndo ? notifier.undo : null,
+              backgroundColor:
+                  brush.canUndo ? BbbColors.panel : BbbColors.bgAlt,
+              foregroundColor:
+                  brush.canUndo ? BbbColors.ink : BbbColors.inkFaint,
+              child: const Icon(Icons.undo),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Tooltip(
+            message: l10n.paintRedo,
+            child: FloatingActionButton.small(
+              key: const ValueKey('redo-fab'),
+              heroTag: 'brush-redo-fab',
+              onPressed: brush.canRedo ? notifier.redo : null,
+              backgroundColor:
+                  brush.canRedo ? BbbColors.panel : BbbColors.bgAlt,
+              foregroundColor:
+                  brush.canRedo ? BbbColors.ink : BbbColors.inkFaint,
+              child: const Icon(Icons.redo),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        _CompassFabInline(onResetBearing: onResetBearing),
+        _RecenterCircleFab(onTap: onFlyToMyLocation),
+        const SizedBox(height: 12),
+        const BrushFab(),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Paint sheet wrapper — stacks the shared FAB column above the PaintSheet
+// body so the brush FAB, undo/redo, and recenter controls stay visible while
+// color chips are open.
+// ---------------------------------------------------------------------------
+
+class _PaintSheetWrapper extends StatelessWidget {
+  const _PaintSheetWrapper({
+    super.key,
+    required this.onFlyToMyLocation,
+    required this.onResetBearing,
+  });
+
+  final VoidCallback onFlyToMyLocation;
+  final VoidCallback onResetBearing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
+            child: _MapFabColumn(
+              onFlyToMyLocation: onFlyToMyLocation,
+              onResetBearing: onResetBearing,
+            ),
+          ),
+          const PaintSheet(),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Route sheet — slides up over home sheet when a route is active (loading,
 // error, or preview ready). Fixed height; not draggable.
 // ---------------------------------------------------------------------------
@@ -933,13 +1069,9 @@ class _RouteSheet extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _CompassFabInline(onResetBearing: onResetBearing),
-                _RecenterCircleFab(onTap: onFlyToMyLocation),
-              ],
+            child: _MapFabColumn(
+              onFlyToMyLocation: onFlyToMyLocation,
+              onResetBearing: onResetBearing,
             ),
           ),
           Container(
@@ -1148,7 +1280,10 @@ class _PaintGestureWrap extends StatelessWidget {
     required this.onPanStart,
     required this.onPanUpdate,
     required this.onPanEnd,
+    required this.onPanCancel,
     required this.onTap,
+    required this.onScaleStart,
+    required this.onScaleUpdate,
     required this.toLatLng,
     required this.child,
   });
@@ -1157,31 +1292,68 @@ class _PaintGestureWrap extends StatelessWidget {
   final ValueChanged<LatLng> onPanStart;
   final ValueChanged<LatLng> onPanUpdate;
   final VoidCallback onPanEnd;
+  final VoidCallback onPanCancel;
   final ValueChanged<LatLng> onTap;
+  final ValueChanged<ScaleStartDetails> onScaleStart;
+  final ValueChanged<ScaleUpdateDetails> onScaleUpdate;
   final Future<LatLng> Function(math.Point<double>) toLatLng;
   final Widget child;
 
-  math.Point<double> _point(Offset o) =>
-      math.Point(o.dx, o.dy);
+  math.Point<double> _point(Offset o) => math.Point(o.dx, o.dy);
 
   @override
   Widget build(BuildContext context) {
-    if (!enabled) return child;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onPanStart: (d) async {
-        final latLng = await toLatLng(_point(d.localPosition));
-        onPanStart(latLng);
-      },
-      onPanUpdate: (d) async {
-        final latLng = await toLatLng(_point(d.localPosition));
-        onPanUpdate(latLng);
-      },
-      onPanEnd: (_) => onPanEnd(),
-      onTapUp: (d) async {
-        final latLng = await toLatLng(_point(d.localPosition));
-        onTap(latLng);
-      },
+    // Always render RawGestureDetector so the widget tree shape stays stable
+    // when `enabled` toggles. Reparenting MapLibreMap (by wrapping/unwrapping
+    // it) disposes the underlying UiKitView — which blows away our rating
+    // overlay layers until the next style reload. When disabled, we register
+    // zero recognizers and fall through to the child.
+    final gestures = enabled
+        ? <Type, GestureRecognizerFactory>{
+            PaintPanGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<
+                    PaintPanGestureRecognizer>(
+              PaintPanGestureRecognizer.new,
+              (r) {
+                r.onStart = (d) async {
+                  final latLng = await toLatLng(_point(d.localPosition));
+                  onPanStart(latLng);
+                };
+                r.onUpdate = (d) async {
+                  final latLng = await toLatLng(_point(d.localPosition));
+                  onPanUpdate(latLng);
+                };
+                r.onEnd = (_) => onPanEnd();
+                // Fires when the arena rejects us after onStart fired — i.e.
+                // a second pointer landed mid-stroke and we released the
+                // gesture to the map's ScaleGestureRecognizer.
+                r.onCancel = onPanCancel;
+              },
+            ),
+            TapGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+              TapGestureRecognizer.new,
+              (r) {
+                r.onTapUp = (d) async {
+                  final latLng = await toLatLng(_point(d.localPosition));
+                  onTap(latLng);
+                };
+              },
+            ),
+            MultiPointerScaleGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<
+                    MultiPointerScaleGestureRecognizer>(
+              MultiPointerScaleGestureRecognizer.new,
+              (r) {
+                r.onStart = onScaleStart;
+                r.onUpdate = onScaleUpdate;
+              },
+            ),
+          }
+        : const <Type, GestureRecognizerFactory>{};
+    return RawGestureDetector(
+      behavior: enabled ? HitTestBehavior.opaque : HitTestBehavior.translucent,
+      gestures: gestures,
       child: child,
     );
   }

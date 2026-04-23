@@ -26,99 +26,44 @@ class PaintSheet extends ConsumerWidget {
     final notifier = ref.read(brushControllerProvider.notifier);
     final mq = MediaQuery.of(context);
 
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        decoration: const BoxDecoration(
-          color: BbbColors.panel,
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
-          boxShadow: BbbShadow.panel,
-        ),
-        padding: EdgeInsets.fromLTRB(16, 12, 16, mq.padding.bottom + 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: BbbColors.grabber,
-                borderRadius: BorderRadius.circular(2),
-              ),
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: BbbColors.panel,
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
+        boxShadow: BbbShadow.panel,
+      ),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, mq.padding.bottom + 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: BbbColors.grabber,
+              borderRadius: BorderRadius.circular(2),
             ),
-            Row(
-              children: [
-                _PaintToggle(
-                  active: state.paintMode,
-                  onPressed: notifier.togglePaintMode,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      for (final v in _values)
-                        KeyedSubtree(
-                          key: ValueKey('paint-chip-$v'),
-                          child: _ColorChip(
-                            value: v,
-                            selected: state.value == v,
-                            onTap: () => notifier.setValue(v),
-                          ),
-                        ),
-                    ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (int i = 0; i < _values.length; i++) ...[
+                if (i > 0) const SizedBox(width: 12),
+                KeyedSubtree(
+                  key: ValueKey('paint-chip-${_values[i]}'),
+                  child: _ColorChip(
+                    value: _values[i],
+                    selected: state.value == _values[i],
+                    onTap: () => notifier.setValue(_values[i]),
                   ),
                 ),
               ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PaintToggle extends StatelessWidget {
-  const _PaintToggle({required this.active, required this.onPressed});
-  final bool active;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final label = active ? l10n.paintExit : l10n.paintEnter;
-    return Tooltip(
-      message: label,
-      child: Semantics(
-        button: true,
-        toggled: active,
-        label: label,
-        child: Material(
-          key: const ValueKey('paint-toggle'),
-          color: active ? BbbColors.brand : BbbColors.panel,
-          shape: RoundedRectangleBorder(
-            side: BorderSide(
-              color: active ? BbbColors.brand : BbbColors.divider,
-              width: 2,
-            ),
-            borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+            ],
           ),
-          child: InkWell(
-            onTap: onPressed,
-            borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-            child: SizedBox(
-              width: 44,
-              height: 44,
-              child: Icon(
-                Icons.brush,
-                color: active ? Colors.white : BbbColors.ink,
-                size: 20,
-              ),
-            ),
-          ),
-        ),
+        ],
       ),
     );
   }

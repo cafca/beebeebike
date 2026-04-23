@@ -89,6 +89,15 @@ class BrushController extends Notifier<BrushState> {
     state = state.copyWith(paintMode: false);
   }
 
+  /// Abandon an in-progress stroke without submitting. Called when a second
+  /// pointer lands on the canvas — the stroke was meant to be a pan, not a
+  /// paint.
+  void cancelStroke() {
+    if (_stroke.isEmpty) return;
+    _stroke.clear();
+    unawaited(_overlay?.clear());
+  }
+
   void startStroke(LatLng first) {
     _stroke
       ..clear()
@@ -137,7 +146,7 @@ class BrushController extends Notifier<BrushState> {
       final api = ref.read(ratingsPaintApiProvider);
       final r = await api.undo();
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
-      _refreshRatingOverlay();
+      ref.read(ratingOverlayControllerProvider.notifier).refreshAfterPaint();
     } catch (e) {
       _log('brush: undo failed: $e');
     }
@@ -148,7 +157,7 @@ class BrushController extends Notifier<BrushState> {
       final api = ref.read(ratingsPaintApiProvider);
       final r = await api.redo();
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
-      _refreshRatingOverlay();
+      ref.read(ratingOverlayControllerProvider.notifier).refreshAfterPaint();
     } catch (e) {
       _log('brush: redo failed: $e');
     }
@@ -166,14 +175,23 @@ class BrushController extends Notifier<BrushState> {
         targetId: targetId,
       );
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
-      _refreshRatingOverlay();
+      final overlay = ref.read(ratingOverlayControllerProvider.notifier);
+      final canAppendLocally = targetId == null &&
+          r.clippedCount == 0 &&
+          r.deletedCount == 0 &&
+          r.createdId != null;
+      if (canAppendLocally) {
+        await overlay.appendLocal(
+          geometry: geometry,
+          value: state.value,
+          id: r.createdId,
+        );
+      } else {
+        await overlay.refreshAfterPaint();
+      }
     } catch (e) {
       _log('brush: paint failed: $e');
     }
-  }
-
-  void _refreshRatingOverlay() {
-    ref.read(ratingOverlayControllerProvider.notifier).refreshAfterPaint();
   }
 }
 

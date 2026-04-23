@@ -7,18 +7,16 @@ import '../models/location.dart';
 import '../providers/auth_provider.dart';
 import '../providers/home_eta_provider.dart';
 import '../providers/location_provider.dart';
-import '../providers/brush_provider.dart';
 import '../providers/route_provider.dart';
 import '../providers/search_history_provider.dart';
 import '../screens/login_screen.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
-import 'paint_roller_icon.dart';
 import 'saved_item.dart';
 
 /// Landing-state bottom sheet. Two snap points: peek (~16 %) and a mid
-/// stop sized to fit the Go Home row + three recent items. Paint FAB is
-/// visually present but disabled in this build.
+/// stop sized to fit the Go Home row + three recent items. The paint
+/// brush FAB lives in the map-screen overlay column, not here.
 class HomeSheet extends ConsumerStatefulWidget {
   const HomeSheet({
     super.key,
@@ -110,22 +108,13 @@ class _GoHomeRow extends ConsumerWidget {
     final enabled = home != null;
     final eta = enabled ? ref.watch(homeEtaMinutesProvider) : null;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: loggedIn
-              ? _GoHomeButton(
-                  enabled: enabled,
-                  etaMinutes: eta,
-                  onTap: enabled ? onNavigateHome : null,
-                )
-              : const _LogInButton(),
-        ),
-        const SizedBox(width: 10),
-        const _PaintFab(),
-      ],
-    );
+    return loggedIn
+        ? _GoHomeButton(
+            enabled: enabled,
+            etaMinutes: eta,
+            onTap: enabled ? onNavigateHome : null,
+          )
+        : const _LogInButton();
   }
 }
 
@@ -258,48 +247,6 @@ class _GoHomeButton extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PaintFab extends ConsumerWidget {
-  const _PaintFab();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final active = ref.watch(
-      brushControllerProvider.select((s) => s.paintMode),
-    );
-    final label = active ? l10n.paintExit : l10n.paintEnter;
-    return Tooltip(
-      message: label,
-      child: Semantics(
-        button: true,
-        toggled: active,
-        label: label,
-        child: SizedBox(
-          width: 52,
-          height: 52,
-          child: Material(
-            key: const ValueKey('paint-fab'),
-            color: active ? BbbColors.brand : BbbColors.panel,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                color: active ? BbbColors.brand : BbbColors.divider,
-                width: 1,
-              ),
-              borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-            ),
-            child: InkWell(
-              onTap: () =>
-                  ref.read(brushControllerProvider.notifier).togglePaintMode(),
-              borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-              child: const Center(child: PaintRollerIcon(size: 24)),
-            ),
           ),
         ),
       ),

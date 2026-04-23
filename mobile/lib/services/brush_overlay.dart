@@ -10,13 +10,15 @@ abstract class BrushOverlaySurface {
   Future<void> detach();
 }
 
-/// Semi-transparent fill of the in-progress brush stroke. Mirrors the
-/// `brush-preview` source + fill layer in web/src/lib/brush.svelte.js.
+/// Semi-transparent fill of the in-progress brush stroke. Geometry comes
+/// from `BrushGeometry.buildPolygon` (clipper2-inflated), so even a
+/// self-crossing stroke arrives here as a valid Polygon/MultiPolygon.
 class BrushOverlay implements BrushOverlaySurface {
   BrushOverlay._(this._controller);
 
   static const String sourceId = 'brush-preview';
   static const String fillLayerId = 'brush-preview-fill';
+  static const double _fillOpacity = 0.4;
 
   static const Map<int, String> _colors = {
     -7: '#B8342E',
@@ -59,7 +61,7 @@ class BrushOverlay implements BrushOverlaySurface {
       fillLayerId,
       const FillLayerProperties(
         fillColor: _fallbackColor,
-        fillOpacity: 0.3,
+        fillOpacity: _fillOpacity,
       ),
       belowLayerId: belowLayerId,
       enableInteraction: false,
@@ -88,7 +90,7 @@ class BrushOverlay implements BrushOverlaySurface {
     if (colorHex != _lastColorHex) {
       await _controller.setLayerProperties(
         fillLayerId,
-        FillLayerProperties(fillColor: colorHex, fillOpacity: 0.3),
+        FillLayerProperties(fillColor: colorHex, fillOpacity: _fillOpacity),
       );
       _lastColorHex = colorHex;
     }

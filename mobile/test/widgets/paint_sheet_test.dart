@@ -23,11 +23,10 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
-  testWidgets('renders 7 color chips and a paint toggle', (tester) async {
+  testWidgets('renders 7 color chips', (tester) async {
     await tester.pumpWidget(
       ProviderScope(child: _wrap(const PaintSheet())),
     );
-    expect(find.byKey(const ValueKey('paint-toggle')), findsOneWidget);
     for (final v in const [-7, -3, -1, 0, 1, 3, 7]) {
       expect(find.byKey(ValueKey('paint-chip-$v')), findsOneWidget);
     }

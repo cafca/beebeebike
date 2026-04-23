@@ -62,11 +62,11 @@ class BbbText {
       );
 
   // Nav hero — "2 min" in navigation sheet.
-  static TextStyle navHero() => GoogleFonts.jetBrainsMono(
-        fontSize: 44,
+  static TextStyle navHero({Color color = BbbColors.inkMuted}) => GoogleFonts.jetBrainsMono(
+        fontSize: 28,
         fontWeight: FontWeight.w700,
         letterSpacing: -1.5,
-        color: BbbColors.ink,
+        color: color,
         height: 1.0,
       );
 }

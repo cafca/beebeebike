@@ -37,40 +37,41 @@ class _RouteSummaryState extends State<RouteSummary> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final onClose = widget.onClose;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Stack(
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: _DataStrip(
-                duration: widget.durationMinutes,
-                distanceKm: widget.distanceKm,
-                eta: _formatEta(),
-              ),
+            _DataStrip(
+              duration: widget.durationMinutes,
+              distanceKm: widget.distanceKm,
+              eta: _formatEta(),
             ),
-            if (onClose != null)
-              Tooltip(
-                message: l10n.routeClearTooltip,
-                child: _CloseButton(onTap: onClose),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _StartRideButton(onTap: widget.onStart),
-            ),
-            const SizedBox(width: 10),
-            _SaveButton(
-              saved: _saved,
-              onTap: () => setState(() => _saved = !_saved),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _StartRideButton(onTap: widget.onStart),
+                ),
+                const SizedBox(width: 10),
+                _SaveButton(
+                  saved: _saved,
+                  onTap: () => setState(() => _saved = !_saved),
+                ),
+              ],
             ),
           ],
         ),
+        if (onClose != null)
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Tooltip(
+              message: l10n.routeClearTooltip,
+              child: _CloseButton(onTap: onClose),
+            ),
+          ),
       ],
     );
   }

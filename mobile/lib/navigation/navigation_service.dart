@@ -61,6 +61,14 @@ class NavigationService {
     final waypoints = [origin, destination];
     _controller = await createController(routeJson, waypoints);
 
+    // Subscribe before seeding so the state emitted in response to the
+    // initial updateLocation is actually delivered — stateStream is a
+    // broadcast stream and drops events with no listener attached yet.
+    _stateSub = _controller!.stateStream.listen(
+      _stateController.add,
+      onError: _stateController.addError,
+    );
+
     // Seed the controller with the last-known position before the live GPS
     // stream attaches, so NavigationState emits immediately instead of
     // waiting for the first fresh fix (which can take several seconds after
@@ -68,11 +76,6 @@ class NavigationService {
     if (initialLocation != null) {
       await _controller!.updateLocation(initialLocation);
     }
-
-    _stateSub = _controller!.stateStream.listen(
-      _stateController.add,
-      onError: _stateController.addError,
-    );
 
     _spokenSub = _controller!.spokenInstructionStream.listen(
       (instruction) {

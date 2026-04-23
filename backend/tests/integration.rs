@@ -487,7 +487,7 @@ async fn delete_account_rejects_anonymous() {
         .delete("/api/auth/account")
         .add_header(hname, hval)
         .await;
-    resp.assert_status(StatusCode::BAD_REQUEST);
+    resp.assert_status(StatusCode::FORBIDDEN);
 }
 
 #[tokio::test]

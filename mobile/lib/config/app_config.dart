@@ -4,10 +4,12 @@ class AppConfig {
     required this.tileServerBaseUrl,
     required this.tileStyleUrl,
     required this.ratingsSseEnabled,
+    this.privacyPolicyUrl = 'https://beebeebike.com/datenschutz/',
   });
 
   final String apiBaseUrl;
   final String tileServerBaseUrl;
+  final String privacyPolicyUrl;
 
   /// Test-only: a remote style URL passed straight to `MapLibreMap.styleString`.
   /// Production uses `mapStyleProvider`, which loads the bundled style and
@@ -38,6 +40,10 @@ class AppConfig {
       ratingsSseEnabled: bool.fromEnvironment(
         'BEEBEEBIKE_RATINGS_SSE_ENABLED',
         defaultValue: true,
+      ),
+      privacyPolicyUrl: String.fromEnvironment(
+        'BEEBEEBIKE_PRIVACY_POLICY_URL',
+        defaultValue: 'https://beebeebike.com/datenschutz/',
       ),
     );
   }

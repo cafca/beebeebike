@@ -334,23 +334,42 @@ class _CreditsList extends StatelessWidget {
   }
 }
 
-class _CreditLink extends StatelessWidget {
+class _CreditLink extends StatefulWidget {
   const _CreditLink({required this.label, required this.url});
 
   final String label;
   final String url;
 
   @override
+  State<_CreditLink> createState() => _CreditLinkState();
+}
+
+class _CreditLinkState extends State<_CreditLink> {
+  late final TapGestureRecognizer _recognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _recognizer = TapGestureRecognizer()
+      ..onTap = () => launchUrl(
+            Uri.parse(widget.url),
+            mode: LaunchMode.externalApplication,
+          );
+  }
+
+  @override
+  void dispose() {
+    _recognizer.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Text.rich(
       TextSpan(
-        text: label,
+        text: widget.label,
         style: BbbText.body().copyWith(color: BbbColors.brand),
-        recognizer: TapGestureRecognizer()
-          ..onTap = () => launchUrl(
-                Uri.parse(url),
-                mode: LaunchMode.externalApplication,
-              ),
+        recognizer: _recognizer,
       ),
     );
   }

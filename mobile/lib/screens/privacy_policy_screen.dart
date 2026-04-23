@@ -1,27 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../app.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../theme/tokens.dart';
 
-const String privacyPolicyUrl = 'https://beebeebike.com/datenschutz/';
-
-class PrivacyPolicyScreen extends StatefulWidget {
+class PrivacyPolicyScreen extends ConsumerStatefulWidget {
   const PrivacyPolicyScreen({super.key});
 
   @override
-  State<PrivacyPolicyScreen> createState() => _PrivacyPolicyScreenState();
+  ConsumerState<PrivacyPolicyScreen> createState() =>
+      _PrivacyPolicyScreenState();
 }
 
-class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
+class _PrivacyPolicyScreenState extends ConsumerState<PrivacyPolicyScreen> {
   late final WebViewController _controller;
   bool _loading = true;
   String? _error;
 
+  late final String _url;
+
   @override
   void initState() {
     super.initState();
+    _url = ref.read(appConfigProvider).privacyPolicyUrl;
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(BbbColors.bg)
@@ -29,7 +33,7 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
         NavigationDelegate(
           onPageFinished: (_) => setState(() => _loading = false),
           onWebResourceError: (error) {
-            if (!error.isForMainFrame!) return;
+            if (!(error.isForMainFrame ?? true)) return;
             setState(() {
               _loading = false;
               _error = error.description;
@@ -37,12 +41,12 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(privacyPolicyUrl));
+      ..loadRequest(Uri.parse(_url));
   }
 
   Future<void> _openExternally() async {
     await launchUrl(
-      Uri.parse(privacyPolicyUrl),
+      Uri.parse(_url),
       mode: LaunchMode.externalApplication,
     );
   }

@@ -354,7 +354,7 @@ pub async fn delete_account(
         .ok_or(AppError::Unauthorized)?;
 
     if account_type != "registered" {
-        return Err(AppError::BadRequest(
+        return Err(AppError::Forbidden(
             "only registered accounts can be deleted".into(),
         ));
     }

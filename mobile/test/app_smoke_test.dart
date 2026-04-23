@@ -108,6 +108,59 @@ void main() {
     expect(authMeCallCount, equals(1),
         reason: 'authControllerProvider must be initialised on app startup');
   });
+
+  testWidgets('onboarding gate defers auth session until completion',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000'));
+    int authMeCallCount = 0;
+    int anonCallCount = 0;
+    dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        if (options.path == '/api/auth/me') {
+          authMeCallCount++;
+          handler.reject(DioException(
+            requestOptions: options,
+            response: Response(requestOptions: options, statusCode: 401),
+          ));
+        } else if (options.path == '/api/auth/anonymous') {
+          anonCallCount++;
+          handler.resolve(Response(
+            requestOptions: options,
+            statusCode: 200,
+            data: {'id': 'anon-1', 'account_type': 'anonymous', 'display_name': ''},
+          ));
+        } else {
+          handler.next(options);
+        }
+      },
+    ));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appConfigProvider.overrideWithValue(const AppConfig(
+            apiBaseUrl: 'http://localhost:3000',
+            tileServerBaseUrl: 'http://localhost:8080',
+            tileStyleUrl: 'http://localhost:8080/tiles/style.json',
+            ratingsSseEnabled: false,
+          )),
+          mapStyleProvider.overrideWith((ref) => Future.value('{}')),
+          dioProvider.overrideWithValue(dio),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: const BeeBeeBikeApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(authMeCallCount, 0,
+        reason: 'no /api/auth/me request before onboarding completes');
+    expect(anonCallCount, 0,
+        reason: 'no anonymous session created before onboarding completes');
+  });
 }
 
 class _AlwaysDoneOnboarding extends OnboardingController {

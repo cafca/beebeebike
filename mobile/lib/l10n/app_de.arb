@@ -38,6 +38,9 @@
   "settingsDeleteConfirm": "Endgültig löschen",
   "settingsDeleteSuccess": "Konto gelöscht",
   "settingsDeleteError": "Löschen fehlgeschlagen: {error}",
+  "@settingsDeleteError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
 
   "onboardingBack": "Zurück",
   "onboardingNext": "Weiter",

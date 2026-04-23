@@ -341,6 +341,38 @@ pub async fn logout(
     Ok(response)
 }
 
+pub async fn delete_account(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
+    let user_id = require_auth(&state.db, &headers).await?;
+
+    let account_type: String = sqlx::query_scalar("SELECT account_type FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
+    if account_type != "registered" {
+        return Err(AppError::BadRequest(
+            "only registered accounts can be deleted".into(),
+        ));
+    }
+
+    // ON DELETE CASCADE on sessions, rated_areas, user_locations, paint_events
+    // removes all dependent rows.
+    sqlx::query("DELETE FROM users WHERE id = $1")
+        .bind(user_id)
+        .execute(&state.db)
+        .await?;
+
+    let mut response = axum::http::StatusCode::NO_CONTENT.into_response();
+    response
+        .headers_mut()
+        .insert("Set-Cookie", clear_session_cookie());
+    Ok(response)
+}
+
 pub async fn me(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,

@@ -34,6 +34,7 @@ class SettingsScreen extends ConsumerWidget {
           _SectionDivider(),
           _LanguageSection(),
           _SectionDivider(),
+          _DangerSection(),
           _CreditsSection(),
         ],
       ),
@@ -42,15 +43,19 @@ class SettingsScreen extends ConsumerWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
+  const _SectionHeader(this.label, {this.color});
 
   final String label;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-      child: Text(label.toUpperCase(), style: BbbText.eyebrow()),
+      child: Text(
+        label.toUpperCase(),
+        style: BbbText.eyebrow().copyWith(color: color),
+      ),
     );
   }
 }
@@ -170,6 +175,110 @@ class _LanguageSection extends StatelessWidget {
         const SizedBox(height: 6),
       ],
     );
+  }
+}
+
+class _DangerSection extends ConsumerWidget {
+  const _DangerSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final user = ref.watch(authControllerProvider).valueOrNull;
+    final isRegistered = user?.accountType == 'registered';
+    if (!isRegistered) return const SizedBox.shrink();
+
+    final danger = BbbColors.rampHate;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(l10n.settingsSectionDanger, color: danger),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Material(
+            color: BbbColors.panel,
+            borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+              onTap: () => _confirmDelete(context, ref),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: BbbColors.divider),
+                  borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+                ),
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.delete_forever_outlined, color: danger),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.settingsDeleteAccount,
+                            style: BbbText.label().copyWith(color: danger),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.settingsDeleteAccountSubtitle,
+                            style: BbbText.monoSub(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const _SectionDivider(),
+      ],
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final danger = BbbColors.rampHate;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.settingsDeleteConfirmTitle),
+        content: Text(l10n.settingsDeleteConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.settingsDeleteCancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: danger),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.settingsDeleteConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      await ref.read(authControllerProvider.notifier).deleteAccount();
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.settingsDeleteSuccess)),
+      );
+      if (navigator.canPop()) navigator.pop();
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.settingsDeleteError(error.toString())),
+        ),
+      );
+    }
   }
 }
 

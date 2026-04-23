@@ -85,6 +85,95 @@ class AppLocalizationsDe extends AppLocalizations {
       'Geocoding mit Photon, gehostet von Komoot';
 
   @override
+  String get settingsSectionDanger => 'Gefahrenzone';
+
+  @override
+  String get settingsDeleteAccount => 'Konto löschen';
+
+  @override
+  String get settingsDeleteAccountSubtitle =>
+      'Entfernt Konto, Bewertungen und Standorte unwiderruflich.';
+
+  @override
+  String get settingsDeleteConfirmTitle => 'Konto wirklich löschen?';
+
+  @override
+  String get settingsDeleteConfirmBody =>
+      'Alle deine Bewertungen, Standorte und dein Konto werden unwiderruflich von unserem Server gelöscht.';
+
+  @override
+  String get settingsDeleteCancel => 'Abbrechen';
+
+  @override
+  String get settingsDeleteConfirm => 'Endgültig löschen';
+
+  @override
+  String get settingsDeleteSuccess => 'Konto gelöscht';
+
+  @override
+  String settingsDeleteError(String error) {
+    return 'Löschen fehlgeschlagen: $error';
+  }
+
+  @override
+  String get onboardingBack => 'Zurück';
+
+  @override
+  String get onboardingNext => 'Weiter';
+
+  @override
+  String get onboardingFinish => 'Los geht\'s';
+
+  @override
+  String get onboardingLogin => 'Jetzt einloggen';
+
+  @override
+  String get onboardingPrivacyLink => 'Vollständige Datenschutzerklärung';
+
+  @override
+  String get onboardingPrivacyTitle => 'Datenschutz';
+
+  @override
+  String get onboardingPrivacyOpenBrowser => 'Im Browser öffnen';
+
+  @override
+  String get onboardingPrivacyLoadError =>
+      'Datenschutzerklärung konnte nicht geladen werden.';
+
+  @override
+  String get onboarding1Headline => 'Male deine Lieblingsstrecken';
+
+  @override
+  String get onboarding1Body =>
+      'Male mit dem Pinsel auf der Karte wo du gerne Rad fährst und wo du lieber fernbleiben möchtest. beebeebike plant daraus Radrouten nach deinen Wünschen.';
+
+  @override
+  String get onboarding2Headline => 'Was wir speichern';
+
+  @override
+  String get onboarding2Bullet1 =>
+      'Deine Bewertungen, deine gespeicherten Standorte und — nur mit Konto — deine E-Mail plus Passwort-Hash liegen auf einem Hetzner-Server in Deutschland.';
+
+  @override
+  String get onboarding2Bullet2 =>
+      'Ortssuche: Deine Eingabe wird über unseren Server an den Geocoding-Dienst Photon (betrieben von der Komoot GmbH, Deutschland) weitergeleitet. Konto-Daten werden dabei nicht übertragen.';
+
+  @override
+  String get onboarding2Bullet3 =>
+      'Ohne Konto bleibst du anonym — wir setzen nur eine zufällige Sitzungs-ID.';
+
+  @override
+  String get onboarding2Bullet4 =>
+      'Du kannst dein Konto jederzeit in den Einstellungen löschen. Damit werden alle serverseitig gespeicherten Daten entfernt.';
+
+  @override
+  String get onboarding3Headline => 'Am Rechner malen, am Rad fahren';
+
+  @override
+  String get onboarding3Body =>
+      'Du kannst beebeebike sofort ohne Konto nutzen. Mit einem kostenlosen Konto kannst du auf beebeebike.com am Rechner schneller malen — deine Bewertungen landen automatisch auf dem Handy.';
+
+  @override
   String get searchHint => 'Wohin?';
 
   @override

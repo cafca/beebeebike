@@ -5,7 +5,9 @@ import 'config/app_config.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'providers/auth_provider.dart';
 import 'providers/locale_provider.dart';
+import 'providers/onboarding_provider.dart';
 import 'screens/map_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'theme/app_theme.dart';
 
 final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.fromEnvironment());
@@ -15,11 +17,6 @@ class BeeBeeBikeApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Start auth eagerly on the first frame. The anonymous session completes
-    // in the background; all user-triggered API calls (route, geocode) happen
-    // after human interaction, giving the session time to settle.
-    ref.watch(authControllerProvider);
-
     final localePref = ref.watch(localeProvider);
 
     return MaterialApp(
@@ -28,7 +25,23 @@ class BeeBeeBikeApp extends ConsumerWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       theme: buildBbbTheme(),
-      home: const MapScreen(),
+      home: const _RootGate(),
     );
+  }
+}
+
+class _RootGate extends ConsumerWidget {
+  const _RootGate();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final onboardingDone = ref.watch(onboardingCompletedProvider);
+    if (!onboardingDone) {
+      return const OnboardingScreen();
+    }
+    // Anonymous session + home location fetch happen here — only after the
+    // user has seen the data-processing disclosure on the onboarding flow.
+    ref.watch(authControllerProvider);
+    return const MapScreen();
   }
 }

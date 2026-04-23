@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Datenschutz — beebeebike</title>
+<link rel="icon" href="/favicon.svg" />
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; font-family: system-ui, -apple-system, Helvetica, Arial, sans-serif; color: #1b1b1b; background: #F7F3EC; line-height: 1.55; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { color: #2E6F66; margin-top: 0; }
+  h2 { color: #2E6F66; margin-top: 2em; }
+  a { color: #2E6F66; }
+  img.provider { display: block; max-width: 100%; height: auto; margin: 1em 0 2em; border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+  th, td { border: 1px solid #d8d2c2; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #ece6d6; }
+  nav.crumb { font-size: 13px; margin-bottom: 12px; }
+  nav.crumb a { margin-right: 12px; }
+  .meta { color: #5f5f5f; font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="crumb"><a href="/">← Zurück zur App</a> <a href="/impressum/">Impressum</a></nav>
+  <h1>Datenschutzerklärung</h1>
+  <p class="meta">Stand: 2026-04-23</p>
+
+  <h2>1. Verantwortlicher</h2>
+  <p>Verantwortlicher im Sinne der DSGVO:</p>
+  <img class="provider" src="/legal/provider.svg" alt="Verantwortlicher: Name, Anschrift und E-Mail" />
+
+  <h2>2. Überblick</h2>
+  <p>beebeebike ist ein fahrradfreundlicher Routenplaner für Berlin. Wir verarbeiten personenbezogene Daten ausschließlich, um den Dienst bereitzustellen. Es findet <strong>kein Verkauf</strong> und <strong>keine Weitergabe zu Werbezwecken</strong> statt.</p>
+  <p>Karten-Kacheln (MapLibre) und die Routing-Engine (GraphHopper) betreiben wir <strong>selbst</strong> auf einem bei der Hetzner Online GmbH (Gunzenhausen, Deutschland) gemieteten Server. Es findet <strong>keine</strong> Weiterleitung an externe Kartenanbieter (z. B. Google, Mapbox) oder externe Routing-Dienste statt.</p>
+
+  <h2>3. Verarbeitete Daten</h2>
+  <table>
+    <thead><tr><th>Datenkategorie</th><th>Zweck</th><th>Rechtsgrundlage</th><th>Speicherort</th></tr></thead>
+    <tbody>
+      <tr><td>E-Mail-Adresse und Passwort-Hash (Argon2)</td><td>Konto-Anmeldung (optional)</td><td>Art. 6 Abs. 1 lit. b DSGVO</td><td>Hetzner-Server (PostGIS) in Deutschland</td></tr>
+      <tr><td>Bewertungs-Polygone</td><td>Personalisiertes Routing</td><td>Art. 6 Abs. 1 lit. b / lit. f DSGVO</td><td>Hetzner-Server (PostGIS) in Deutschland</td></tr>
+      <tr><td>Gespeicherte Standorte (z. B. Zuhause)</td><td>Komfort-Funktion</td><td>Art. 6 Abs. 1 lit. b DSGVO</td><td>Hetzner-Server (PostGIS) in Deutschland</td></tr>
+      <tr><td>Routenanfragen (Start-/Zielkoordinaten)</td><td>Routenberechnung</td><td>Art. 6 Abs. 1 lit. b DSGVO</td><td>Nur transient im Arbeitsspeicher — keine dauerhafte Speicherung</td></tr>
+      <tr><td>Sitzungs-Cookie (zufällige UUID)</td><td>Anmeldung / Gastmodus</td><td>Art. 6 Abs. 1 lit. f DSGVO</td><td>Hetzner-Server; Ablauf nach 30 Tagen</td></tr>
+      <tr><td>Suchanfragen (Ortssuche)</td><td>Geocoding</td><td>Art. 6 Abs. 1 lit. b / lit. f DSGVO</td><td>Weiterleitung an Auftragsverarbeiter (siehe Abschnitt 5)</td></tr>
+      <tr><td>Aggregierte Seitenaufrufe + Session-Cookie (nur Web-App)</td><td>Reichweitenmessung (selbst gehostet, keine Cross-Site-Tracker, keine Wiedererkennung über Sitzungen hinweg)</td><td>Art. 6 Abs. 1 lit. f DSGVO</td><td>Hetzner-Server in Deutschland — keine Weitergabe an Dritte</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Gast-Modus</h2>
+  <p>Ohne Konto können Sie beebeebike anonym nutzen. Dabei wird lediglich eine zufällige Sitzungs-ID als Cookie gesetzt. Bewertungen, die Sie als Gast anlegen, werden serverseitig an diese Sitzungs-ID gebunden gespeichert, damit sie bei späteren Besuchen weiterverwendet werden können. Eine Zuordnung zu Ihrer Person findet nicht statt.</p>
+
+  <h2>5. Empfänger / Auftragsverarbeiter</h2>
+  <p>Folgende externe Dienstleister erhalten personenbezogene Daten in unserem Auftrag. Mit allen besteht ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO.</p>
+  <ul>
+    <li><strong>Server-Hosting:</strong> Hetzner Online GmbH, Industriestr. 25, 91710 Gunzenhausen, Deutschland. Unsere Datenbank, die Routing-Engine und die Karten-Kacheln laufen auf einem bei Hetzner gemieteten Server in einem deutschen Rechenzentrum.</li>
+    <li><strong>Geocoding (Ortssuche):</strong> Komoot GmbH, Berlin, Deutschland — betreibt den Dienst <em>Photon</em> (<code>photon.komoot.io</code>). Ihre Sucheingabe wird über unseren Server weitergeleitet; Konto-Daten werden dabei nicht übertragen.</li>
+  </ul>
+
+  <h2>6. Speicherdauer</h2>
+  <ul>
+    <li><strong>Konto-Daten:</strong> bis zur Löschung durch Sie. Ein Konto kann jederzeit in der App unter <em>Einstellungen → Konto löschen</em> entfernt werden; dabei werden alle damit verknüpften Bewertungen, Standorte und Sitzungen unwiderruflich gelöscht.</li>
+    <li><strong>Anonyme Sitzungen:</strong> 30 Tage.</li>
+    <li><strong>Routenanfragen:</strong> nicht persistiert.</li>
+    <li><strong>Server-Logfiles:</strong> maximal 14 Tage zu Sicherheits- und Stabilitätszwecken.</li>
+  </ul>
+
+  <h2>7. Ihre Rechte</h2>
+  <p>Nach Art. 15–22 DSGVO haben Sie das Recht auf:</p>
+  <ul>
+    <li><strong>Auskunft</strong> (Art. 15)</li>
+    <li><strong>Berichtigung</strong> (Art. 16)</li>
+    <li><strong>Löschung / „Recht auf Vergessenwerden“</strong> (Art. 17) — vollständig per App-Funktion oder auf Anfrage</li>
+    <li><strong>Einschränkung der Verarbeitung</strong> (Art. 18)</li>
+    <li><strong>Datenübertragbarkeit</strong> (Art. 20) — auf Anfrage per E-Mail</li>
+    <li><strong>Widerspruch</strong> (Art. 21)</li>
+  </ul>
+  <p>Wenden Sie sich dafür an die im <a href="/impressum/">Impressum</a> genannte Kontaktadresse.</p>
+
+  <h2>8. Beschwerderecht</h2>
+  <p>Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren. Zuständig ist die Behörde am Ort des Verantwortlichen (siehe Abschnitt 1 und Impressum).</p>
+
+  <h2>9. Keine automatisierte Entscheidungsfindung</h2>
+  <p>Es findet keine automatisierte Entscheidungsfindung einschließlich Profiling im Sinne von Art. 22 DSGVO statt.</p>
+
+  <h2>10. Änderungen</h2>
+  <p>Wir passen diese Erklärung an, wenn sich technische Gegebenheiten oder die Rechtslage ändern. Maßgeblich ist die jeweils unter <code>beebeebike.com/datenschutz</code> veröffentlichte Fassung.</p>
+</main>
+</body>
+</html>

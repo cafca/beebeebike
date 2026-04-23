@@ -4,13 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:beebeebike/app.dart';
 import 'package:beebeebike/api/client.dart';
 import 'package:beebeebike/config/app_config.dart';
+import 'package:beebeebike/providers/onboarding_provider.dart';
 import 'package:beebeebike/providers/search_history_provider.dart';
 import 'package:beebeebike/services/map_style_loader.dart';
 import 'package:dio/dio.dart';
 
 void main() {
   testWidgets('boots to the map screen shell', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding.completed.v1': true});
     final prefs = await SharedPreferences.getInstance();
 
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000'));
@@ -47,6 +48,8 @@ void main() {
           mapStyleProvider.overrideWith((ref) => Future.value('{}')),
           dioProvider.overrideWithValue(dio),
           sharedPreferencesProvider.overrideWithValue(prefs),
+          onboardingCompletedProvider
+              .overrideWith(() => _AlwaysDoneOnboarding()),
         ],
         child: const BeeBeeBikeApp(),
       ),
@@ -57,7 +60,7 @@ void main() {
   });
 
   testWidgets('auth provider begins initialising on startup', (tester) async {
-    SharedPreferences.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({'onboarding.completed.v1': true});
     final prefs = await SharedPreferences.getInstance();
 
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000'));
@@ -94,6 +97,8 @@ void main() {
           mapStyleProvider.overrideWith((ref) => Future.value('{}')),
           dioProvider.overrideWithValue(dio),
           sharedPreferencesProvider.overrideWithValue(prefs),
+          onboardingCompletedProvider
+              .overrideWith(() => _AlwaysDoneOnboarding()),
         ],
         child: const BeeBeeBikeApp(),
       ),
@@ -103,4 +108,9 @@ void main() {
     expect(authMeCallCount, equals(1),
         reason: 'authControllerProvider must be initialised on app startup');
   });
+}
+
+class _AlwaysDoneOnboarding extends OnboardingController {
+  @override
+  bool build() => true;
 }

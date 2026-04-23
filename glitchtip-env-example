@@ -1,0 +1,11 @@
+SECRET_KEY=change-me-to-a-long-random-string
+POSTGRES_PASSWORD=change-me
+
+GLITCHTIP_DOMAIN=https://glitchtip.beebeebike.com
+DEFAULT_FROM_EMAIL=glitchtip@beebeebike.com
+
+# SMTP — or use consolemail:// to log to stdout (dev/test only)
+EMAIL_URL=smtp://user:password@smtp.example.com:587
+
+# Host port for nginx to proxy (default 3849)
+PORT=3849

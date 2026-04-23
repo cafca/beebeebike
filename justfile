@@ -157,6 +157,15 @@ release-ios-device DEVICE:
       --dart-define=BEEBEEBIKE_API_BASE_URL={{IOS_DEVICE_API}} \
       --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL={{IOS_DEVICE_TILES}}
 
+# Build a release archive for TestFlight. When done, open Xcode → Window → Organizer,
+# select the archive, and click Distribute App → TestFlight & App Store → Upload.
+[group('build')]
+ios-archive:
+    cd mobile && flutter build ipa --release \
+      --dart-define=BEEBEEBIKE_API_BASE_URL=https://beebeebike.com \
+      --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL=https://beebeebike.com/tiles \
+      --dart-define=BEEBEEBIKE_GLITCHTIP_DSN=${BEEBEEBIKE_GLITCHTIP_DSN:-}
+
 # ---------- clean ----------
 
 [group('clean')]

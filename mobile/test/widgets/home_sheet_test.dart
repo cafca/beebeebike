@@ -107,7 +107,7 @@ void main() {
     expect(container.read(routeControllerProvider).destination, isNull);
 
     // Expand the sheet so the recent row is inside the hit-test viewport.
-    controller.jumpTo(0.92);
+    controller.jumpTo(0.46);
     await tester.pump();
 
     await tester.tap(find.text('Alexanderplatz'));

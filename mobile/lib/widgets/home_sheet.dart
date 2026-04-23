@@ -12,9 +12,9 @@ import '../theme/typography.dart';
 import 'paint_roller_icon.dart';
 import 'saved_item.dart';
 
-/// Landing-state bottom sheet. Three snap points (~44 / 66 / 92 % screen).
-/// Contents: grabber, Go Home + Paint FAB row, SAVED list, caveats/how-to.
-/// Paint FAB is visually present but disabled in this build.
+/// Landing-state bottom sheet. Two snap points: peek (~16 %) and a mid
+/// stop sized to fit the Go Home row + three recent items. Paint FAB is
+/// visually present but disabled in this build.
 class HomeSheet extends ConsumerStatefulWidget {
   const HomeSheet({
     super.key,
@@ -31,8 +31,7 @@ class HomeSheet extends ConsumerStatefulWidget {
 
 class _HomeSheetState extends ConsumerState<HomeSheet> {
   static const double _peek = 0.16;
-  static const double _s1 = 0.66;
-  static const double _s2 = 0.92;
+  static const double _mid = 0.46;
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +39,9 @@ class _HomeSheetState extends ConsumerState<HomeSheet> {
       controller: widget.sheetController,
       initialChildSize: _peek,
       minChildSize: _peek,
-      maxChildSize: _s2,
+      maxChildSize: _mid,
       snap: true,
-      snapSizes: const [_peek, _s1, _s2],
+      snapSizes: const [_peek, _mid],
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(

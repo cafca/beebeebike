@@ -80,6 +80,14 @@
   </div>
 
   <div class="credits">
+    <p>Legal</p>
+    <div class="credit-links">
+      <a href="/impressum/" target="_blank" rel="noreferrer">Impressum</a>
+      <a href="/datenschutz/" target="_blank" rel="noreferrer">Datenschutz</a>
+    </div>
+  </div>
+
+  <div class="credits">
     <p>Built with</p>
     <div class="credit-links">
       <a href="https://www.openstreetmap.org/" target="_blank" rel="noreferrer">OpenStreetMap</a>

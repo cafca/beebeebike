@@ -34,4 +34,8 @@ class AuthApi {
   Future<void> logout() async {
     await _dio.post('/api/auth/logout');
   }
+
+  Future<void> deleteAccount() async {
+    await _dio.delete('/api/auth/account');
+  }
 }

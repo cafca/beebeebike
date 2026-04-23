@@ -248,6 +248,180 @@ abstract class AppLocalizations {
   /// **'Geocoding by Photon, hosted by Komoot'**
   String get settingsCreditPhoton;
 
+  /// No description provided for @settingsSectionLegal.
+  ///
+  /// In en, this message translates to:
+  /// **'Legal'**
+  String get settingsSectionLegal;
+
+  /// No description provided for @settingsLegalPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get settingsLegalPrivacy;
+
+  /// No description provided for @settingsLegalImprint.
+  ///
+  /// In en, this message translates to:
+  /// **'Imprint'**
+  String get settingsLegalImprint;
+
+  /// No description provided for @settingsSectionDanger.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger zone'**
+  String get settingsSectionDanger;
+
+  /// No description provided for @settingsDeleteAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get settingsDeleteAccount;
+
+  /// No description provided for @settingsDeleteAccountSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently removes your account, ratings and locations.'**
+  String get settingsDeleteAccountSubtitle;
+
+  /// No description provided for @settingsDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account?'**
+  String get settingsDeleteConfirmTitle;
+
+  /// No description provided for @settingsDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'All of your ratings, locations and your account will be permanently deleted from our server.'**
+  String get settingsDeleteConfirmBody;
+
+  /// No description provided for @settingsDeleteCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get settingsDeleteCancel;
+
+  /// No description provided for @settingsDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete forever'**
+  String get settingsDeleteConfirm;
+
+  /// No description provided for @settingsDeleteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deleted'**
+  String get settingsDeleteSuccess;
+
+  /// No description provided for @settingsDeleteError.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete failed: {error}'**
+  String settingsDeleteError(String error);
+
+  /// No description provided for @onboardingBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get onboardingBack;
+
+  /// No description provided for @onboardingNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onboardingNext;
+
+  /// No description provided for @onboardingFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s go'**
+  String get onboardingFinish;
+
+  /// No description provided for @onboardingLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get onboardingLogin;
+
+  /// No description provided for @onboardingPrivacyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Full privacy policy'**
+  String get onboardingPrivacyLink;
+
+  /// No description provided for @onboardingPrivacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy'**
+  String get onboardingPrivacyTitle;
+
+  /// No description provided for @onboardingPrivacyOpenBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in browser'**
+  String get onboardingPrivacyOpenBrowser;
+
+  /// No description provided for @onboardingPrivacyLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load the privacy policy.'**
+  String get onboardingPrivacyLoadError;
+
+  /// No description provided for @onboarding1Headline.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint your favourite routes'**
+  String get onboarding1Headline;
+
+  /// No description provided for @onboarding1Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint on the map where you like to ride and where you\'d rather avoid. beebeebike turns that into bike routes that match your taste.'**
+  String get onboarding1Body;
+
+  /// No description provided for @onboarding2Headline.
+  ///
+  /// In en, this message translates to:
+  /// **'What we store'**
+  String get onboarding2Headline;
+
+  /// No description provided for @onboarding2Bullet1.
+  ///
+  /// In en, this message translates to:
+  /// **'Your ratings, saved places and — only with an account — your email plus a password hash live on a Hetzner server in Germany.'**
+  String get onboarding2Bullet1;
+
+  /// No description provided for @onboarding2Bullet2.
+  ///
+  /// In en, this message translates to:
+  /// **'Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). No account data is sent along.'**
+  String get onboarding2Bullet2;
+
+  /// No description provided for @onboarding2Bullet3.
+  ///
+  /// In en, this message translates to:
+  /// **'Without an account you stay anonymous — we only set a random session ID.'**
+  String get onboarding2Bullet3;
+
+  /// No description provided for @onboarding2Bullet4.
+  ///
+  /// In en, this message translates to:
+  /// **'You can delete your account anytime in Settings. All server-side data is removed with it.'**
+  String get onboarding2Bullet4;
+
+  /// No description provided for @onboarding3Headline.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint on the desktop, ride with your phone'**
+  String get onboarding3Headline;
+
+  /// No description provided for @onboarding3Body.
+  ///
+  /// In en, this message translates to:
+  /// **'You can use beebeebike right away without an account. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.'**
+  String get onboarding3Body;
+
   /// No description provided for @searchHint.
   ///
   /// In en, this message translates to:

@@ -405,6 +405,102 @@ async fn login_nonexistent_user() {
 }
 
 // ---------------------------------------------------------------------------
+// Auth: delete account
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn delete_account_removes_user_and_ratings() {
+    let Some((server, db)) = setup_with_db().await else {
+        return;
+    };
+
+    let email = unique_email("delete");
+    let resp = server
+        .post("/api/auth/register")
+        .json(&json!({
+            "email": email,
+            "password": "password123"
+        }))
+        .await;
+    resp.assert_status_ok();
+    let user_id: Uuid = Uuid::parse_str(resp.json::<Value>()["id"].as_str().unwrap()).unwrap();
+    let session = extract_session_cookie(&resp);
+
+    // Paint a rating so there is dependent data to cascade.
+    let polygon = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.4, 52.5], [13.41, 52.5], [13.41, 52.51], [13.4, 52.51], [13.4, 52.5]]]
+    });
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": polygon, "value": 3 }))
+        .await
+        .assert_status_ok();
+
+    // Delete account.
+    let (hname, hval) = with_session(&session);
+    let resp = server
+        .delete("/api/auth/account")
+        .add_header(hname, hval)
+        .await;
+    resp.assert_status(StatusCode::NO_CONTENT);
+
+    // User row gone.
+    let users: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+    assert_eq!(users, 0);
+
+    // Cascade: rated_areas + sessions gone too.
+    let ratings: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM rated_areas WHERE user_id = $1")
+        .bind(user_id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+    assert_eq!(ratings, 0);
+    let sessions: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sessions WHERE user_id = $1")
+        .bind(user_id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+    assert_eq!(sessions, 0);
+
+    // Session cookie is now invalid.
+    let (hname, hval) = with_session(&session);
+    let resp = server.get("/api/auth/me").add_header(hname, hval).await;
+    resp.assert_status(StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn delete_account_rejects_anonymous() {
+    let Some(server) = setup().await else {
+        return;
+    };
+
+    let session = create_anonymous(&server).await;
+    let (hname, hval) = with_session(&session);
+    let resp = server
+        .delete("/api/auth/account")
+        .add_header(hname, hval)
+        .await;
+    resp.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn delete_account_requires_auth() {
+    let Some(server) = setup().await else {
+        return;
+    };
+
+    let resp = server.delete("/api/auth/account").await;
+    resp.assert_status(StatusCode::UNAUTHORIZED);
+}
+
+// ---------------------------------------------------------------------------
 // Auth: me endpoint
 // ---------------------------------------------------------------------------
 

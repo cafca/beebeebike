@@ -84,6 +84,104 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCreditPhoton => 'Geocoding by Photon, hosted by Komoot';
 
   @override
+  String get settingsSectionLegal => 'Legal';
+
+  @override
+  String get settingsLegalPrivacy => 'Privacy policy';
+
+  @override
+  String get settingsLegalImprint => 'Imprint';
+
+  @override
+  String get settingsSectionDanger => 'Danger zone';
+
+  @override
+  String get settingsDeleteAccount => 'Delete account';
+
+  @override
+  String get settingsDeleteAccountSubtitle =>
+      'Permanently removes your account, ratings and locations.';
+
+  @override
+  String get settingsDeleteConfirmTitle => 'Delete account?';
+
+  @override
+  String get settingsDeleteConfirmBody =>
+      'All of your ratings, locations and your account will be permanently deleted from our server.';
+
+  @override
+  String get settingsDeleteCancel => 'Cancel';
+
+  @override
+  String get settingsDeleteConfirm => 'Delete forever';
+
+  @override
+  String get settingsDeleteSuccess => 'Account deleted';
+
+  @override
+  String settingsDeleteError(String error) {
+    return 'Delete failed: $error';
+  }
+
+  @override
+  String get onboardingBack => 'Back';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get onboardingFinish => 'Let\'s go';
+
+  @override
+  String get onboardingLogin => 'Sign in';
+
+  @override
+  String get onboardingPrivacyLink => 'Full privacy policy';
+
+  @override
+  String get onboardingPrivacyTitle => 'Privacy';
+
+  @override
+  String get onboardingPrivacyOpenBrowser => 'Open in browser';
+
+  @override
+  String get onboardingPrivacyLoadError => 'Could not load the privacy policy.';
+
+  @override
+  String get onboarding1Headline => 'Paint your favourite routes';
+
+  @override
+  String get onboarding1Body =>
+      'Paint on the map where you like to ride and where you\'d rather avoid. beebeebike turns that into bike routes that match your taste.';
+
+  @override
+  String get onboarding2Headline => 'What we store';
+
+  @override
+  String get onboarding2Bullet1 =>
+      'Your ratings, saved places and — only with an account — your email plus a password hash live on a Hetzner server in Germany.';
+
+  @override
+  String get onboarding2Bullet2 =>
+      'Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). No account data is sent along.';
+
+  @override
+  String get onboarding2Bullet3 =>
+      'Without an account you stay anonymous — we only set a random session ID.';
+
+  @override
+  String get onboarding2Bullet4 =>
+      'You can delete your account anytime in Settings. All server-side data is removed with it.';
+
+  @override
+  String get onboarding3Headline =>
+      'Paint on the desktop, ride with your phone';
+
+  @override
+  String get onboarding3Body =>
+      'You can use beebeebike right away without an account. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.';
+
+  @override
   String get searchHint => 'Where to?';
 
   @override

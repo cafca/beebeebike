@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../app.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/location_provider.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
 import '../widgets/language_picker.dart';
+import 'legal_document_screen.dart';
 import 'login_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -34,6 +36,9 @@ class SettingsScreen extends ConsumerWidget {
           _SectionDivider(),
           _LanguageSection(),
           _SectionDivider(),
+          _LegalSection(),
+          _SectionDivider(),
+          _DangerSection(),
           _CreditsSection(),
         ],
       ),
@@ -42,15 +47,19 @@ class SettingsScreen extends ConsumerWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.label);
+  const _SectionHeader(this.label, {this.color});
 
   final String label;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-      child: Text(label.toUpperCase(), style: BbbText.eyebrow()),
+      child: Text(
+        label.toUpperCase(),
+        style: BbbText.eyebrow().copyWith(color: color),
+      ),
     );
   }
 }
@@ -173,6 +182,177 @@ class _LanguageSection extends StatelessWidget {
   }
 }
 
+class _LegalSection extends ConsumerWidget {
+  const _LegalSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final config = ref.watch(appConfigProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(l10n.settingsSectionLegal),
+        _LegalTile(
+          label: l10n.settingsLegalPrivacy,
+          icon: Icons.shield_outlined,
+          title: l10n.onboardingPrivacyTitle,
+          url: config.privacyPolicyUrl,
+        ),
+        _LegalTile(
+          label: l10n.settingsLegalImprint,
+          icon: Icons.description_outlined,
+          title: l10n.settingsLegalImprint,
+          url: config.imprintUrl,
+        ),
+        const SizedBox(height: 6),
+      ],
+    );
+  }
+}
+
+class _LegalTile extends StatelessWidget {
+  const _LegalTile({
+    required this.label,
+    required this.icon,
+    required this.title,
+    required this.url,
+  });
+
+  final String label;
+  final IconData icon;
+  final String title;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => LegalDocumentScreen(title: title, url: url),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: BbbColors.inkMuted),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label, style: BbbText.cardTitle()),
+            ),
+            const Icon(Icons.chevron_right, color: BbbColors.inkFaint),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DangerSection extends ConsumerWidget {
+  const _DangerSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final user = ref.watch(authControllerProvider).valueOrNull;
+    final isRegistered = user?.accountType == 'registered';
+    if (!isRegistered) return const SizedBox.shrink();
+
+    final danger = BbbColors.rampHate;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(l10n.settingsSectionDanger, color: danger),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Material(
+            color: BbbColors.panel,
+            borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+              onTap: () => _confirmDelete(context, ref),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: BbbColors.divider),
+                  borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+                ),
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.delete_forever_outlined, color: danger),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.settingsDeleteAccount,
+                            style: BbbText.label().copyWith(color: danger),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            l10n.settingsDeleteAccountSubtitle,
+                            style: BbbText.monoSub(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const _SectionDivider(),
+      ],
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final danger = BbbColors.rampHate;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.settingsDeleteConfirmTitle),
+        content: Text(l10n.settingsDeleteConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.settingsDeleteCancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: danger),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.settingsDeleteConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      await ref.read(authControllerProvider.notifier).deleteAccount();
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.settingsDeleteSuccess)),
+      );
+      if (navigator.canPop()) navigator.pop();
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.settingsDeleteError(error.toString())),
+        ),
+      );
+    }
+  }
+}
+
 class _CreditsSection extends StatelessWidget {
   const _CreditsSection();
 
@@ -225,23 +405,42 @@ class _CreditsList extends StatelessWidget {
   }
 }
 
-class _CreditLink extends StatelessWidget {
+class _CreditLink extends StatefulWidget {
   const _CreditLink({required this.label, required this.url});
 
   final String label;
   final String url;
 
   @override
+  State<_CreditLink> createState() => _CreditLinkState();
+}
+
+class _CreditLinkState extends State<_CreditLink> {
+  late final TapGestureRecognizer _recognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _recognizer = TapGestureRecognizer()
+      ..onTap = () => launchUrl(
+            Uri.parse(widget.url),
+            mode: LaunchMode.externalApplication,
+          );
+  }
+
+  @override
+  void dispose() {
+    _recognizer.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Text.rich(
       TextSpan(
-        text: label,
+        text: widget.label,
         style: BbbText.body().copyWith(color: BbbColors.brand),
-        recognizer: TapGestureRecognizer()
-          ..onTap = () => launchUrl(
-                Uri.parse(url),
-                mode: LaunchMode.externalApplication,
-              ),
+        recognizer: _recognizer,
       ),
     );
   }

@@ -8,7 +8,7 @@ pub mod ratings_events;
 pub mod routing;
 
 use axum::{
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Router,
 };
 use std::sync::Arc;
@@ -36,6 +36,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/api/auth/anonymous", post(auth::anonymous))
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/logout", post(auth::logout))
+        .route("/api/auth/account", delete(auth::delete_account))
         .route("/api/auth/me", get(auth::me))
         .route(
             "/api/locations/home",

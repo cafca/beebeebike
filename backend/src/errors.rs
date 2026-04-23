@@ -7,6 +7,7 @@ pub enum AppError {
     Internal(String),
     BadRequest(String),
     Unauthorized,
+    Forbidden(String),
     NotFound,
 }
 
@@ -22,6 +23,7 @@ impl IntoResponse for AppError {
             }
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized".to_string()),
+            AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
             AppError::NotFound => (StatusCode::NOT_FOUND, "not found".to_string()),
         };
         (status, serde_json::json!({ "error": message }).to_string()).into_response()
@@ -49,6 +51,12 @@ mod tests {
     fn unauthorized_returns_401() {
         let resp = AppError::Unauthorized.into_response();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[test]
+    fn forbidden_returns_403() {
+        let resp = AppError::Forbidden("no".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
     }
 
     #[test]

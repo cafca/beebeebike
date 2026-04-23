@@ -40,4 +40,9 @@ class AuthController extends AsyncNotifier<User?> {
     await ref.read(authApiProvider).logout();
     state = await AsyncValue.guard(() => ref.read(authApiProvider).anonymous());
   }
+
+  Future<void> deleteAccount() async {
+    await ref.read(authApiProvider).deleteAccount();
+    state = await AsyncValue.guard(() => ref.read(authApiProvider).anonymous());
+  }
 }

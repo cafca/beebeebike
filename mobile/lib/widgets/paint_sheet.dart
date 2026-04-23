@@ -26,52 +26,55 @@ class PaintSheet extends ConsumerWidget {
     final notifier = ref.read(brushControllerProvider.notifier);
     final mq = MediaQuery.of(context);
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: BbbColors.panel,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
-        boxShadow: BbbShadow.panel,
-      ),
-      padding: EdgeInsets.fromLTRB(16, 12, 16, mq.padding.bottom + 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: BbbColors.grabber,
-              borderRadius: BorderRadius.circular(2),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: BbbColors.panel,
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
+          boxShadow: BbbShadow.panel,
+        ),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, mq.padding.bottom + 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: BbbColors.grabber,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          Row(
-            children: [
-              _PaintToggle(
-                active: state.paintMode,
-                onPressed: notifier.togglePaintMode,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    for (final v in _values)
-                      KeyedSubtree(
-                        key: ValueKey('paint-chip-$v'),
-                        child: _ColorChip(
-                          value: v,
-                          selected: state.value == v,
-                          onTap: () => notifier.setValue(v),
-                        ),
-                      ),
-                  ],
+            Row(
+              children: [
+                _PaintToggle(
+                  active: state.paintMode,
+                  onPressed: notifier.togglePaintMode,
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      for (final v in _values)
+                        KeyedSubtree(
+                          key: ValueKey('paint-chip-$v'),
+                          child: _ColorChip(
+                            value: v,
+                            selected: state.value == v,
+                            onTap: () => notifier.setValue(v),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

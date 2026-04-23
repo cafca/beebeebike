@@ -7,6 +7,7 @@ import '../models/location.dart';
 import '../providers/auth_provider.dart';
 import '../providers/home_eta_provider.dart';
 import '../providers/location_provider.dart';
+import '../providers/brush_provider.dart';
 import '../providers/route_provider.dart';
 import '../providers/search_history_provider.dart';
 import '../screens/login_screen.dart';
@@ -122,7 +123,7 @@ class _GoHomeRow extends ConsumerWidget {
               : const _LogInButton(),
         ),
         const SizedBox(width: 10),
-        const _PaintFab(enabled: false),
+        const _PaintFab(),
       ],
     );
   }
@@ -264,28 +265,41 @@ class _GoHomeButton extends StatelessWidget {
   }
 }
 
-class _PaintFab extends StatelessWidget {
-  const _PaintFab({required this.enabled});
-
-  final bool enabled;
+class _PaintFab extends ConsumerWidget {
+  const _PaintFab();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final active = ref.watch(
+      brushControllerProvider.select((s) => s.paintMode),
+    );
+    final label = active ? l10n.paintExit : l10n.paintEnter;
     return Tooltip(
-      message: enabled ? 'Paint mode' : 'Paint mode (coming soon)',
-      child: Opacity(
-        opacity: enabled ? 1 : 0.55,
-        child: Container(
+      message: label,
+      child: Semantics(
+        button: true,
+        toggled: active,
+        label: label,
+        child: SizedBox(
           width: 52,
           height: 52,
-          decoration: BoxDecoration(
-            color: BbbColors.panel,
-            borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-            border: Border.all(color: BbbColors.divider, width: 1),
-            boxShadow: BbbShadow.sm,
-          ),
-          child: const Center(
-            child: PaintRollerIcon(size: 24),
+          child: Material(
+            key: const ValueKey('paint-fab'),
+            color: active ? BbbColors.brand : BbbColors.panel,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(
+                color: active ? BbbColors.brand : BbbColors.divider,
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+            ),
+            child: InkWell(
+              onTap: () =>
+                  ref.read(brushControllerProvider.notifier).togglePaintMode(),
+              borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+              child: const Center(child: PaintRollerIcon(size: 24)),
+            ),
           ),
         ),
       ),

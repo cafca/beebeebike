@@ -60,6 +60,11 @@
   "arrivedTitle": "Arrived",
   "arrivedDone": "Done",
 
+  "mapResetNorth": "Reset to north",
+  "mapInfoTooltip": "Map info",
+  "mapAttributionTitle": "Map data",
+  "mapAttributionOsm": "© OpenStreetMap contributors",
+
   "homeCaveatsTitle": "Caveats",
   "homeCaveatsBefore": "You can't edit your painted areas yet in the mobile app. Do that on ",
   "homeCaveatsAfter": ", then zoom out a lot and back in to load updates in the app.",

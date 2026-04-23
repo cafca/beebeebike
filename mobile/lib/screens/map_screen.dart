@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/tokens.dart';
 
@@ -57,6 +58,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _ttsEnabled = true;
   bool _rerouting = false;
   bool _browseAutocentered = false;
+  double _bearing = 0;
 
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
@@ -333,6 +335,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
+  Future<void> _resetBearingToNorth() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    await controller.animateCamera(CameraUpdate.bearingTo(0));
+  }
+
   Future<void> _handleRecenterTap() async {
     final controller = _mapController;
     if (controller == null) return;
@@ -470,6 +478,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               myLocationEnabled: true,
               myLocationTrackingMode: MyLocationTrackingMode.none,
               trackCameraPosition: true,
+              // Hide built-in compass + attribution chrome; we render our own
+              // (see _CompassButton / _MapInfoButton) so placement fits our
+              // sheet stack and styling.
+              compassEnabled: false,
+              attributionButtonMargins: const math.Point(-1000, -1000),
               // EagerGestureRecognizer: map claims all pointer events so pinch,
               // rotate and pan work when wrapped in a Scaffold/MaterialApp
               // that otherwise wins the gesture arena on iOS.
@@ -513,6 +526,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       .read(navigationCameraControllerProvider)
                       .onZoomChanged(zoom);
                 }
+                final bearing = c.cameraPosition?.bearing ?? 0;
+                if ((bearing - _bearing).abs() > 0.1) {
+                  setState(() => _bearing = bearing);
+                }
                 ref
                     .read(ratingOverlayControllerProvider.notifier)
                     .onCameraIdle();
@@ -533,6 +550,34 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               onToggleTts: () => setState(() => _ttsEnabled = !_ttsEnabled),
               onRecenter: _handleRecenterTap,
             ),
+          // Custom top-right stack replacing MapLibre's built-in compass +
+          // attribution chrome. Compass only surfaces when the map is
+          // actually rotated; info button is always tappable.
+          Align(
+            alignment: Alignment.topRight,
+            child: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: navActive ? 96 : 90,
+                  right: 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (_bearing.abs() > 0.5) ...[
+                      _CompassButton(
+                        bearing: _bearing,
+                        onTap: _resetBearingToNorth,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    const _MapInfoButton(),
+                  ],
+                ),
+              ),
+            ),
+          ),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             transitionBuilder: (child, animation) => SlideTransition(
@@ -698,6 +743,135 @@ class _RecenterCircleFabState extends State<_RecenterCircleFab>
       ),
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Compass + attribution — replace MapLibre's built-in chrome.
+// ---------------------------------------------------------------------------
+
+class _CompassButton extends StatelessWidget {
+  const _CompassButton({required this.bearing, required this.onTap});
+
+  final double bearing;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Tooltip(
+      message: l10n.mapResetNorth,
+      child: Material(
+        shape: const CircleBorder(),
+        color: BbbColors.panel,
+        elevation: 0,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: BbbColors.panel,
+              shape: BoxShape.circle,
+              boxShadow: BbbShadow.sm,
+            ),
+            child: Transform.rotate(
+              angle: -bearing * math.pi / 180,
+              child: const Icon(
+                Icons.navigation,
+                size: 18,
+                color: BbbColors.ink,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MapInfoButton extends StatelessWidget {
+  const _MapInfoButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Tooltip(
+      message: l10n.mapInfoTooltip,
+      child: Material(
+        shape: const CircleBorder(),
+        color: BbbColors.panel,
+        elevation: 0,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => _showMapAttribution(context),
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: const BoxDecoration(
+              color: BbbColors.panel,
+              shape: BoxShape.circle,
+              boxShadow: BbbShadow.sm,
+            ),
+            child: const Icon(
+              Icons.info_outline,
+              size: 16,
+              color: BbbColors.inkMuted,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showMapAttribution(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: BbbColors.panel,
+    shape: const RoundedRectangleBorder(
+      borderRadius:
+          BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.mapAttributionTitle,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: BbbColors.ink,
+              ),
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () => launchUrl(
+                Uri.parse('https://www.openstreetmap.org/copyright'),
+                mode: LaunchMode.externalApplication,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  l10n.mapAttributionOsm,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: BbbColors.brand,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------

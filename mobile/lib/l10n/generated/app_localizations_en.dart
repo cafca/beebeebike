@@ -126,6 +126,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arrivedDone => 'Done';
 
   @override
+  String get mapResetNorth => 'Reset to north';
+
+  @override
+  String get mapInfoTooltip => 'Map info';
+
+  @override
+  String get mapAttributionTitle => 'Map data';
+
+  @override
+  String get mapAttributionOsm => '© OpenStreetMap contributors';
+
+  @override
   String get homeCaveatsTitle => 'Caveats';
 
   @override

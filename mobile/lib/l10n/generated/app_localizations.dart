@@ -320,6 +320,30 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get arrivedDone;
 
+  /// No description provided for @mapResetNorth.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to north'**
+  String get mapResetNorth;
+
+  /// No description provided for @mapInfoTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Map info'**
+  String get mapInfoTooltip;
+
+  /// No description provided for @mapAttributionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Map data'**
+  String get mapAttributionTitle;
+
+  /// No description provided for @mapAttributionOsm.
+  ///
+  /// In en, this message translates to:
+  /// **'© OpenStreetMap contributors'**
+  String get mapAttributionOsm;
+
   /// No description provided for @homeCaveatsTitle.
   ///
   /// In en, this message translates to:

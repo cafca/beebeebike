@@ -27,15 +27,23 @@ class BrushOverlay implements BrushOverlaySurface {
     3: '#1abc9c',
     7: '#0e6655',
   };
+  static const String _fallbackColor = '#6b7280';
 
-  static String colorFor(int value) => _colors[value] ?? '#6b7280';
+  /// Get the hex color for a given rating value, or the fallback gray if not found.
+  static String colorFor(int value) => _colors[value] ?? _fallbackColor;
 
   final MapLibreMapController _controller;
   bool _attached = false;
+  String? _lastColorHex;
 
   @override
   bool get isAttached => _attached;
 
+  /// Create and attach the brush preview source and fill layer to the current style.
+  ///
+  /// [belowLayerId] allows layering the brush preview below other overlays.
+  /// Pass `null` to add at the top of the style. Returns an attached overlay
+  /// ready to receive geometry updates via [setPreview].
   static Future<BrushOverlay> attach(
     MapLibreMapController controller, {
     String? belowLayerId,
@@ -50,7 +58,7 @@ class BrushOverlay implements BrushOverlaySurface {
       sourceId,
       fillLayerId,
       const FillLayerProperties(
-        fillColor: '#60a5fa',
+        fillColor: _fallbackColor,
         fillOpacity: 0.3,
       ),
       belowLayerId: belowLayerId,
@@ -60,6 +68,11 @@ class BrushOverlay implements BrushOverlaySurface {
     return overlay;
   }
 
+  /// Update the preview geometry and color, caching the color to avoid redundant layer updates.
+  ///
+  /// Since [setPreview] is called on every pointer-move event, the geometry always
+  /// changes but the color usually stays the same within a stroke. This method skips
+  /// [setLayerProperties] calls when the color hex hasn't changed.
   @override
   Future<void> setPreview(
     Map<String, dynamic> geometry,
@@ -72,12 +85,18 @@ class BrushOverlay implements BrushOverlaySurface {
         {'type': 'Feature', 'properties': {}, 'geometry': geometry},
       ],
     });
-    await _controller.setLayerProperties(
-      fillLayerId,
-      FillLayerProperties(fillColor: colorHex, fillOpacity: 0.3),
-    );
+    if (colorHex != _lastColorHex) {
+      await _controller.setLayerProperties(
+        fillLayerId,
+        FillLayerProperties(fillColor: colorHex, fillOpacity: 0.3),
+      );
+      _lastColorHex = colorHex;
+    }
   }
 
+  /// Clear all rendered geometry without removing the source or layer.
+  ///
+  /// The preview will be hidden until the next [setPreview] call.
   @override
   Future<void> clear() async {
     if (!_attached) return;
@@ -87,6 +106,9 @@ class BrushOverlay implements BrushOverlaySurface {
     });
   }
 
+  /// Remove the fill layer and source from the style. Safe to call multiple times.
+  ///
+  /// This should be called during screen disposal to clean up all resources.
   @override
   Future<void> detach() async {
     if (!_attached) return;

@@ -288,6 +288,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (controller != null) {
       await controller
           .updateMyLocationTrackingMode(MyLocationTrackingMode.none);
+      // Reorient to north — trackingCompass may have rotated the map during
+      // navigation, and browse mode should always face north-up.
+      await controller.animateCamera(CameraUpdate.bearingTo(0));
     }
     if (!mounted) return;
     setState(() {

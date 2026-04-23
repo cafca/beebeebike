@@ -8,6 +8,8 @@ pub mod ratings_events;
 pub mod routing;
 
 use axum::{
+    http::header,
+    response::IntoResponse,
     routing::{delete, get, post, put},
     Router,
 };
@@ -50,7 +52,11 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/api/ratings/redo", post(ratings::redo))
         .route("/api/route", post(routing::get_route))
         .route("/api/navigate", post(routing::get_navigation_route))
-        .route("/api/geocode", get(geocode::geocode));
+        .route("/api/geocode", get(geocode::geocode))
+        .route(
+            "/.well-known/apple-app-site-association",
+            get(apple_app_site_association),
+        );
     // Only register the SSE route when the feature is on. A disabled server
     // then returns the same 404 for this path as for any unknown URL, and
     // the mobile client uses that as its signal to stop retrying.
@@ -68,4 +74,12 @@ pub fn build_router(state: Arc<AppState>) -> Router {
                 .allow_headers(Any),
         )
         .with_state(state)
+}
+
+// Apple fetches this file anonymously over HTTPS; content-type must be
+// application/json and the path has no extension, so we serve it as a
+// dedicated route rather than through ServeDir.
+async fn apple_app_site_association() -> impl IntoResponse {
+    const BODY: &str = r#"{"webcredentials":{"apps":["37FTP2QTRQ.com.beebeebike.app"]}}"#;
+    ([(header::CONTENT_TYPE, "application/json")], BODY)
 }

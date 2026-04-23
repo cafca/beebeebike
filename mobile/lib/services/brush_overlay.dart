@@ -19,15 +19,15 @@ class BrushOverlay implements BrushOverlaySurface {
   static const String fillLayerId = 'brush-preview-fill';
 
   static const Map<int, String> _colors = {
-    -7: '#c0392b',
-    -3: '#e74c3c',
-    -1: '#f1948a',
-    0: '#6b7280',
-    1: '#76d7c4',
-    3: '#1abc9c',
-    7: '#0e6655',
+    -7: '#B8342E',
+    -3: '#D94A4A',
+    -1: '#EF8379',
+    0: '#8A95A1',
+    1: '#7FD9C9',
+    3: '#2EB8A8',
+    7: '#0E7E72',
   };
-  static const String _fallbackColor = '#6b7280';
+  static const String _fallbackColor = '#8A95A1';
 
   /// Get the hex color for a given rating value, or the fallback gray if not found.
   static String colorFor(int value) => _colors[value] ?? _fallbackColor;

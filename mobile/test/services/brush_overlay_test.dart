@@ -27,14 +27,14 @@ class _FakeSurface implements BrushOverlaySurface {
 }
 
 void main() {
-  test('colorFor returns expected web-parity hex per rating', () {
-    expect(BrushOverlay.colorFor(-7), '#c0392b');
-    expect(BrushOverlay.colorFor(-3), '#e74c3c');
-    expect(BrushOverlay.colorFor(-1), '#f1948a');
-    expect(BrushOverlay.colorFor(0), '#6b7280');
-    expect(BrushOverlay.colorFor(1), '#76d7c4');
-    expect(BrushOverlay.colorFor(3), '#1abc9c');
-    expect(BrushOverlay.colorFor(7), '#0e6655');
+  test('colorFor returns expected design-ramp hex per rating', () {
+    expect(BrushOverlay.colorFor(-7), '#B8342E');
+    expect(BrushOverlay.colorFor(-3), '#D94A4A');
+    expect(BrushOverlay.colorFor(-1), '#EF8379');
+    expect(BrushOverlay.colorFor(0), '#8A95A1');
+    expect(BrushOverlay.colorFor(1), '#7FD9C9');
+    expect(BrushOverlay.colorFor(3), '#2EB8A8');
+    expect(BrushOverlay.colorFor(7), '#0E7E72');
   });
 
   test('BrushOverlaySurface contract is usable via a fake', () async {

@@ -583,6 +583,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset to north'**
   String get mapResetNorth;
+
+  /// No description provided for @paintEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint mode'**
+  String get paintEnter;
+
+  /// No description provided for @paintExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit paint mode'**
+  String get paintExit;
+
+  /// No description provided for @paintDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint mode (coming soon)'**
+  String get paintDisabled;
+
+  /// No description provided for @paintEraser.
+  ///
+  /// In en, this message translates to:
+  /// **'Eraser'**
+  String get paintEraser;
+
+  /// No description provided for @paintRatingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating {value}'**
+  String paintRatingLabel(int value);
+
+  /// No description provided for @paintUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get paintUndo;
+
+  /// No description provided for @paintRedo.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get paintRedo;
 }
 
 class _AppLocalizationsDelegate

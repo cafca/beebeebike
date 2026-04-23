@@ -319,6 +319,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get arrivedDone;
+
+  /// No description provided for @homeCaveatsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Caveats'**
+  String get homeCaveatsTitle;
+
+  /// No description provided for @homeCaveatsBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'You can\'t edit your painted areas yet in the mobile app. Do that on '**
+  String get homeCaveatsBefore;
+
+  /// No description provided for @homeCaveatsAfter.
+  ///
+  /// In en, this message translates to:
+  /// **', then zoom out a lot and back in to load updates in the app.'**
+  String get homeCaveatsAfter;
+
+  /// No description provided for @homeHowToTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How to use'**
+  String get homeHowToTitle;
+
+  /// No description provided for @homeHowToBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap \"Where to?\" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in the web app to get one-tap navigation.'**
+  String get homeHowToBody;
 }
 
 class _AppLocalizationsDelegate

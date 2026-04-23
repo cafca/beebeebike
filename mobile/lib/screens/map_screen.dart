@@ -602,6 +602,7 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final home = ref.watch(homeLocationProvider).valueOrNull;
     final mq = MediaQuery.of(context);
 
@@ -662,7 +663,7 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
                         if (home != null)
                           ActionChip(
                             avatar: const Icon(Icons.home, size: 16),
-                            label: const Text('Home'),
+                            label: Text(l10n.settingsHome),
                             onPressed: widget.onNavigateHome,
                           ),
                       ],
@@ -676,16 +677,13 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
                       children: [
                         const Divider(),
                         const SizedBox(height: 16),
-                        Text('Caveats',
+                        Text(l10n.homeCaveatsTitle,
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
                         Text.rich(
                           TextSpan(
                             children: [
-                              const TextSpan(
-                                text:
-                                    "You can't edit your painted areas yet in the mobile app. Do that on ",
-                              ),
+                              TextSpan(text: l10n.homeCaveatsBefore),
                               TextSpan(
                                 text: 'beebeebike.com',
                                 style: TextStyle(
@@ -698,20 +696,15 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
                                         mode: LaunchMode.externalApplication,
                                       ),
                               ),
-                              const TextSpan(
-                                text:
-                                    ', then zoom out a lot and back in to load updates in the app.',
-                              ),
+                              TextSpan(text: l10n.homeCaveatsAfter),
                             ],
                           ),
                         ),
                         const SizedBox(height: 20),
-                        Text('How to use',
+                        Text(l10n.homeHowToTitle,
                             style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Tap "Wohin?" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in the web app to get one-tap navigation.',
-                        ),
+                        Text(l10n.homeHowToBody),
                       ],
                     ),
                   ),

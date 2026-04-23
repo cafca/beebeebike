@@ -124,4 +124,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get arrivedDone => 'Done';
+
+  @override
+  String get homeCaveatsTitle => 'Caveats';
+
+  @override
+  String get homeCaveatsBefore =>
+      'You can\'t edit your painted areas yet in the mobile app. Do that on ';
+
+  @override
+  String get homeCaveatsAfter =>
+      ', then zoom out a lot and back in to load updates in the app.';
+
+  @override
+  String get homeHowToTitle => 'How to use';
+
+  @override
+  String get homeHowToBody =>
+      'Tap \"Where to?\" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in the web app to get one-tap navigation.';
 }

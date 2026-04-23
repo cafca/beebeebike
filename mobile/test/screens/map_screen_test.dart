@@ -135,11 +135,12 @@ void main() {
     expect(container.read(navigationSessionProvider), isTrue);
   });
 
-  testWidgets('empty state shows disabled Go home button', (tester) async {
+  testWidgets('empty state shows disabled Go home button when logged in',
+      (tester) async {
     final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
-      buildTestWidget(const MapScreen(), prefs: prefs),
+      buildTestWidget(const MapScreen(), prefs: prefs, authenticated: true),
     );
     await tester.pump();
 
@@ -154,11 +155,29 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
-      buildTestWidget(const MapScreen(), prefs: prefs, homeLocation: fakeHome()),
+      buildTestWidget(
+        const MapScreen(),
+        prefs: prefs,
+        authenticated: true,
+        homeLocation: fakeHome(),
+      ),
     );
     await tester.pump();
 
     expect(find.text('Go home'), findsOneWidget);
     expect(find.text('Calculating ETA…'), findsOneWidget);
+  });
+
+  testWidgets('landing CTA shows Log in when not authenticated',
+      (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      buildTestWidget(const MapScreen(), prefs: prefs),
+    );
+    await tester.pump();
+
+    expect(find.text('Log in'), findsOneWidget);
+    expect(find.text('Go home'), findsNothing);
   });
 }

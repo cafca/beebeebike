@@ -78,7 +78,7 @@ void main() {
     expect(closed, 1);
   });
 
-  testWidgets('heart button toggles saved icon state', (tester) async {
+  testWidgets('heart button rendered in disabled state', (tester) async {
     await tester.pumpWidget(MaterialApp(
       locale: const Locale('en'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -94,11 +94,12 @@ void main() {
     expect(find.byIcon(Icons.favorite_border), findsOneWidget);
     expect(find.byIcon(Icons.favorite), findsNothing);
 
+    // Button is non-interactive: tapping must not swap the icon.
     await tester.tap(find.byIcon(Icons.favorite_border));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.favorite), findsOneWidget);
-    expect(find.byIcon(Icons.favorite_border), findsNothing);
+    expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+    expect(find.byIcon(Icons.favorite), findsNothing);
   });
 
   testWidgets('data strip shows ETA hh:mm formatted from now', (tester) async {

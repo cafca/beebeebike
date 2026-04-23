@@ -5,7 +5,8 @@ import '../theme/tokens.dart';
 import '../theme/typography.dart';
 
 /// Route Sheet (variant B) body — mono data strip + Start ride / heart row.
-class RouteSummary extends StatefulWidget {
+/// The heart is visually present but disabled in this build.
+class RouteSummary extends StatelessWidget {
   const RouteSummary({
     super.key,
     required this.durationMinutes,
@@ -19,15 +20,8 @@ class RouteSummary extends StatefulWidget {
   final VoidCallback onStart;
   final VoidCallback? onClose;
 
-  @override
-  State<RouteSummary> createState() => _RouteSummaryState();
-}
-
-class _RouteSummaryState extends State<RouteSummary> {
-  bool _saved = false;
-
   String _formatEta() {
-    final eta = DateTime.now().add(Duration(minutes: widget.durationMinutes));
+    final eta = DateTime.now().add(Duration(minutes: durationMinutes));
     final h = eta.hour.toString().padLeft(2, '0');
     final m = eta.minute.toString().padLeft(2, '0');
     return '$h:$m';
@@ -36,7 +30,7 @@ class _RouteSummaryState extends State<RouteSummary> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final onClose = widget.onClose;
+    final close = onClose;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,15 +40,15 @@ class _RouteSummaryState extends State<RouteSummary> {
           children: [
             Expanded(
               child: _DataStrip(
-                duration: widget.durationMinutes,
-                distanceKm: widget.distanceKm,
+                duration: durationMinutes,
+                distanceKm: distanceKm,
                 eta: _formatEta(),
               ),
             ),
-            if (onClose != null)
+            if (close != null)
               Tooltip(
                 message: l10n.routeClearTooltip,
-                child: _CloseButton(onTap: onClose),
+                child: _CloseButton(onTap: close),
               ),
           ],
         ),
@@ -62,13 +56,10 @@ class _RouteSummaryState extends State<RouteSummary> {
         Row(
           children: [
             Expanded(
-              child: _StartRideButton(onTap: widget.onStart),
+              child: _StartRideButton(onTap: onStart),
             ),
             const SizedBox(width: 10),
-            _SaveButton(
-              saved: _saved,
-              onTap: () => setState(() => _saved = !_saved),
-            ),
+            const _SaveButton(enabled: false),
           ],
         ),
       ],
@@ -162,31 +153,26 @@ class _StartRideButton extends StatelessWidget {
 }
 
 class _SaveButton extends StatelessWidget {
-  const _SaveButton({required this.saved, required this.onTap});
+  const _SaveButton({required this.enabled});
 
-  final bool saved;
-  final VoidCallback onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: BbbColors.panel,
-      borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-        onTap: onTap,
-        child: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-            border: Border.all(color: BbbColors.divider, width: 1),
-          ),
-          child: Icon(
-            saved ? Icons.favorite : Icons.favorite_border,
-            size: 22,
-            color: saved ? BbbColors.brand : BbbColors.inkMuted,
-          ),
+    return Opacity(
+      opacity: enabled ? 1 : 0.55,
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          color: BbbColors.panel,
+          borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+          border: Border.all(color: BbbColors.divider, width: 1),
+        ),
+        child: const Icon(
+          Icons.favorite_border,
+          size: 22,
+          color: BbbColors.inkMuted,
         ),
       ),
     );

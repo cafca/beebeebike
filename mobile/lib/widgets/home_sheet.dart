@@ -4,10 +4,12 @@ import 'package:geolocator/geolocator.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import '../models/location.dart';
+import '../providers/auth_provider.dart';
 import '../providers/home_eta_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/route_provider.dart';
 import '../providers/search_history_provider.dart';
+import '../screens/login_screen.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
 import 'paint_roller_icon.dart';
@@ -101,6 +103,8 @@ class _GoHomeRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authControllerProvider).valueOrNull;
+    final loggedIn = user?.email != null;
     final home = ref.watch(homeLocationProvider).valueOrNull;
     final enabled = home != null;
     final eta = enabled ? ref.watch(homeEtaMinutesProvider) : null;
@@ -109,15 +113,65 @@ class _GoHomeRow extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: _GoHomeButton(
-            enabled: enabled,
-            etaMinutes: eta,
-            onTap: enabled ? onNavigateHome : null,
-          ),
+          child: loggedIn
+              ? _GoHomeButton(
+                  enabled: enabled,
+                  etaMinutes: eta,
+                  onTap: enabled ? onNavigateHome : null,
+                )
+              : const _LogInButton(),
         ),
         const SizedBox(width: 10),
         const _PaintFab(enabled: false),
       ],
+    );
+  }
+}
+
+class _LogInButton extends StatelessWidget {
+  const _LogInButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Material(
+      color: BbbColors.ink,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Color.fromRGBO(255, 255, 255, 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.login_rounded,
+                  size: 17,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.settingsLogIn,
+                  style: BbbText.cardTitle().copyWith(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

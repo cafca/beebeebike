@@ -27,6 +27,7 @@ Widget _host({
   required SharedPreferences prefs,
   required DraggableScrollableController controller,
   Location? homeLocation,
+  bool authenticated = true,
   ProviderContainer? container,
 }) {
   final widget = Scaffold(
@@ -45,7 +46,11 @@ Widget _host({
     return UncontrolledProviderScope(container: container, child: app);
   }
   return ProviderScope(
-    overrides: testProviderOverrides(prefs: prefs, homeLocation: homeLocation),
+    overrides: testProviderOverrides(
+      prefs: prefs,
+      authenticated: authenticated,
+      homeLocation: homeLocation,
+    ),
     child: app,
   );
 }
@@ -139,6 +144,22 @@ void main() {
     // Without a saved home there is no ETA subtitle.
     expect(find.textContaining('min'), findsNothing);
     expect(find.text('Calculating ETA…'), findsNothing);
+  });
+
+  testWidgets('Log in button shown when not authenticated', (tester) async {
+    final prefs = await _prefsWithHistory(const []);
+    final controller = DraggableScrollableController();
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_host(
+      prefs: prefs,
+      controller: controller,
+      authenticated: false,
+    ));
+    await tester.pump();
+
+    expect(find.text('Log in'), findsOneWidget);
+    expect(find.text('Go home'), findsNothing);
   });
 
   testWidgets('Go home button shows calculating ETA subtitle when home saved',

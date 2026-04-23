@@ -42,7 +42,7 @@ class _RouteSummaryState extends State<RouteSummary> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
               child: _DataStrip(

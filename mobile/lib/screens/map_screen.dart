@@ -688,7 +688,7 @@ class _RouteSheet extends ConsumerWidget {
           ),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             decoration: const BoxDecoration(
               color: BbbColors.panel,
               borderRadius:
@@ -701,17 +701,6 @@ class _RouteSheet extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: BbbColors.grabber,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
                   if (routeState.isLoading)
                     const Center(
                       child: Padding(

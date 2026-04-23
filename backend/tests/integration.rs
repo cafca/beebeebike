@@ -843,6 +843,67 @@ async fn paint_clips_overlapping_areas() {
 }
 
 #[tokio::test]
+async fn paint_same_value_over_existing_merges_into_single_row() {
+    let Some(server) = setup().await else {
+        return;
+    };
+
+    let session = create_anonymous(&server).await;
+
+    // Paint larger V=3 area first.
+    let large = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.40, 52.50], [13.44, 52.50], [13.44, 52.54], [13.40, 52.54], [13.40, 52.50]]]
+    });
+    let (hname, hval) = with_session(&session);
+    server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": large, "value": 3 }))
+        .await
+        .assert_status_ok();
+
+    // Paint a smaller V=3 area fully inside the first. Should merge, not
+    // create a concentric ring.
+    let small = json!({
+        "type": "Polygon",
+        "coordinates": [[[13.41, 52.51], [13.43, 52.51], [13.43, 52.53], [13.41, 52.53], [13.41, 52.51]]]
+    });
+    let (hname, hval) = with_session(&session);
+    let resp = server
+        .put("/api/ratings/paint")
+        .add_header(hname, hval)
+        .json(&json!({ "geometry": small, "value": 3 }))
+        .await;
+    resp.assert_status_ok();
+
+    // Merge must be surfaced as deleted_count >= 1 so the client refetches
+    // instead of optimistically appending.
+    let body: Value = resp.json();
+    assert!(
+        body["deleted_count"].as_i64().unwrap() >= 1,
+        "expected deleted_count >= 1 for same-value merge, got: {body}"
+    );
+
+    // Overlay should have exactly one feature (the merged union).
+    let (hname, hval) = with_session(&session);
+    let resp = server
+        .get("/api/ratings?bbox=13.3,52.4,13.5,52.6")
+        .add_header(hname, hval)
+        .await;
+    resp.assert_status_ok();
+    let body: Value = resp.json();
+    let features = body["features"].as_array().unwrap();
+    assert_eq!(
+        features.len(),
+        1,
+        "expected single merged feature, got {}: {body}",
+        features.len()
+    );
+    assert_eq!(features[0]["properties"]["value"], 3);
+}
+
+#[tokio::test]
 async fn paint_requires_auth() {
     let Some(server) = setup().await else {
         return;

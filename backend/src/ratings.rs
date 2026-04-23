@@ -64,6 +64,12 @@ struct CountRow {
 }
 
 #[derive(FromRow)]
+struct MergeRow {
+    pub merged: Option<String>,
+    pub count: i64,
+}
+
+#[derive(FromRow)]
 struct SeqRow {
     pub seq: i64,
 }
@@ -152,8 +158,49 @@ async fn apply_paint(
     .fetch_one(&mut **tx)
     .await?;
 
-    // Step 2: Clip overlapping polygons. ST_MakeValid(geometry) on the stored
-    // side is belt-and-suspenders against any legacy invalid rows.
+    // Step 2a: Delete same-value intersecting polygons and capture their
+    // union for merging into the new polygon in Step 3. Without this, painting
+    // a same-value shape over an existing same-value area creates separate
+    // rows that render as distinct features with a visible seam. Skipped for
+    // eraser (value == 0) since no value-0 rows are ever stored.
+    let merge_row = if value != 0 {
+        sqlx::query_as::<_, MergeRow>(
+            r#"
+            WITH input AS (
+                SELECT ST_CollectionExtract(
+                    ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON($2), 4326)),
+                    3
+                ) AS g
+            ),
+            deleted_same AS (
+                DELETE FROM rated_areas
+                WHERE user_id = $1
+                  AND value = $3
+                  AND ST_Intersects(geometry, (SELECT g FROM input))
+                RETURNING geometry
+            )
+            SELECT
+                ST_AsGeoJSON(ST_Union(ST_MakeValid(geometry))) AS merged,
+                COUNT(*) AS count
+            FROM deleted_same
+            "#,
+        )
+        .bind(user_id)
+        .bind(geometry_json)
+        .bind(value)
+        .fetch_one(&mut **tx)
+        .await?
+    } else {
+        MergeRow {
+            merged: None,
+            count: 0,
+        }
+    };
+
+    // Step 2b: Clip different-value overlapping polygons. Same-value
+    // intersecting rows are already gone (Step 2a), so this is effectively
+    // "clip non-matching values". ST_MakeValid(geometry) on the stored side
+    // is belt-and-suspenders against legacy invalid rows.
     let clipped_row = sqlx::query_as::<_, CountRow>(
         r#"
         WITH input AS (
@@ -190,20 +237,36 @@ async fn apply_paint(
     .fetch_one(&mut **tx)
     .await?;
 
-    // Step 3: Insert new polygon (skip if value == 0, eraser mode).
-    // Sanitize, then ST_Dump so multi-polygon results (from a pathological
-    // self-intersecting input) become separate rated_areas rows.
+    // Step 3: Insert new polygon (skip if value == 0, eraser mode). If any
+    // same-value rows were deleted in Step 2a, union their geometry with the
+    // input before insert so same-value paints merge into a single row.
+    // ST_Dump splits multi-polygon results into separate rows.
     if value != 0 {
         sqlx::query(
             r#"
             WITH input AS (
-                SELECT (ST_Dump(ST_CollectionExtract(
+                SELECT ST_CollectionExtract(
                     ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON($2), 4326)),
                     3
-                ))).geom AS g
+                ) AS g
+            ),
+            merged AS (
+                SELECT CASE
+                    WHEN $4::text IS NULL THEN (SELECT g FROM input)
+                    ELSE ST_MakeValid(ST_Union(
+                        (SELECT g FROM input),
+                        ST_CollectionExtract(
+                            ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON($4), 4326)),
+                            3
+                        )
+                    ))
+                END AS g
+            ),
+            parts AS (
+                SELECT (ST_Dump(g)).geom AS g FROM merged
             )
             INSERT INTO rated_areas (user_id, geometry, value)
-            SELECT $1, g, $3 FROM input
+            SELECT $1, g, $3 FROM parts
             WHERE g IS NOT NULL
               AND NOT ST_IsEmpty(g)
               AND ST_GeometryType(g) = 'ST_Polygon'
@@ -213,11 +276,12 @@ async fn apply_paint(
         .bind(user_id)
         .bind(geometry_json)
         .bind(value)
+        .bind(&merge_row.merged)
         .execute(&mut **tx)
         .await?;
     }
 
-    Ok((deleted_row.count, clipped_row.count))
+    Ok((deleted_row.count + merge_row.count, clipped_row.count))
 }
 
 /// Wipe a user's `rated_areas` and rebuild by replaying all active paint events.

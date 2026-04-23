@@ -29,40 +29,26 @@ class PaintSheet extends ConsumerWidget {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: BbbColors.panel,
+        color: BbbColors.ink,
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
         boxShadow: BbbShadow.panel,
       ),
-      padding: EdgeInsets.fromLTRB(16, 12, 16, mq.padding.bottom + 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      padding: EdgeInsets.fromLTRB(16, 20, 16, mq.padding.bottom + 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: BbbColors.grabber,
-              borderRadius: BorderRadius.circular(2),
+          for (int i = 0; i < _values.length; i++) ...[
+            if (i > 0) const SizedBox(width: 12),
+            KeyedSubtree(
+              key: ValueKey('paint-chip-${_values[i]}'),
+              child: _ColorChip(
+                value: _values[i],
+                selected: state.value == _values[i],
+                onTap: () => notifier.setValue(_values[i]),
+              ),
             ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (int i = 0; i < _values.length; i++) ...[
-                if (i > 0) const SizedBox(width: 12),
-                KeyedSubtree(
-                  key: ValueKey('paint-chip-${_values[i]}'),
-                  child: _ColorChip(
-                    value: _values[i],
-                    selected: state.value == _values[i],
-                    onTap: () => notifier.setValue(_values[i]),
-                  ),
-                ),
-              ],
-            ],
-          ),
+          ],
         ],
       ),
     );
@@ -99,15 +85,10 @@ class _ColorChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: isEraser ? BbbColors.panel : color,
             border: Border.all(
-              color: selected ? BbbColors.ink : Colors.transparent,
+              color: selected ? BbbColors.panel : Colors.transparent,
               width: 2,
             ),
             borderRadius: BorderRadius.circular(10),
-            boxShadow: selected
-                ? const [
-                    BoxShadow(color: Colors.white, blurRadius: 0, spreadRadius: 2),
-                  ]
-                : const [],
           ),
           transformAlignment: Alignment.center,
           transform: selected

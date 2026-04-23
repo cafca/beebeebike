@@ -17,6 +17,8 @@ class TapFeature {
 
 typedef TapFeatureLookup = Future<TapFeature?> Function(LatLng point);
 
+enum BrushOp { paint, undo, redo }
+
 @immutable
 class BrushState {
   const BrushState({
@@ -24,12 +26,16 @@ class BrushState {
     this.paintMode = false,
     this.canUndo = false,
     this.canRedo = false,
+    this.activeOp,
   });
 
   final int value;
   final bool paintMode;
   final bool canUndo;
   final bool canRedo;
+  final BrushOp? activeOp;
+
+  bool get busy => activeOp != null;
 
   BrushState copyWith({
     int? value,
@@ -42,6 +48,15 @@ class BrushState {
         paintMode: paintMode ?? this.paintMode,
         canUndo: canUndo ?? this.canUndo,
         canRedo: canRedo ?? this.canRedo,
+        activeOp: activeOp,
+      );
+
+  BrushState withOp(BrushOp? op) => BrushState(
+        value: value,
+        paintMode: paintMode,
+        canUndo: canUndo,
+        canRedo: canRedo,
+        activeOp: op,
       );
 }
 
@@ -53,7 +68,6 @@ class BrushController extends Notifier<BrushState> {
   BrushOverlaySurface? _overlay;
   final List<LatLng> _stroke = [];
   double _lastZoom = 14;
-  bool _submitting = false;
 
   @override
   BrushState build() => const BrushState();
@@ -114,8 +128,7 @@ class BrushController extends Notifier<BrushState> {
   }
 
   Future<void> endStroke({required TapFeatureLookup tapFeatureLookup}) async {
-    if (_submitting) return;
-    _submitting = true;
+    if (state.busy) return;
     try {
       if (_stroke.length < 2) {
         final tap = _stroke.isEmpty ? null : _stroke.first;
@@ -137,29 +150,40 @@ class BrushController extends Notifier<BrushState> {
     } finally {
       _stroke.clear();
       unawaited(_overlay?.clear());
-      _submitting = false;
     }
   }
 
   Future<void> undo() async {
+    if (state.busy) return;
+    state = state.withOp(BrushOp.undo);
     try {
       final api = ref.read(ratingsPaintApiProvider);
       final r = await api.undo();
+      await ref
+          .read(ratingOverlayControllerProvider.notifier)
+          .refreshAfterPaint();
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
-      ref.read(ratingOverlayControllerProvider.notifier).refreshAfterPaint();
     } catch (e) {
       _log('brush: undo failed: $e');
+    } finally {
+      state = state.withOp(null);
     }
   }
 
   Future<void> redo() async {
+    if (state.busy) return;
+    state = state.withOp(BrushOp.redo);
     try {
       final api = ref.read(ratingsPaintApiProvider);
       final r = await api.redo();
+      await ref
+          .read(ratingOverlayControllerProvider.notifier)
+          .refreshAfterPaint();
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
-      ref.read(ratingOverlayControllerProvider.notifier).refreshAfterPaint();
     } catch (e) {
       _log('brush: redo failed: $e');
+    } finally {
+      state = state.withOp(null);
     }
   }
 
@@ -167,6 +191,7 @@ class BrushController extends Notifier<BrushState> {
     required Map<String, dynamic> geometry,
     required int? targetId,
   }) async {
+    state = state.withOp(BrushOp.paint);
     try {
       final api = ref.read(ratingsPaintApiProvider);
       final r = await api.paint(
@@ -174,7 +199,6 @@ class BrushController extends Notifier<BrushState> {
         value: state.value,
         targetId: targetId,
       );
-      state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
       final overlay = ref.read(ratingOverlayControllerProvider.notifier);
       final canAppendLocally = targetId == null &&
           r.clippedCount == 0 &&
@@ -189,8 +213,11 @@ class BrushController extends Notifier<BrushState> {
       } else {
         await overlay.refreshAfterPaint();
       }
+      state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
     } catch (e) {
       _log('brush: paint failed: $e');
+    } finally {
+      state = state.withOp(null);
     }
   }
 }

@@ -29,10 +29,10 @@ class BrushFab extends ConsumerWidget {
           height: 52,
           child: Material(
             key: const ValueKey('paint-fab'),
-            color: active ? BbbColors.brand : BbbColors.panel,
+            color: active ? BbbColors.ink : BbbColors.panel,
             shape: RoundedRectangleBorder(
               side: BorderSide(
-                color: active ? BbbColors.brand : BbbColors.divider,
+                color: active ? BbbColors.ink : BbbColors.divider,
                 width: 1,
               ),
               borderRadius: BorderRadius.circular(BbbRadius.ctrl),
@@ -41,7 +41,12 @@ class BrushFab extends ConsumerWidget {
               onTap: () =>
                   ref.read(brushControllerProvider.notifier).togglePaintMode(),
               borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-              child: const Center(child: PaintRollerIcon(size: 24)),
+              child: Center(
+                child: PaintRollerIcon(
+                  size: 24,
+                  color: active ? BbbColors.panel : BbbColors.ink,
+                ),
+              ),
             ),
           ),
         ),

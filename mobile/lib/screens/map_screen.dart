@@ -961,32 +961,24 @@ class _MapFabColumn extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         if (brush.paintMode) ...[
-          Tooltip(
-            message: l10n.paintUndo,
-            child: FloatingActionButton.small(
-              key: const ValueKey('undo-fab'),
-              heroTag: 'brush-undo-fab',
-              onPressed: brush.canUndo ? notifier.undo : null,
-              backgroundColor:
-                  brush.canUndo ? BbbColors.panel : BbbColors.bgAlt,
-              foregroundColor:
-                  brush.canUndo ? BbbColors.ink : BbbColors.inkFaint,
-              child: const Icon(Icons.undo),
-            ),
+          _UndoRedoFab(
+            tooltip: l10n.paintUndo,
+            keyValue: 'undo-fab',
+            heroTag: 'brush-undo-fab',
+            icon: Icons.undo,
+            enabled: brush.canUndo && !brush.busy,
+            loading: brush.activeOp == BrushOp.undo,
+            onPressed: notifier.undo,
           ),
           const SizedBox(height: 8),
-          Tooltip(
-            message: l10n.paintRedo,
-            child: FloatingActionButton.small(
-              key: const ValueKey('redo-fab'),
-              heroTag: 'brush-redo-fab',
-              onPressed: brush.canRedo ? notifier.redo : null,
-              backgroundColor:
-                  brush.canRedo ? BbbColors.panel : BbbColors.bgAlt,
-              foregroundColor:
-                  brush.canRedo ? BbbColors.ink : BbbColors.inkFaint,
-              child: const Icon(Icons.redo),
-            ),
+          _UndoRedoFab(
+            tooltip: l10n.paintRedo,
+            keyValue: 'redo-fab',
+            heroTag: 'brush-redo-fab',
+            icon: Icons.redo,
+            enabled: brush.canRedo && !brush.busy,
+            loading: brush.activeOp == BrushOp.redo,
+            onPressed: notifier.redo,
           ),
           const SizedBox(height: 12),
         ],
@@ -995,6 +987,51 @@ class _MapFabColumn extends ConsumerWidget {
         const SizedBox(height: 12),
         const BrushFab(),
       ],
+    );
+  }
+}
+
+class _UndoRedoFab extends StatelessWidget {
+  const _UndoRedoFab({
+    required this.tooltip,
+    required this.keyValue,
+    required this.heroTag,
+    required this.icon,
+    required this.enabled,
+    required this.loading,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final String keyValue;
+  final String heroTag;
+  final IconData icon;
+  final bool enabled;
+  final bool loading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = enabled || loading;
+    return Tooltip(
+      message: tooltip,
+      child: FloatingActionButton.small(
+        key: ValueKey(keyValue),
+        heroTag: heroTag,
+        onPressed: enabled ? onPressed : null,
+        backgroundColor: active ? BbbColors.panel : BbbColors.bgAlt,
+        foregroundColor: active ? BbbColors.ink : BbbColors.inkFaint,
+        child: loading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(BbbColors.ink),
+                ),
+              )
+            : Icon(icon),
+      ),
     );
   }
 }

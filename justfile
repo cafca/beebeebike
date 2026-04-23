@@ -163,8 +163,7 @@ release-ios-device DEVICE:
 ios-archive:
     cd mobile && flutter build ipa --release \
       --dart-define=BEEBEEBIKE_API_BASE_URL=https://beebeebike.com \
-      --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL=https://beebeebike.com/tiles \
-      --dart-define=BEEBEEBIKE_GLITCHTIP_DSN=${BEEBEEBIKE_GLITCHTIP_DSN:-}
+      --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL=https://beebeebike.com/tiles
 
 # ---------- clean ----------
 

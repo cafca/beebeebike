@@ -17,6 +17,7 @@ import '../models/location.dart';
 import '../models/route_preview.dart';
 import '../models/route_state.dart';
 import '../navigation/camera_controller.dart';
+import '../navigation/location_converter.dart';
 import '../navigation/maneuver_icons.dart';
 import '../navigation/nav_constants.dart';
 import '../providers/navigation_camera_provider.dart';
@@ -270,11 +271,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
     debugPrint('nav: start ${origin.name} -> ${destination.name}');
     final service = ref.read(navigationServiceProvider);
+    // Fetch last-known position synchronously (no GPS wait) so the controller
+    // has an initial fix and NavigationState emits immediately.
+    UserLocation? initial;
+    try {
+      final pos = await Geolocator.getLastKnownPosition();
+      if (pos != null) initial = positionToUserLocation(pos);
+    } catch (_) {}
     try {
       await service.start(
         origin: WaypointInput(lat: origin.lat, lng: origin.lng),
         destination:
             WaypointInput(lat: destination.lat, lng: destination.lng),
+        initialLocation: initial,
       );
     } catch (e, st) {
       debugPrint('nav: start failed: $e\n$st');

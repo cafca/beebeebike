@@ -50,6 +50,7 @@ class NavigationService {
   Future<void> start({
     required WaypointInput origin,
     required WaypointInput destination,
+    UserLocation? initialLocation,
   }) async {
     await dispose();
     _destination = destination;
@@ -59,6 +60,14 @@ class NavigationService {
     );
     final waypoints = [origin, destination];
     _controller = await createController(routeJson, waypoints);
+
+    // Seed the controller with the last-known position before the live GPS
+    // stream attaches, so NavigationState emits immediately instead of
+    // waiting for the first fresh fix (which can take several seconds after
+    // a cold start).
+    if (initialLocation != null) {
+      await _controller!.updateLocation(initialLocation);
+    }
 
     _stateSub = _controller!.stateStream.listen(
       _stateController.add,

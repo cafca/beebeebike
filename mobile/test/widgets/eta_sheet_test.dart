@@ -25,8 +25,6 @@ void main() {
       home: Scaffold(
         body: EtaSheet(
           navState: AsyncValue.data(_state()),
-          ttsEnabled: true,
-          onToggleTts: () {},
           onClose: () => closed++,
         ),
       ),
@@ -38,29 +36,7 @@ void main() {
     expect(closed, 1);
   });
 
-  testWidgets('tts IconButton toggles tts icon via onToggleTts',
-      (tester) async {
-    var toggled = 0;
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: EtaSheet(
-          navState: AsyncValue.data(_state()),
-          ttsEnabled: true,
-          onToggleTts: () => toggled++,
-          onClose: () {},
-        ),
-      ),
-    ));
-    expect(find.byIcon(Icons.volume_up), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.volume_up));
-    await tester.pumpAndSettle();
-    expect(toggled, 1);
-  });
-
-  testWidgets('renders volume_off icon when ttsEnabled is false',
+  testWidgets('does not render volume controls (moved to FAB)',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
       locale: const Locale('en'),
@@ -69,14 +45,12 @@ void main() {
       home: Scaffold(
         body: EtaSheet(
           navState: AsyncValue.data(_state()),
-          ttsEnabled: false,
-          onToggleTts: () {},
           onClose: () {},
         ),
       ),
     ));
-    expect(find.byIcon(Icons.volume_off), findsOneWidget);
     expect(find.byIcon(Icons.volume_up), findsNothing);
+    expect(find.byIcon(Icons.volume_off), findsNothing);
   });
 
   testWidgets('shows loading fallback when navState is loading',
@@ -88,8 +62,6 @@ void main() {
       home: Scaffold(
         body: EtaSheet(
           navState: const AsyncValue.loading(),
-          ttsEnabled: true,
-          onToggleTts: () {},
           onClose: () {},
         ),
       ),
@@ -106,8 +78,6 @@ void main() {
       home: Scaffold(
         body: EtaSheet(
           navState: AsyncValue.data(_state()),
-          ttsEnabled: true,
-          onToggleTts: () {},
           onClose: () {},
         ),
       ),

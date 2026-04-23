@@ -34,6 +34,7 @@ import '../widgets/recenter_fab.dart';
 import '../widgets/rerouting_toast.dart';
 import '../widgets/route_card.dart';
 import '../widgets/route_summary.dart';
+import '../widgets/tts_toggle_fab.dart';
 import '../widgets/turn_banner.dart';
 
 final _berlinBounds = LatLngBounds(
@@ -542,9 +543,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             child: navActive
                 ? _NavigationSheet(
                     key: const ValueKey('nav'),
-                    ttsEnabled: _ttsEnabled,
-                    onToggleTts: () =>
-                        setState(() => _ttsEnabled = !_ttsEnabled),
                     onClose: () =>
                         ref.read(navigationSessionProvider.notifier).state =
                             false,
@@ -768,13 +766,9 @@ class _RouteSheet extends ConsumerWidget {
 class _NavigationSheet extends ConsumerWidget {
   const _NavigationSheet({
     super.key,
-    required this.ttsEnabled,
-    required this.onToggleTts,
     required this.onClose,
   });
 
-  final bool ttsEnabled;
-  final VoidCallback onToggleTts;
   final VoidCallback onClose;
 
   @override
@@ -798,8 +792,6 @@ class _NavigationSheet extends ConsumerWidget {
               ? ArrivedSheet(onDone: onClose)
               : EtaSheet(
                   navState: navState,
-                  ttsEnabled: ttsEnabled,
-                  onToggleTts: onToggleTts,
                   onClose: onClose,
                 ),
         ),
@@ -870,17 +862,26 @@ class _NavTopBar extends ConsumerWidget {
             ),
           ),
         ),
-        if (cam.mode == CameraMode.free)
-          Align(
-            alignment: Alignment.bottomRight,
-            child: SafeArea(
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(right: 16, bottom: kEtaSheetHeight),
-                child: RecenterFab(onTap: onRecenter),
+        Align(
+          alignment: Alignment.bottomRight,
+          child: SafeArea(
+            child: Padding(
+              padding:
+                  const EdgeInsets.only(right: 16, bottom: kEtaSheetHeight),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  TtsToggleFab(enabled: ttsEnabled, onTap: onToggleTts),
+                  if (cam.mode == CameraMode.free) ...[
+                    const SizedBox(height: 12),
+                    RecenterFab(onTap: onRecenter),
+                  ],
+                ],
               ),
             ),
           ),
+        ),
       ],
     );
   }

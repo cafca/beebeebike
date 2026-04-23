@@ -7,21 +7,17 @@ import '../navigation/maneuver_icons.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
 
-/// Navigation Sheet (variant C) — grabber, voice + close top-right, hero
+/// Navigation Sheet (variant C) — grabber, close top-right, hero
 /// remaining-time in JB Mono, divider, mono data strip with remaining
 /// distance + arrival clock.
 class EtaSheet extends StatelessWidget {
   const EtaSheet({
     super.key,
     required this.navState,
-    required this.ttsEnabled,
-    required this.onToggleTts,
     required this.onClose,
   });
 
   final AsyncValue<NavigationState> navState;
-  final bool ttsEnabled;
-  final VoidCallback onToggleTts;
   final VoidCallback onClose;
 
   String _formatArrival(int durationRemainingMs) {
@@ -35,7 +31,7 @@ class EtaSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -62,16 +58,10 @@ class EtaSheet extends StatelessWidget {
                     final p = state.progress;
                     if (p == null) return Text('—', style: BbbText.body());
                     final mins = (p.durationRemainingMs / 60000).round();
-                    return Text('$mins min', style: BbbText.navHero());
+                    return Text('$mins min', style: BbbText.navHero(color: BbbColors.inkMuted));
                   },
                 ),
               ),
-              _CircleIconButton(
-                icon: ttsEnabled ? Icons.volume_up : Icons.volume_off,
-                tooltip: ttsEnabled ? l10n.navMuteVoice : l10n.navEnableVoice,
-                onPressed: onToggleTts,
-              ),
-              const SizedBox(width: 8),
               _CircleIconButton(
                 icon: Icons.close,
                 tooltip: l10n.navEndNavigation,
@@ -79,9 +69,9 @@ class EtaSheet extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 6),
           const Divider(height: 1, color: BbbColors.divider),
-          const SizedBox(height: 14),
+          const SizedBox(height: 6),
           navState.when(
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
@@ -94,7 +84,7 @@ class EtaSheet extends StatelessWidget {
                 children: [
                   Text(
                     distText,
-                    style: BbbText.monoTime(color: BbbColors.ink).copyWith(
+                    style: BbbText.monoTime(color: BbbColors.inkMuted).copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),

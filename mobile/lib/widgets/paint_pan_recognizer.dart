@@ -1,28 +1,9 @@
 import 'package:flutter/gestures.dart';
 
-/// A [PanGestureRecognizer] variant for the brush paint mode.
-///
-/// Two tweaks over the default:
-///
-///   * **Single-pointer enforcement.** If a second pointer lands while a
-///     pan is already being tracked, we reject our claim on the first
-///     pointer and bail. Combined with the map platform view claiming a
-///     [ScaleGestureRecognizer] in paint mode, that hands both pointers
-///     to MapLibre so pinch-to-zoom works. If the drag had already been
-///     accepted (past slop) the parent fires `onCancel` for us so the
-///     caller can drop the in-progress stroke.
-///
-///   * **Double-tap-drag guard.** The second tap of iOS's double-tap-drag
-///     zoom gesture fires as a lone `PointerDown`. We ignore any
-///     `addAllowedPointer` that arrives within 300 ms of the last
-///     `PointerUp` so MapLibre's native zoom gesture can claim it.
-///
-/// Mirrors `web/src/lib/brush.svelte.js` (second-pointer cancel +
-/// `lastTouchEndTime` guard).
 /// A [ScaleGestureRecognizer] that only claims the gesture when at least two
-/// pointers are down. Used on the MapLibre platform view in paint mode so
-/// pinch-to-zoom still reaches the map, but single-finger drags fall through
-/// to [PaintPanGestureRecognizer] for the brush.
+/// pointers are down. Mounted on the outer `RawGestureDetector` in paint mode
+/// alongside [PaintPanGestureRecognizer] so single-finger drags go to the
+/// brush and two-finger pinch/pan drives the map manually.
 ///
 /// The stock [ScaleGestureRecognizer] accepts single-pointer focal-point
 /// drags (once they cross pan slop), which would steal paint strokes from us.
@@ -57,6 +38,25 @@ class MultiPointerScaleGestureRecognizer extends ScaleGestureRecognizer {
   }
 }
 
+/// A [PanGestureRecognizer] variant for the brush paint mode.
+///
+/// Two tweaks over the default:
+///
+///   * **Single-pointer enforcement.** If a second pointer lands while a
+///     pan is already being tracked, we reject our claim on the first
+///     pointer and bail. That lets the sibling
+///     [MultiPointerScaleGestureRecognizer] win the arena and drive
+///     pinch/pan on the map. If the drag had already been accepted (past
+///     slop) the parent fires `onCancel` for us so the caller can drop
+///     the in-progress stroke.
+///
+///   * **Double-tap-drag guard.** The second tap of iOS's double-tap-drag
+///     zoom gesture fires as a lone `PointerDown`. We ignore any
+///     `addAllowedPointer` that arrives within 300 ms of the last
+///     `PointerUp` so native zoom gesture handling can claim it.
+///
+/// Mirrors `web/src/lib/brush.svelte.js` (second-pointer cancel +
+/// `lastTouchEndTime` guard).
 class PaintPanGestureRecognizer extends PanGestureRecognizer {
   PaintPanGestureRecognizer({super.debugOwner});
 
@@ -68,7 +68,8 @@ class PaintPanGestureRecognizer extends PanGestureRecognizer {
   @override
   void addAllowedPointer(PointerDownEvent event) {
     if (_tracking) {
-      // Second pointer during an active drag → hand off to MapLibre.
+      // Second pointer during an active drag → hand off to the sibling
+      // MultiPointerScaleGestureRecognizer.
       resolve(GestureDisposition.rejected);
       return;
     }

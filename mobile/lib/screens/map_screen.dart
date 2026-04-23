@@ -1326,7 +1326,7 @@ class _PaintGestureWrap extends StatelessWidget {
                 r.onEnd = (_) => onPanEnd();
                 // Fires when the arena rejects us after onStart fired — i.e.
                 // a second pointer landed mid-stroke and we released the
-                // gesture to the map's ScaleGestureRecognizer.
+                // gesture to the sibling MultiPointerScaleGestureRecognizer.
                 r.onCancel = onPanCancel;
               },
             ),

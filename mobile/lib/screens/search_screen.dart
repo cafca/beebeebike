@@ -128,6 +128,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               label: r.label,
                               lng: r.lng,
                               lat: r.lat,
+                              street: r.street,
+                              housenumber: r.housenumber,
                             )),
                           );
                         },

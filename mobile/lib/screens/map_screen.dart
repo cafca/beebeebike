@@ -625,29 +625,72 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
   }
 }
 
-class _RecenterCircleFab extends StatelessWidget {
+class _RecenterCircleFab extends StatefulWidget {
   const _RecenterCircleFab({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
+  State<_RecenterCircleFab> createState() => _RecenterCircleFabState();
+}
+
+class _RecenterCircleFabState extends State<_RecenterCircleFab>
+    with SingleTickerProviderStateMixin {
+  bool _pressed = false;
+  late final AnimationController _flash = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+    value: 1.0,
+  );
+
+  @override
+  void dispose() {
+    _flash.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    setState(() => _pressed = false);
+    widget.onTap();
+    _flash.forward(from: 0);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      surfaceTintColor: Colors.white,
-      shape: const CircleBorder(),
-      elevation: 0,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Container(
-          width: 52,
-          height: 52,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: BbbShadow.sm,
+    return AnimatedScale(
+      scale: _pressed ? 0.96 : 1.0,
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.easeOut,
+      child: Material(
+        // color: BbbColors.panel,
+        // surfaceTintColor: BbbColors.panel,
+        shape: const CircleBorder(),
+        elevation: 0,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTap: _handleTap,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: const BoxDecoration(
+              color: BbbColors.panel,
+              shape: BoxShape.circle,
+              boxShadow: BbbShadow.sm,
+            ),
+            child: AnimatedBuilder(
+              animation: _flash,
+              builder: (context, _) {
+                final color = Color.lerp(
+                  BbbColors.brand,
+                  BbbColors.inkMuted,
+                  Curves.easeOut.transform(_flash.value),
+                )!;
+                return Icon(Icons.my_location, color: color, size: 22);
+              },
+            ),
           ),
-          child: const Icon(Icons.my_location, color: BbbColors.inkMuted, size: 22),
         ),
       ),
     );
@@ -736,7 +779,6 @@ class _RouteSheet extends ConsumerWidget {
                       onClose: () =>
                           ref.read(routeControllerProvider.notifier).clear(),
                     ),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),

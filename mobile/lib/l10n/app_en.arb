@@ -1,0 +1,84 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "beebeebike",
+
+  "commonLoading": "Loading...",
+
+  "loginTitle": "Log in",
+  "loginSubmit": "Log in",
+  "loginEmail": "Email",
+  "loginPassword": "Password",
+  "loginErrorEmptyEmail": "Enter your email",
+  "loginErrorEmptyPassword": "Enter your password",
+  "loginErrorInvalid": "Invalid email or password",
+
+  "settingsTitle": "Settings",
+  "settingsGuest": "Guest",
+  "settingsHome": "Home",
+  "settingsLogOut": "Log out",
+  "settingsLogIn": "Log in",
+  "settingsLanguage": "Language",
+  "settingsLanguageSystem": "System default",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageGerman": "Deutsch",
+  "settingsSectionAccount": "Account",
+  "settingsSectionLanguage": "Language",
+  "settingsSectionCredits": "Shout outs",
+  "settingsCreditOsm": "Map data © OpenStreetMap contributors",
+  "settingsCreditMaplibre": "Map rendering by MapLibre",
+  "settingsCreditGraphhopper": "Routing by GraphHopper",
+  "settingsCreditPhoton": "Geocoding by Photon, hosted by Komoot",
+
+  "searchHint": "Where to?",
+  "searchSavedPlaces": "Saved places",
+  "searchSectionQuick": "Quick",
+  "searchSectionRecent": "Recent",
+  "searchSectionResults": "Results",
+  "homeGoHome": "Go home",
+  "routeStartRide": "Start ride",
+  "routeEta": "ETA {time}",
+  "@routeEta": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "navArrives": "arrives {time}",
+  "@navArrives": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+
+  "locationCurrent": "Current location",
+  "locationDroppedPin": "Dropped pin",
+  "locationFetchError": "Could not get current location: {error}",
+  "@locationFetchError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "mapLoadError": "Failed to load map: {error}",
+  "@mapLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "routeLoadError": "Could not load route",
+  "routeClearTooltip": "Clear route",
+  "routeStart": "Start",
+  "routeSummary": "🚲 {minutes} min · {distance} km",
+  "@routeSummary": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "distance": { "type": "String" }
+    }
+  },
+
+  "navStarting": "Starting navigation...",
+  "navError": "Navigation error",
+  "navOnRoute": "On route",
+  "navMuteVoice": "Mute voice",
+  "navEnableVoice": "Enable voice",
+  "navEndNavigation": "End navigation",
+  "navRerouting": "Rerouting…",
+
+  "arrivedTitle": "Arrived",
+  "arrivedDone": "Done",
+
+  "mapResetNorth": "Reset to north"
+}

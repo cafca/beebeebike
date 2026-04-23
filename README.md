@@ -16,23 +16,13 @@ just dev
 
 Then open the app at `http://localhost:5173`.
 
-## Repository layout
-
-- `frontend/` - Svelte/Vite map UI.
-- `backend/` - Rust/Axum API, migrations, and integration tests.
-- `infra/` - Deployment and infrastructure support files, including GraphHopper config and nginx helpers.
-- `scripts/` - Local data download helpers.
-- `data/` - Local map data and generated routing/tile artifacts used by Docker Compose.
-
-Docker Compose files live at the project root and are meant to be run from there.
-
 ## Mobile app (iOS)
 
 Flutter client in `mobile/`. Requires the `ferrostar_flutter` plugin at `packages/ferrostar_flutter/`.
 
 ```bash
 just setup-mobile
-just dev-ios-sim
+just dev-ios-sim  # runs against https://beebeebike.com by default; override with BEEBEEBIKE_API_BASE_URL + BEEBEEBIKE_TILE_SERVER_BASE_URL
 ```
 
 > Android support is planned for a future release.

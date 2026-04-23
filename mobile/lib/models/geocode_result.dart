@@ -11,6 +11,8 @@ class GeocodeResult with _$GeocodeResult {
     required String label,
     required double lng,
     required double lat,
+    String? street,
+    String? housenumber,
   }) = _GeocodeResult;
 
   factory GeocodeResult.fromJson(Map<String, dynamic> json) =>

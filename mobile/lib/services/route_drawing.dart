@@ -3,8 +3,8 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../models/route_preview.dart';
 
-const _routeLineColor = '#2E6F66';
-const _markerFillColor = '#2E6F66';
+const _routeLineColor = '#19A4C2';
+const _markerFillColor = '#14272F';
 const _markerStrokeColor = '#ffffff';
 
 List<LatLng> _decodeLineString(Map<String, dynamic> geometry) {
@@ -47,7 +47,7 @@ class RouteOverlay {
     final line = await controller.addLine(LineOptions(
       geometry: coords,
       lineColor: _routeLineColor,
-      lineWidth: 5.0,
+      lineWidth: 8.0,
       lineOpacity: 0.9,
     ));
     final origin = await controller.addCircle(CircleOptions(

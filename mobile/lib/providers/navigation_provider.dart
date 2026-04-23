@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import '../api/client.dart';
 import '../api/routing_api.dart';
 import '../navigation/location_converter.dart';
 import '../navigation/navigation_service.dart';
+import 'locale_provider.dart';
 
 Stream<UserLocation> _buildLocationStream() async* {
   var permission = await Geolocator.checkPermission();
@@ -27,10 +30,15 @@ Stream<UserLocation> _buildLocationStream() async* {
   ).map(positionToUserLocation);
 }
 
+final ttsFactoryProvider = Provider<FlutterTts Function()>((_) => FlutterTts.new);
+
 final flutterTtsProvider = Provider<FlutterTts>((ref) {
-  final tts = FlutterTts();
-  // Berlin-only v0.1: instruction text is German.
-  tts.setLanguage('de-DE');
+  final tts = ref.watch(ttsFactoryProvider)();
+  final pref = ref.watch(localeProvider);
+  final deviceLocale = ui.PlatformDispatcher.instance.locale;
+  final tag = effectiveLanguageTag(pref, deviceLocale);
+  final ttsTag = tag == 'de' ? 'de-DE' : 'en-US';
+  tts.setLanguage(ttsTag);
   return tts;
 });
 

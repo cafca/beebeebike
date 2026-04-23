@@ -1,0 +1,66 @@
+{
+  "@@locale": "de",
+
+  "appTitle": "beebeebike",
+
+  "commonLoading": "Lädt…",
+
+  "loginTitle": "Anmeldung",
+  "loginSubmit": "Einloggen",
+  "loginEmail": "Email",
+  "loginPassword": "Passwort",
+  "loginErrorEmptyEmail": "Email eingeben",
+  "loginErrorEmptyPassword": "Passwort eingeben",
+  "loginErrorInvalid": "Ungültige Email oder ungültiges Passwort",
+
+  "settingsTitle": "Einstellungen",
+  "settingsGuest": "Gast",
+  "settingsHome": "Zuhause",
+  "settingsLogOut": "Ausloggen",
+  "settingsLogIn": "Einloggen",
+  "settingsLanguage": "Sprache",
+  "settingsLanguageSystem": "Systemstandard",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageGerman": "Deutsch",
+  "settingsSectionAccount": "Konto",
+  "settingsSectionLanguage": "Sprache",
+  "settingsSectionCredits": "Shoutouts",
+  "settingsCreditOsm": "Kartendaten © OpenStreetMap-Mitwirkende",
+  "settingsCreditMaplibre": "Kartendarstellung mit MapLibre",
+  "settingsCreditGraphhopper": "Routing mit GraphHopper",
+  "settingsCreditPhoton": "Geocoding mit Photon, gehostet von Komoot",
+
+  "searchHint": "Wohin?",
+  "searchSavedPlaces": "Gespeicherte Orte",
+  "searchSectionQuick": "Schnell",
+  "searchSectionRecent": "Zuletzt",
+  "searchSectionResults": "Ergebnisse",
+  "homeGoHome": "Nach Hause",
+  "routeStartRide": "Los geht's",
+  "routeEta": "Ankunft {time}",
+  "navArrives": "Ankunft um {time}",
+
+  "locationCurrent": "Aktueller Standort",
+  "locationDroppedPin": "Markierung",
+  "locationFetchError": "Standort konnte nicht ermittelt werden: {error}",
+
+  "mapLoadError": "Karte konnte nicht geladen werden: {error}",
+
+  "routeLoadError": "Route konnte nicht geladen werden",
+  "routeClearTooltip": "Route löschen",
+  "routeStart": "Start",
+  "routeSummary": "🚲 {minutes} Min · {distance} km",
+
+  "navStarting": "Navigation wird gestartet…",
+  "navError": "Navigationsfehler",
+  "navOnRoute": "Auf der Route",
+  "navMuteVoice": "Stimme aus",
+  "navEnableVoice": "Stimme an",
+  "navEndNavigation": "Navigation beenden",
+  "navRerouting": "Route wird neu berechnet…",
+
+  "arrivedTitle": "Angekommen",
+  "arrivedDone": "Fertig",
+
+  "mapResetNorth": "Nach Norden ausrichten"
+}

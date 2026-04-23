@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:beebeebike/app.dart';
 import 'package:beebeebike/config/app_config.dart';
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/navigation/camera_controller.dart';
 import 'package:beebeebike/navigation/navigation_service.dart';
 import 'package:beebeebike/providers/navigation_camera_provider.dart';
@@ -87,7 +88,12 @@ Future<_NavHarness> _pumpNavActive(WidgetTester tester) async {
         navigationServiceProvider.overrideWithValue(fakeService),
         navigationCameraControllerProvider.overrideWith((ref) => cam),
       ],
-      child: const MaterialApp(home: MapScreen()),
+      child: MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const MapScreen(),
+      ),
     ),
   );
   await tester.pump();

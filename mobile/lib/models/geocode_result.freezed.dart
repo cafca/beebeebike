@@ -25,6 +25,8 @@ mixin _$GeocodeResult {
   String get label => throw _privateConstructorUsedError;
   double get lng => throw _privateConstructorUsedError;
   double get lat => throw _privateConstructorUsedError;
+  String? get street => throw _privateConstructorUsedError;
+  String? get housenumber => throw _privateConstructorUsedError;
 
   /// Serializes this GeocodeResult to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -42,7 +44,14 @@ abstract class $GeocodeResultCopyWith<$Res> {
           GeocodeResult value, $Res Function(GeocodeResult) then) =
       _$GeocodeResultCopyWithImpl<$Res, GeocodeResult>;
   @useResult
-  $Res call({String id, String name, String label, double lng, double lat});
+  $Res call(
+      {String id,
+      String name,
+      String label,
+      double lng,
+      double lat,
+      String? street,
+      String? housenumber});
 }
 
 /// @nodoc
@@ -65,6 +74,8 @@ class _$GeocodeResultCopyWithImpl<$Res, $Val extends GeocodeResult>
     Object? label = null,
     Object? lng = null,
     Object? lat = null,
+    Object? street = freezed,
+    Object? housenumber = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -87,6 +98,14 @@ class _$GeocodeResultCopyWithImpl<$Res, $Val extends GeocodeResult>
           ? _value.lat
           : lat // ignore: cast_nullable_to_non_nullable
               as double,
+      street: freezed == street
+          ? _value.street
+          : street // ignore: cast_nullable_to_non_nullable
+              as String?,
+      housenumber: freezed == housenumber
+          ? _value.housenumber
+          : housenumber // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -99,7 +118,14 @@ abstract class _$$GeocodeResultImplCopyWith<$Res>
       __$$GeocodeResultImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String id, String name, String label, double lng, double lat});
+  $Res call(
+      {String id,
+      String name,
+      String label,
+      double lng,
+      double lat,
+      String? street,
+      String? housenumber});
 }
 
 /// @nodoc
@@ -120,6 +146,8 @@ class __$$GeocodeResultImplCopyWithImpl<$Res>
     Object? label = null,
     Object? lng = null,
     Object? lat = null,
+    Object? street = freezed,
+    Object? housenumber = freezed,
   }) {
     return _then(_$GeocodeResultImpl(
       id: null == id
@@ -142,6 +170,14 @@ class __$$GeocodeResultImplCopyWithImpl<$Res>
           ? _value.lat
           : lat // ignore: cast_nullable_to_non_nullable
               as double,
+      street: freezed == street
+          ? _value.street
+          : street // ignore: cast_nullable_to_non_nullable
+              as String?,
+      housenumber: freezed == housenumber
+          ? _value.housenumber
+          : housenumber // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -154,7 +190,9 @@ class _$GeocodeResultImpl implements _GeocodeResult {
       required this.name,
       required this.label,
       required this.lng,
-      required this.lat});
+      required this.lat,
+      this.street,
+      this.housenumber});
 
   factory _$GeocodeResultImpl.fromJson(Map<String, dynamic> json) =>
       _$$GeocodeResultImplFromJson(json);
@@ -169,10 +207,14 @@ class _$GeocodeResultImpl implements _GeocodeResult {
   final double lng;
   @override
   final double lat;
+  @override
+  final String? street;
+  @override
+  final String? housenumber;
 
   @override
   String toString() {
-    return 'GeocodeResult(id: $id, name: $name, label: $label, lng: $lng, lat: $lat)';
+    return 'GeocodeResult(id: $id, name: $name, label: $label, lng: $lng, lat: $lat, street: $street, housenumber: $housenumber)';
   }
 
   @override
@@ -184,12 +226,16 @@ class _$GeocodeResultImpl implements _GeocodeResult {
             (identical(other.name, name) || other.name == name) &&
             (identical(other.label, label) || other.label == label) &&
             (identical(other.lng, lng) || other.lng == lng) &&
-            (identical(other.lat, lat) || other.lat == lat));
+            (identical(other.lat, lat) || other.lat == lat) &&
+            (identical(other.street, street) || other.street == street) &&
+            (identical(other.housenumber, housenumber) ||
+                other.housenumber == housenumber));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, label, lng, lat);
+  int get hashCode =>
+      Object.hash(runtimeType, id, name, label, lng, lat, street, housenumber);
 
   /// Create a copy of GeocodeResult
   /// with the given fields replaced by the non-null parameter values.
@@ -213,7 +259,9 @@ abstract class _GeocodeResult implements GeocodeResult {
       required final String name,
       required final String label,
       required final double lng,
-      required final double lat}) = _$GeocodeResultImpl;
+      required final double lat,
+      final String? street,
+      final String? housenumber}) = _$GeocodeResultImpl;
 
   factory _GeocodeResult.fromJson(Map<String, dynamic> json) =
       _$GeocodeResultImpl.fromJson;
@@ -228,6 +276,10 @@ abstract class _GeocodeResult implements GeocodeResult {
   double get lng;
   @override
   double get lat;
+  @override
+  String? get street;
+  @override
+  String? get housenumber;
 
   /// Create a copy of GeocodeResult
   /// with the given fields replaced by the non-null parameter values.

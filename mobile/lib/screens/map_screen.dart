@@ -9,28 +9,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
-import 'package:url_launcher/url_launcher.dart';
 
+import '../theme/tokens.dart';
+
+import '../l10n/generated/app_localizations.dart';
 import '../models/location.dart';
 import '../models/route_preview.dart';
 import '../models/route_state.dart';
 import '../navigation/camera_controller.dart';
+import '../navigation/location_converter.dart';
 import '../navigation/maneuver_icons.dart';
 import '../navigation/nav_constants.dart';
 import '../providers/navigation_camera_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/navigation_session_provider.dart';
 import '../providers/location_provider.dart';
+import '../providers/map_bearing_provider.dart';
 import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
 import '../services/map_style_loader.dart';
 import '../services/route_drawing.dart';
 import '../widgets/arrived_sheet.dart';
 import '../widgets/eta_sheet.dart';
+import '../widgets/home_sheet.dart';
 import '../widgets/recenter_fab.dart';
 import '../widgets/rerouting_toast.dart';
 import '../widgets/route_card.dart';
 import '../widgets/route_summary.dart';
+import '../widgets/tts_toggle_fab.dart';
 import '../widgets/turn_banner.dart';
 
 final _berlinBounds = LatLngBounds(
@@ -53,10 +59,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _ttsEnabled = true;
   bool _rerouting = false;
   bool _browseAutocentered = false;
+  double? _lastLoggedZoom;
 
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final notifier = ref.read(routeControllerProvider.notifier);
     if (ref.read(routeControllerProvider).origin == null) {
       Position? pos;
@@ -68,8 +76,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       notifier.setOrigin(
         Location(
           id: 'gps',
-          name: 'Mein Standort',
-          label: 'Mein Standort',
+          name: l10n.locationCurrent,
+          label: l10n.locationCurrent,
           lng: pos?.longitude ?? 13.4533,
           lat: pos?.latitude ?? 52.5065,
         ),
@@ -80,7 +88,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         id: 'geo:${coords.latitude},${coords.longitude}',
         name:
             '${coords.latitude.toStringAsFixed(4)}, ${coords.longitude.toStringAsFixed(4)}',
-        label: 'Dropped pin',
+        label: l10n.locationDroppedPin,
         lng: coords.longitude,
         lat: coords.latitude,
       ),
@@ -160,8 +168,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
     } catch (e) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not get current location: $e')),
+        SnackBar(content: Text(l10n.locationFetchError(e.toString()))),
       );
     }
   }
@@ -169,6 +178,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _navigateHome() async {
     final home = ref.read(homeLocationProvider).valueOrNull;
     if (home == null) return;
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final notifier = ref.read(routeControllerProvider.notifier);
     if (ref.read(routeControllerProvider).origin == null) {
       Position? pos;
@@ -179,15 +190,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       if (!mounted) return;
       notifier.setOrigin(Location(
         id: 'gps',
-        name: 'Mein Standort',
-        label: 'Mein Standort',
+        name: l10n.locationCurrent,
+        label: l10n.locationCurrent,
         lng: pos?.longitude ?? 13.4533,
         lat: pos?.latitude ?? 52.5065,
       ));
     }
     notifier.setDestination(Location(
       id: home.id,
-      name: 'Zuhause',
+      name: l10n.settingsHome,
       label: home.label,
       lng: home.lng,
       lat: home.lat,
@@ -261,11 +272,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
     debugPrint('nav: start ${origin.name} -> ${destination.name}');
     final service = ref.read(navigationServiceProvider);
+    // Fetch last-known position synchronously (no GPS wait) so the controller
+    // has an initial fix and NavigationState emits immediately.
+    UserLocation? initial;
+    try {
+      final pos = await Geolocator.getLastKnownPosition();
+      if (pos != null) initial = positionToUserLocation(pos);
+    } catch (_) {}
     try {
       await service.start(
         origin: WaypointInput(lat: origin.lat, lng: origin.lng),
         destination:
             WaypointInput(lat: destination.lat, lng: destination.lng),
+        initialLocation: initial,
       );
     } catch (e, st) {
       debugPrint('nav: start failed: $e\n$st');
@@ -280,6 +299,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (controller != null) {
       await controller
           .updateMyLocationTrackingMode(MyLocationTrackingMode.none);
+      // Reorient to north — trackingCompass may have rotated the map during
+      // navigation, and browse mode should always face north-up.
+      await controller.animateCamera(CameraUpdate.bearingTo(0));
     }
     if (!mounted) return;
     setState(() {
@@ -298,11 +320,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     cam.onFirstFix();
     final controller = _mapController;
     if (controller == null) return;
-    await controller.animateCamera(CameraUpdate.newLatLngZoom(
-        LatLng(loc.lat, loc.lng), cam.followZoom));
-    if (!mounted) return;
+    // Enable tracking first so maplibre drives the camera target, then
+    // apply zoom. newLatLngZoom before trackingCompass gets clobbered —
+    // the tracking mode kicks in and resets zoom to whatever it was.
     await controller
         .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+    if (!mounted) return;
+    await controller.animateCamera(CameraUpdate.zoomTo(cam.followZoom));
   }
 
   Future<void> _handleArrival() async {
@@ -320,6 +344,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       await controller.animateCamera(CameraUpdate.newLatLngZoom(
           LatLng(destination.lat, destination.lng), kArrivalZoom));
     }
+  }
+
+  Future<void> _resetBearingToNorth() async {
+    final controller = _mapController;
+    if (controller == null) return;
+    await controller.animateCamera(CameraUpdate.bearingTo(0));
   }
 
   Future<void> _handleRecenterTap() async {
@@ -383,11 +413,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       debugPrint('nav: refresh-preview GPS error: $e');
     }
     if (!mounted || pos == null) return;
+    final l10n = AppLocalizations.of(context)!;
     ref.read(routeControllerProvider.notifier).setOrigin(
           Location(
             id: 'gps',
-            name: 'Mein Standort',
-            label: 'Mein Standort',
+            name: l10n.locationCurrent,
+            label: l10n.locationCurrent,
             lat: pos.latitude,
             lng: pos.longitude,
           ),
@@ -410,6 +441,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Cache the notifier on first build so dispose() can call detach()
     // without touching `ref` after unmount.
     _ratingOverlayNotifier ??=
@@ -458,7 +490,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         children: [
           styleAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Failed to load map: $e')),
+            error: (e, _) =>
+                Center(child: Text(l10n.mapLoadError(e.toString()))),
             data: (style) => MapLibreMap(
               styleString: style,
               initialCameraPosition: const CameraPosition(
@@ -470,6 +503,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               myLocationEnabled: true,
               myLocationTrackingMode: MyLocationTrackingMode.none,
               trackCameraPosition: true,
+              // Hide built-in compass + attribution chrome. Compass is
+              // redrawn inline above each RecenterFab (_CompassFabInline);
+              // attribution is inlined under each sheet's CTA (MapAttribution).
+              compassEnabled: false,
+              attributionButtonMargins: const math.Point(-1000, -1000),
               // EagerGestureRecognizer: map claims all pointer events so pinch,
               // rotate and pan work when wrapped in a Scaffold/MaterialApp
               // that otherwise wins the gesture arena on iOS.
@@ -509,9 +547,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 if (c == null) return;
                 final zoom = c.cameraPosition?.zoom;
                 if (zoom != null) {
+                  if (_lastLoggedZoom == null ||
+                      (zoom - _lastLoggedZoom!).abs() >= 0.01) {
+                    debugPrint('zoom: ${zoom.toStringAsFixed(2)}');
+                    _lastLoggedZoom = zoom;
+                  }
                   ref
                       .read(navigationCameraControllerProvider)
                       .onZoomChanged(zoom);
+                }
+                final bearing = c.cameraPosition?.bearing ?? 0;
+                final current = ref.read(mapBearingProvider);
+                if ((bearing - current).abs() > 0.1) {
+                  ref.read(mapBearingProvider.notifier).state = bearing;
                 }
               },
             ),
@@ -529,6 +577,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               rerouting: _rerouting,
               onToggleTts: () => setState(() => _ttsEnabled = !_ttsEnabled),
               onRecenter: _handleRecenterTap,
+              onResetBearing: _resetBearingToNorth,
             ),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
@@ -543,9 +592,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             child: navActive
                 ? _NavigationSheet(
                     key: const ValueKey('nav'),
-                    ttsEnabled: _ttsEnabled,
-                    onToggleTts: () =>
-                        setState(() => _ttsEnabled = !_ttsEnabled),
                     onClose: () =>
                         ref.read(navigationSessionProvider.notifier).state =
                             false,
@@ -556,6 +602,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         routeState: routeState,
                         preview: preview,
                         onFlyToMyLocation: _flyToCurrentLocation,
+                        onResetBearing: _resetBearingToNorth,
                         onStart: () =>
                             ref.read(navigationSessionProvider.notifier).state =
                                 true,
@@ -563,6 +610,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     : _HomeSheet(
                         key: const ValueKey('home'),
                         onFlyToMyLocation: _flyToCurrentLocation,
+                        onResetBearing: _resetBearingToNorth,
                         onNavigateHome: _navigateHome,
                       ),
           ),
@@ -573,18 +621,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Home sheet — always the base layer. DraggableScrollableSheet with home chip
-// collapsed; caveats/how-to/report-issue revealed on swipe-up.
+// Home sheet wrapper — hosts the HomeSheet widget plus a recenter FAB whose
+// vertical position tracks the sheet's current snap size.
 // ---------------------------------------------------------------------------
 
 class _HomeSheet extends ConsumerStatefulWidget {
   const _HomeSheet({
     super.key,
     required this.onFlyToMyLocation,
+    required this.onResetBearing,
     required this.onNavigateHome,
   });
 
   final VoidCallback onFlyToMyLocation;
+  final VoidCallback onResetBearing;
   final VoidCallback onNavigateHome;
 
   @override
@@ -592,9 +642,6 @@ class _HomeSheet extends ConsumerStatefulWidget {
 }
 
 class _HomeSheetState extends ConsumerState<_HomeSheet> {
-  static const double _idleSize = 0.18;
-  static const double _maxSize = 0.88;
-
   final _sheetController = DraggableScrollableController();
 
   @override
@@ -605,7 +652,6 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final home = ref.watch(homeLocationProvider).valueOrNull;
     final mq = MediaQuery.of(context);
 
     return Stack(
@@ -613,120 +659,157 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
         AnimatedBuilder(
           animation: _sheetController,
           builder: (context, _) {
-            final size = _sheetController.isAttached
-                ? _sheetController.size
-                : _idleSize;
+            final size =
+                _sheetController.isAttached ? _sheetController.size : 0.16;
             final sheetPx = size * mq.size.height;
             return Positioned(
               right: 16,
               bottom: sheetPx + 8,
-              child: FloatingActionButton(
-                heroTag: 'home-sheet-fab',
-                onPressed: widget.onFlyToMyLocation,
-                child: const Icon(Icons.my_location),
-              ),
-            );
-          },
-        ),
-        DraggableScrollableSheet(
-          controller: _sheetController,
-          initialChildSize: _idleSize,
-          minChildSize: _idleSize,
-          maxChildSize: _maxSize,
-          snap: true,
-          snapSizes: const [_idleSize, _maxSize],
-          builder: (context, scrollController) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: ListView(
-                controller: scrollController,
-                padding: EdgeInsets.zero,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 36,
-                            height: 4,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        if (home != null)
-                          ActionChip(
-                            avatar: const Icon(Icons.home, size: 16),
-                            label: const Text('Home'),
-                            onPressed: widget.onNavigateHome,
-                          ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding:
-                        EdgeInsets.fromLTRB(24, 8, 24, mq.padding.bottom + 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Divider(),
-                        const SizedBox(height: 16),
-                        Text('Caveats',
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              const TextSpan(
-                                text:
-                                    "You can't edit your painted areas yet in the mobile app. Do that on ",
-                              ),
-                              TextSpan(
-                                text: 'beebeebike.com',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  decoration: TextDecoration.underline,
-                                ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () => launchUrl(
-                                        Uri.parse('https://beebeebike.com'),
-                                        mode: LaunchMode.externalApplication,
-                                      ),
-                              ),
-                              const TextSpan(
-                                text:
-                                    ', then zoom out a lot and back in to load updates in the app.',
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text('How to use',
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Tap "Wohin?" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in the web app to get one-tap navigation.',
-                        ),
-                      ],
-                    ),
-                  ),
+                  _CompassFabInline(onResetBearing: widget.onResetBearing),
+                  _RecenterCircleFab(onTap: widget.onFlyToMyLocation),
                 ],
               ),
             );
           },
         ),
+        HomeSheet(
+          onNavigateHome: widget.onNavigateHome,
+          sheetController: _sheetController,
+        ),
       ],
     );
   }
 }
+
+class _RecenterCircleFab extends StatefulWidget {
+  const _RecenterCircleFab({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  State<_RecenterCircleFab> createState() => _RecenterCircleFabState();
+}
+
+class _RecenterCircleFabState extends State<_RecenterCircleFab>
+    with SingleTickerProviderStateMixin {
+  bool _pressed = false;
+  late final AnimationController _flash = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+    value: 1.0,
+  );
+
+  @override
+  void dispose() {
+    _flash.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    setState(() => _pressed = false);
+    widget.onTap();
+    _flash.forward(from: 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      scale: _pressed ? 0.96 : 1.0,
+      duration: const Duration(milliseconds: 100),
+      curve: Curves.easeOut,
+      child: Material(
+        // color: BbbColors.panel,
+        // surfaceTintColor: BbbColors.panel,
+        shape: const CircleBorder(),
+        elevation: 0,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapCancel: () => setState(() => _pressed = false),
+          onTap: _handleTap,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: const BoxDecoration(
+              color: BbbColors.panel,
+              shape: BoxShape.circle,
+              boxShadow: BbbShadow.sm,
+            ),
+            child: AnimatedBuilder(
+              animation: _flash,
+              builder: (context, _) {
+                final color = Color.lerp(
+                  BbbColors.brand,
+                  BbbColors.inkMuted,
+                  Curves.easeOut.transform(_flash.value),
+                )!;
+                return Icon(Icons.my_location, color: color, size: 22);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Compass + attribution — replace MapLibre's built-in chrome.
+// ---------------------------------------------------------------------------
+
+/// Inline compass that sits above a RecenterFab in each sheet. Reads
+/// the map bearing from [mapBearingProvider] and renders nothing when
+/// the map is ~north-up; otherwise shows a rotated glyph + spacer,
+/// tapping animates the map back to bearing 0.
+class _CompassFabInline extends ConsumerWidget {
+  const _CompassFabInline({required this.onResetBearing});
+
+  final VoidCallback onResetBearing;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bearing = ref.watch(mapBearingProvider);
+    if (bearing.abs() <= 0.5) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Tooltip(
+        message: l10n.mapResetNorth,
+        child: Material(
+          shape: const CircleBorder(),
+          color: BbbColors.panel,
+          elevation: 0,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onResetBearing,
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: const BoxDecoration(
+                color: BbbColors.panel,
+                shape: BoxShape.circle,
+                boxShadow: BbbShadow.sm,
+              ),
+              child: Transform.rotate(
+                angle: -bearing * math.pi / 180,
+                child: const Icon(
+                  Icons.navigation,
+                  size: 22,
+                  color: BbbColors.ink,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 // ---------------------------------------------------------------------------
 // Route sheet — slides up over home sheet when a route is active (loading,
@@ -739,16 +822,19 @@ class _RouteSheet extends ConsumerWidget {
     required this.routeState,
     required this.preview,
     required this.onFlyToMyLocation,
+    required this.onResetBearing,
     required this.onStart,
   });
 
   final RouteState routeState;
   final RoutePreview? preview;
   final VoidCallback onFlyToMyLocation;
+  final VoidCallback onResetBearing;
   final VoidCallback onStart;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Align(
       alignment: Alignment.bottomCenter,
       child: Column(
@@ -757,18 +843,23 @@ class _RouteSheet extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
-            child: FloatingActionButton(
-              heroTag: 'route-sheet-fab',
-              onPressed: onFlyToMyLocation,
-              child: const Icon(Icons.my_location),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _CompassFabInline(onResetBearing: onResetBearing),
+                _RecenterCircleFab(onTap: onFlyToMyLocation),
+              ],
             ),
           ),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              color: BbbColors.panel,
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
+              boxShadow: BbbShadow.panel,
             ),
             child: SafeArea(
               top: false,
@@ -789,7 +880,7 @@ class _RouteSheet extends ConsumerWidget {
                         const Icon(Icons.error_outline, color: Colors.red),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text('Could not load route',
+                          child: Text(l10n.routeLoadError,
                               style: Theme.of(context).textTheme.bodyMedium),
                         ),
                         IconButton(
@@ -808,10 +899,11 @@ class _RouteSheet extends ConsumerWidget {
                       durationMinutes: (preview!.time / 60000).round(),
                       distanceKm: preview!.distance / 1000,
                       onStart: onStart,
-                      onClose: () =>
-                          ref.read(routeControllerProvider.notifier).clear(),
+                      onClose: () {
+                        ref.read(routeControllerProvider.notifier).clear();
+                        onFlyToMyLocation();
+                      },
                     ),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -830,13 +922,9 @@ class _RouteSheet extends ConsumerWidget {
 class _NavigationSheet extends ConsumerWidget {
   const _NavigationSheet({
     super.key,
-    required this.ttsEnabled,
-    required this.onToggleTts,
     required this.onClose,
   });
 
-  final bool ttsEnabled;
-  final VoidCallback onToggleTts;
   final VoidCallback onClose;
 
   @override
@@ -849,8 +937,10 @@ class _NavigationSheet extends ConsumerWidget {
       child: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          color: BbbColors.panel,
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
+          boxShadow: BbbShadow.panel,
         ),
         child: SafeArea(
           top: false,
@@ -858,8 +948,6 @@ class _NavigationSheet extends ConsumerWidget {
               ? ArrivedSheet(onDone: onClose)
               : EtaSheet(
                   navState: navState,
-                  ttsEnabled: ttsEnabled,
-                  onToggleTts: onToggleTts,
                   onClose: onClose,
                 ),
         ),
@@ -879,15 +967,18 @@ class _NavTopBar extends ConsumerWidget {
     required this.rerouting,
     required this.onToggleTts,
     required this.onRecenter,
+    required this.onResetBearing,
   });
 
   final bool ttsEnabled;
   final bool rerouting;
   final VoidCallback onToggleTts;
   final VoidCallback onRecenter;
+  final VoidCallback onResetBearing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final navState = ref.watch(navigationStateProvider);
     final cam = ref.watch(navigationCameraControllerProvider);
 
@@ -900,17 +991,18 @@ class _NavTopBar extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 navState.when(
-                  loading: () => const TurnBanner(
-                    primaryText: 'Starting navigation...',
+                  loading: () => TurnBanner(
+                    primaryText: l10n.navStarting,
                     distanceText: '',
                   ),
-                  error: (e, _) => const TurnBanner(
-                    primaryText: 'Navigation error',
+                  error: (e, _) => TurnBanner(
+                    primaryText: l10n.navError,
                     distanceText: '',
                     icon: Icons.error_outline,
                   ),
                   data: (state) => TurnBanner(
-                    primaryText: state.currentVisual?.primaryText ?? 'On route',
+                    primaryText:
+                        state.currentVisual?.primaryText ?? l10n.navOnRoute,
                     distanceText: state.progress != null
                         ? formatDistance(
                             state.progress!.distanceToNextManeuverM)
@@ -928,17 +1020,27 @@ class _NavTopBar extends ConsumerWidget {
             ),
           ),
         ),
-        if (cam.mode == CameraMode.free)
-          Align(
-            alignment: Alignment.bottomRight,
-            child: SafeArea(
-              child: Padding(
-                padding:
-                    const EdgeInsets.only(right: 16, bottom: kEtaSheetHeight),
-                child: RecenterFab(onTap: onRecenter),
+        Align(
+          alignment: Alignment.bottomRight,
+          child: SafeArea(
+            child: Padding(
+              padding:
+                  const EdgeInsets.only(right: 16, bottom: kEtaSheetHeight),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  TtsToggleFab(enabled: ttsEnabled, onTap: onToggleTts),
+                  if (cam.mode == CameraMode.free) ...[
+                    const SizedBox(height: 12),
+                    _CompassFabInline(onResetBearing: onResetBearing),
+                    RecenterFab(onTap: onRecenter),
+                  ],
+                ],
               ),
             ),
           ),
+        ),
       ],
     );
   }

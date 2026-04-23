@@ -13,6 +13,8 @@ _$LocationImpl _$$LocationImplFromJson(Map<String, dynamic> json) =>
       label: json['label'] as String,
       lng: (json['lng'] as num).toDouble(),
       lat: (json['lat'] as num).toDouble(),
+      street: json['street'] as String?,
+      housenumber: json['housenumber'] as String?,
     );
 
 Map<String, dynamic> _$$LocationImplToJson(_$LocationImpl instance) =>
@@ -22,4 +24,6 @@ Map<String, dynamic> _$$LocationImplToJson(_$LocationImpl instance) =>
       'label': instance.label,
       'lng': instance.lng,
       'lat': instance.lat,
+      'street': instance.street,
+      'housenumber': instance.housenumber,
     };

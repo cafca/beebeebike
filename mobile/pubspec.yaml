@@ -10,6 +10,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^2.5.1
   dio: ^5.7.0
@@ -24,6 +27,7 @@ dependencies:
   path_provider: ^2.1.5
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
+  google_fonts: ^6.2.1
   ferrostar_flutter:
     path: ../packages/ferrostar_flutter
 
@@ -41,5 +45,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - assets/styles/

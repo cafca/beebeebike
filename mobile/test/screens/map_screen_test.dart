@@ -1,3 +1,4 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/models/route_state.dart';
 import 'package:beebeebike/providers/navigation_session_provider.dart';
 import 'package:beebeebike/providers/route_provider.dart';
@@ -42,7 +43,12 @@ void main() {
           ...testProviderOverrides(prefs: prefs),
           routeControllerProvider.overrideWith(_LoadingRouteController.new),
         ],
-        child: const MaterialApp(home: MapScreen()),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const MapScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -59,7 +65,12 @@ void main() {
           ...testProviderOverrides(prefs: prefs),
           routeControllerProvider.overrideWith(_ErrorRouteController.new),
         ],
-        child: const MaterialApp(home: MapScreen()),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const MapScreen(),
+        ),
       ),
     );
     await tester.pump();
@@ -76,13 +87,18 @@ void main() {
           ...testProviderOverrides(prefs: prefs),
           routeControllerProvider.overrideWith(_PreviewRouteController.new),
         ],
-        child: const MaterialApp(home: MapScreen()),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const MapScreen(),
+        ),
       ),
     );
     await tester.pump();
 
     // RouteSummary shows a Start button
-    expect(find.text('Start'), findsOneWidget);
+    expect(find.text('Start ride'), findsOneWidget);
 
     // time=1200s → 20 min, distance=5000m → 5.0 km
     expect(find.textContaining('20 min'), findsOneWidget);
@@ -101,20 +117,59 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: MapScreen()),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const MapScreen(),
+        ),
       ),
     );
     await tester.pump();
 
     expect(container.read(navigationSessionProvider), isFalse);
-    expect(find.text('Start'), findsOneWidget);
-    await tester.tap(find.text('Start'));
+    expect(find.text('Start ride'), findsOneWidget);
+    await tester.tap(find.text('Start ride'));
     await tester.pump();
 
     expect(container.read(navigationSessionProvider), isTrue);
   });
 
-  testWidgets('empty state shows drag handle', (tester) async {
+  testWidgets('empty state shows disabled Go home button when logged in',
+      (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      buildTestWidget(const MapScreen(), prefs: prefs, authenticated: true),
+    );
+    await tester.pump();
+
+    // Landing sheet always renders the Go home button; without a saved home
+    // the button is visually disabled and omits the ETA subtitle.
+    expect(find.text('Go home'), findsOneWidget);
+    expect(find.text('Set home to enable'), findsNothing);
+  });
+
+  testWidgets('Go home subtitle shows calculating state while ETA resolves',
+      (tester) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(
+      buildTestWidget(
+        const MapScreen(),
+        prefs: prefs,
+        authenticated: true,
+        homeLocation: fakeHome(),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Go home'), findsOneWidget);
+    expect(find.text('Calculating ETA…'), findsOneWidget);
+  });
+
+  testWidgets('landing CTA shows Log in when not authenticated',
+      (tester) async {
     final prefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
@@ -122,19 +177,7 @@ void main() {
     );
     await tester.pump();
 
-    // No route, no home saved — just the drag handle container, no chips
-    expect(find.text('Saved places'), findsNothing);
-    expect(find.text('Home'), findsNothing);
-  });
-
-  testWidgets('empty state shows Home chip when home is saved', (tester) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await tester.pumpWidget(
-      buildTestWidget(const MapScreen(), prefs: prefs, homeLocation: fakeHome()),
-    );
-    await tester.pump();
-
-    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Log in'), findsOneWidget);
+    expect(find.text('Go home'), findsNothing);
   });
 }

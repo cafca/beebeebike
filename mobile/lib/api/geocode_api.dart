@@ -39,6 +39,8 @@ class GeocodeApi {
         label: parts.isEmpty ? name : parts.join(' · '),
         lng: (coords[0] as num).toDouble(),
         lat: (coords[1] as num).toDouble(),
+        street: street.isEmpty ? null : street,
+        housenumber: housenumber.isEmpty ? null : housenumber,
       );
     }).toList();
   }

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'config/app_config.dart';
+import 'l10n/generated/app_localizations.dart';
 import 'providers/auth_provider.dart';
+import 'providers/locale_provider.dart';
 import 'screens/map_screen.dart';
+import 'theme/app_theme.dart';
 
 final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.fromEnvironment());
 
@@ -17,16 +20,14 @@ class BeeBeeBikeApp extends ConsumerWidget {
     // after human interaction, giving the session time to settle.
     ref.watch(authControllerProvider);
 
+    final localePref = ref.watch(localeProvider);
+
     return MaterialApp(
-      title: 'BeeBeeBike',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E6F66),
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF7F3EC),
-        useMaterial3: true,
-      ),
+      onGenerateTitle: (ctx) => AppLocalizations.of(ctx)!.appTitle,
+      locale: localePref.materialLocale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      theme: buildBbbTheme(),
       home: const MapScreen(),
     );
   }

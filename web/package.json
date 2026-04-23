@@ -26,6 +26,8 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@fontsource-variable/manrope": "^5.2.8",
     "@turf/buffer": "^7.3.4",
     "@turf/helpers": "^7.3.4",
     "@versatiles/style": "^5.10.2",

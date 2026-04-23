@@ -77,4 +77,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(closed, 1);
   });
+
+  testWidgets('heart button toggles saved icon state', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: RouteSummary(
+          durationMinutes: 12,
+          distanceKm: 3.4,
+          onStart: () {},
+        ),
+      ),
+    ));
+    expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+    expect(find.byIcon(Icons.favorite), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.favorite_border));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.favorite), findsOneWidget);
+    expect(find.byIcon(Icons.favorite_border), findsNothing);
+  });
+
+  testWidgets('data strip shows ETA hh:mm formatted from now', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: RouteSummary(
+          durationMinutes: 20,
+          distanceKm: 5.0,
+          onStart: () {},
+        ),
+      ),
+    ));
+    expect(find.textContaining(RegExp(r'ETA \d{2}:\d{2}')), findsOneWidget);
+  });
 }

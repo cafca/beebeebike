@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
+import 'map_attribution.dart';
 
 /// Route Sheet (variant B) body — mono data strip + Start ride / heart row.
 class RouteSummary extends StatefulWidget {
@@ -71,6 +72,7 @@ class _RouteSummaryState extends State<RouteSummary> {
             ),
           ],
         ),
+        const MapAttribution(),
       ],
     );
   }

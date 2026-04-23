@@ -49,9 +49,6 @@
   "arrivedDone": "Fertig",
 
   "mapResetNorth": "Nach Norden ausrichten",
-  "mapInfoTooltip": "Karten-Info",
-  "mapAttributionTitle": "Kartendaten",
-  "mapAttributionOsm": "© OpenStreetMap-Mitwirkende",
 
   "homeCaveatsTitle": "Einschränkungen",
   "homeCaveatsBefore": "Du kannst deine gemalten Flächen noch nicht in der App bearbeiten. Mach das auf ",

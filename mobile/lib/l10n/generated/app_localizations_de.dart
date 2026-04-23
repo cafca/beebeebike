@@ -129,12 +129,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get mapResetNorth => 'Nach Norden ausrichten';
 
   @override
-  String get mapInfoTooltip => 'Karten-Info';
-
-  @override
-  String get mapAttributionTitle => 'Kartendaten';
-
-  @override
   String get mapAttributionOsm => '© OpenStreetMap-Mitwirkende';
 
   @override

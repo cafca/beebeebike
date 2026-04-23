@@ -7,6 +7,7 @@ import '../navigation/maneuver_icons.dart';
 import '../providers/route_provider.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
+import 'map_attribution.dart';
 
 /// Distance (m) within which, if the destination has a house number,
 /// the ETA hero swaps from "$mins min" to the street + house number so
@@ -111,6 +112,7 @@ class EtaSheet extends ConsumerWidget {
               );
             },
           ),
+          const MapAttribution(),
         ],
       ),
     );

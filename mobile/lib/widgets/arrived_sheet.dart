@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
+import 'map_attribution.dart';
 
 class ArrivedSheet extends StatelessWidget {
   const ArrivedSheet({super.key, required this.onDone});
@@ -48,6 +49,7 @@ class ArrivedSheet extends StatelessWidget {
               ),
             ),
           ),
+          const MapAttribution(),
         ],
       ),
     );

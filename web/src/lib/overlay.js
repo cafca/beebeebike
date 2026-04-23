@@ -1,13 +1,15 @@
 import { api } from './api.js';
+import { colors } from './tokens.js';
 
 const COLORS = {
-  '-7': '#c0392b', // dark red
-  '-3': '#e74c3c', // medium red
-  '-1': '#f1948a', // pale red
-  '1':  '#76d7c4', // pale teal
-  '3':  '#1abc9c', // teal
-  '7':  '#0e6655', // dark teal
+  '-7': colors.ramp[0],
+  '-3': colors.ramp[1],
+  '-1': colors.ramp[2],
+  '1':  colors.ramp[4],
+  '3':  colors.ramp[5],
+  '7':  colors.ramp[6],
 };
+const FALLBACK = colors.ramp[3];
 
 let initialized = false;
 let currentMap = null;
@@ -34,7 +36,7 @@ export function initOverlay(map) {
         1,  COLORS['1'],
         3,  COLORS['3'],
         7,  COLORS['7'],
-        '#6b7280', // fallback gray
+        FALLBACK,
       ],
       'fill-opacity': 0.4,
     },
@@ -53,7 +55,7 @@ export function initOverlay(map) {
         1,  COLORS['1'],
         3,  COLORS['3'],
         7,  COLORS['7'],
-        '#6b7280',
+        FALLBACK,
       ],
       'line-width': 1,
       'line-opacity': 0.7,

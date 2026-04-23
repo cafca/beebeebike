@@ -1,0 +1,38 @@
+:root {
+  --bg: #EEF0F2;
+  --bg-alt: #E6E9ED;
+  --panel: #FFFFFF;
+  --ink: #14272F;
+  --ink-muted: #5B6C76;
+  --ink-faint: #95A3AB;
+  --divider: #EEF2F5;
+  --brand: #19A4C2;
+  --brand-soft: #E0F3F8;
+  --route-ink: #1A2A3E;
+  --accent-yellow: #F6B93B;
+
+  --radius-panel: 22px;
+  --radius-ctrl: 14px;
+  --radius-fab: 999px;
+  --radius-chip: 999px;
+  --radius-sheet-top: 30px;
+
+  --shadow-panel: 0 2px 4px rgba(20, 40, 50, 0.04), 0 18px 40px rgba(20, 40, 50, 0.12);
+  --shadow-sm: 0 1px 2px rgba(20, 40, 50, 0.06), 0 4px 10px rgba(20, 40, 50, 0.05);
+
+  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.t-screen-title { font: 600 17px/1.3 var(--font-sans); color: var(--ink); }
+.t-card-title   { font: 700 15px/1.3 var(--font-sans); color: var(--ink); }
+.t-body         { font: 500 15px/1.4 var(--font-sans); color: var(--ink); }
+.t-label        { font: 600 14px/1.3 var(--font-sans); color: var(--ink); }
+.t-mono-sub     { font: 500 11px/1.3 var(--font-mono); color: var(--ink-faint); }
+.t-mono-time    { font: 600 12px/1.3 var(--font-mono); color: var(--ink-muted); }
+.t-eyebrow {
+  font: 700 11px/1.2 var(--font-sans);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}

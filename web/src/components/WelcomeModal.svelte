@@ -35,40 +35,76 @@
 
 <style>
   .overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(20, 40, 50, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 100;
   }
   .modal {
-    background: white; padding: 24px; border-radius: 12px; max-width: min(520px, calc(100vw - 32px));
-    max-height: calc(100vh - 32px); overflow: auto;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    background: var(--panel);
+    padding: 24px;
+    border-radius: var(--radius-panel);
+    max-width: min(520px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+    box-shadow: var(--shadow-panel);
+    color: var(--ink);
+    font-family: var(--font-sans);
   }
   .route-preview {
     display: block;
     width: 100%;
     aspect-ratio: 5 / 3;
     object-fit: cover;
-    border-radius: 8px;
+    border-radius: var(--radius-ctrl);
     margin: 0 0 20px;
   }
-  h2 { margin: 0 0 12px; }
-  p { margin: 0 0 16px; font-size: 14px; line-height: 1.5; color: #444; }
-  ol { margin: 0 0 24px; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
-  li { font-size: 14px; line-height: 1.4; color: #444; }
-  button {
-    width: 100%; padding: 10px; background: #2563eb; color: white; border: none;
-    border-radius: 6px; cursor: pointer; font-size: 14px;
+  h2 {
+    margin: 0 0 12px;
+    font: 700 20px/1.2 var(--font-sans);
+    color: var(--ink);
   }
-  button:hover { background: #1d4ed8; }
-  .muted { color: #999; font-size: 12px; }
+  p {
+    margin: 0 0 16px;
+    font: 500 15px/1.5 var(--font-sans);
+    color: var(--ink-muted);
+  }
+  ol {
+    margin: 0 0 24px;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  li {
+    font: 500 14px/1.4 var(--font-sans);
+    color: var(--ink-muted);
+  }
+  button {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--ink);
+    color: var(--panel);
+    border: none;
+    border-radius: var(--radius-ctrl);
+    cursor: pointer;
+    font: 700 15px/1.3 var(--font-sans);
+  }
+  button:hover { opacity: 0.92; }
+  .muted {
+    color: var(--ink-faint);
+    font: 500 12px/1.4 var(--font-sans);
+  }
 
   @media (max-width: 640px) {
     .overlay { align-items: flex-end; }
     .modal {
       width: 100%;
       max-width: 100%;
-      border-radius: 16px 16px 0 0;
+      border-radius: var(--radius-sheet-top) var(--radius-sheet-top) 0 0;
       padding: 24px 20px 32px;
       max-height: calc(100vh - 24px);
     }

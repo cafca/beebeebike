@@ -94,8 +94,9 @@
   .preferences-panel {
     margin-top: 8px;
     padding-top: 10px;
-    border-top: 1px solid #e5e7eb;
-    color: #111827;
+    border-top: 1px solid var(--divider);
+    color: var(--ink);
+    font-family: var(--font-sans);
   }
   .preference-row {
     display: flex;
@@ -103,7 +104,7 @@
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 10px;
-    font-size: 14px;
+    font: 500 14px/1.3 var(--font-sans);
   }
   .preference-copy {
     min-width: 0;
@@ -112,14 +113,13 @@
   .preference-copy label {
     display: block;
     margin: 0;
-    font-weight: 600;
-    line-height: 1.2;
+    font: 600 14px/1.3 var(--font-sans);
+    color: var(--ink);
   }
   .preference-copy p {
     margin: 4px 0 0;
-    color: #6b7280;
-    font-size: 12px;
-    line-height: 1.35;
+    color: var(--ink-muted);
+    font: 500 12px/1.35 var(--font-sans);
   }
   .preference-row-spaced {
     margin-top: 16px;
@@ -127,30 +127,30 @@
   .preference-row span {
     min-width: 52px;
     text-align: right;
-    line-height: 1.2;
+    font: 600 12px/1.2 var(--font-mono);
+    color: var(--ink-muted);
     padding-top: 1px;
   }
   input[type='range'] {
     width: 100%;
-    accent-color: #059669;
+    accent-color: var(--brand);
   }
   .scale-labels {
     display: flex;
     justify-content: space-between;
     margin-top: 4px;
-    color: #6b7280;
-    font-size: 12px;
+    color: var(--ink-faint);
+    font: 500 12px/1.3 var(--font-sans);
   }
   .credits {
     margin-top: 18px;
     padding-top: 12px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--divider);
   }
   .credits p {
     margin: 0 0 8px;
-    color: #6b7280;
-    font-size: 12px;
-    line-height: 1.35;
+    color: var(--ink-muted);
+    font: 500 12px/1.35 var(--font-sans);
   }
   .credit-links {
     display: flex;
@@ -158,9 +158,8 @@
     gap: 8px 12px;
   }
   .credit-links a {
-    color: #2563eb;
-    font-size: 12px;
-    line-height: 1.35;
+    color: var(--brand);
+    font: 500 12px/1.35 var(--font-sans);
     text-decoration: none;
   }
   .credit-links a:hover {

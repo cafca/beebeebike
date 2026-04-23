@@ -132,7 +132,7 @@
         title="Preferences"
         onclick={() => showPreferences = !showPreferences}
       >
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"/>
         </svg>
@@ -267,27 +267,32 @@
     width: 340px;
   }
   .search-bar {
-    background: white; border-radius: 8px; padding: 8px 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    display: flex; flex-direction: column; gap: 4px;
+    background: var(--panel);
+    border-radius: 20px;
+    padding: 10px 14px;
+    box-shadow: var(--shadow-panel);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     position: relative;
   }
   .panel-actions {
     position: absolute;
-    top: 6px;
+    top: 50%;
     right: 6px;
+    transform: translateY(-50%);
     display: flex;
     gap: 4px;
     z-index: 2;
   }
   .icon-btn {
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     border: none;
-    border-radius: 6px;
-    background: white;
-    color: #374151;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink-muted);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -295,84 +300,168 @@
   }
   .icon-btn:hover,
   .icon-btn.active {
-    background: #eef2ff;
-    color: #2563eb;
+    background: var(--brand-soft);
+    color: var(--brand);
   }
   input {
-    border: none; outline: none; font-size: 16px; padding: 6px 0;
-    width: calc(100% - 68px);
+    border: none;
+    outline: none;
+    background: transparent;
+    font: 500 15px/1.4 var(--font-sans);
+    color: var(--ink);
+    padding: 6px 0;
+    width: calc(100% - 84px);
+  }
+  input::placeholder {
+    color: var(--ink-faint);
   }
   .waypoint {
-    display: flex; align-items: center; gap: 8px; font-size: 13px;
-    padding: 4px 68px 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font: 600 14px/1.3 var(--font-sans);
+    color: var(--ink);
+    padding: 4px 84px 4px 0;
   }
-  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .origin-dot { background: #f1c40f; }
-  .dest-dot { background: #2980b9; }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .origin-dot { background: var(--brand); }
+  .dest-dot { background: var(--route-ink); }
   .clear-btn {
     font-size: 18px;
     line-height: 1;
   }
   .save-home-btn {
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    width: 100%; min-height: 32px; margin-top: 2px; padding: 7px 10px;
-    border: 1px solid #d1d5db; border-radius: 6px; background: #f9fafb;
-    color: #111827; cursor: pointer; font-size: 13px; font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 34px;
+    margin-top: 4px;
+    padding: 8px 12px;
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-ctrl);
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+    font: 600 13px/1.3 var(--font-sans);
   }
-  .save-home-btn:hover { background: #f3f4f6; }
-  .save-home-btn:disabled { opacity: 0.55; cursor: default; }
+  .save-home-btn:hover {
+    background: var(--bg);
+  }
+  .save-home-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
   .save-home-btn svg {
-    width: 16px; height: 16px; fill: currentColor; flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+    flex: 0 0 auto;
   }
   .home-control {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    min-height: 32px; margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 32px;
+    margin-top: 2px;
   }
   .home-toggle {
-    display: flex; align-items: center; gap: 8px; color: #111827;
-    font-size: 13px; cursor: pointer; user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink);
+    font: 500 13px/1.3 var(--font-sans);
+    cursor: pointer;
+    user-select: none;
   }
   .home-toggle input {
-    position: absolute; opacity: 0; pointer-events: none;
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
   }
   .switch {
-    width: 34px; height: 20px; border-radius: 999px; background: #d1d5db;
-    position: relative; flex: 0 0 auto; transition: background 0.15s;
+    width: 34px;
+    height: 20px;
+    border-radius: 999px;
+    background: var(--ink-faint);
+    position: relative;
+    flex: 0 0 auto;
+    transition: background 0.15s;
   }
   .switch::after {
-    content: ''; position: absolute; width: 16px; height: 16px; top: 2px; left: 2px;
-    border-radius: 50%; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.22);
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 2px;
+    left: 2px;
+    border-radius: 50%;
+    background: var(--panel);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
     transition: transform 0.15s;
   }
-  .home-toggle input:checked + .switch { background: #2563eb; }
+  .home-toggle input:checked + .switch { background: var(--brand); }
   .home-toggle input:checked + .switch::after { transform: translateX(14px); }
   .home-toggle input:focus-visible + .switch {
-    outline: 2px solid #2563eb; outline-offset: 2px;
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
   }
   .reset-home-btn {
-    background: none; border: none; color: #2563eb; cursor: pointer;
-    font-size: 13px; padding: 4px 0;
+    background: none;
+    border: none;
+    color: var(--brand);
+    cursor: pointer;
+    font: 600 13px/1.3 var(--font-sans);
+    padding: 4px 0;
   }
   .reset-home-btn:disabled { opacity: 0.55; cursor: default; }
   .home-error {
-    color: #b91c1c; font-size: 12px; line-height: 1.3; padding: 2px 0;
+    color: #b91c1c;
+    font: 500 12px/1.3 var(--font-sans);
+    padding: 2px 0;
   }
   .results {
-    list-style: none; margin: 4px 0 0; padding: 0; background: white;
-    border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    max-height: 200px; overflow-y: auto;
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    background: var(--panel);
+    border-radius: var(--radius-ctrl);
+    box-shadow: var(--shadow-panel);
+    max-height: 200px;
+    overflow-y: auto;
   }
   .results li {
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--divider);
+  }
+  .results li:last-child {
+    border-bottom: none;
   }
   .result-btn {
-    width: 100%; text-align: left; padding: 10px 12px;
-    background: none; border: none; cursor: pointer; font-size: 13px;
-    display: flex; align-items: center; gap: 7px;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font: 500 13px/1.3 var(--font-sans);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 7px;
   }
-  .result-btn:hover { background: #f0f4ff; }
+  .result-btn:hover { background: var(--brand-soft); }
   .result-icon {
-    width: 14px; height: 14px; flex-shrink: 0; color: #6b7280;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--ink-faint);
   }
 
   @media (max-width: 640px) {
@@ -382,7 +471,7 @@
     .search-bar {
       background: none;
       box-shadow: none;
-      border-radius: 8px 8px 0 0;
+      border-radius: var(--radius-ctrl) var(--radius-ctrl) 0 0;
     }
     .result-btn {
       padding: 14px 12px;

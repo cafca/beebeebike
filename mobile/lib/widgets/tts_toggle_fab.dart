@@ -4,6 +4,8 @@ import '../l10n/generated/app_localizations.dart';
 import '../theme/tokens.dart';
 
 /// 52×52 circular FAB for toggling turn-by-turn voice during navigation.
+/// Active (voice on): dark ground, bright icon. Inactive: white ground,
+/// muted icon — matches the recenter-idle treatment.
 class TtsToggleFab extends StatelessWidget {
   const TtsToggleFab({
     super.key,
@@ -17,9 +19,11 @@ class TtsToggleFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final bg = enabled ? BbbColors.ink : Colors.white;
+    final fg = enabled ? Colors.white : BbbColors.inkMuted;
     return Material(
-      color: Colors.white,
-      surfaceTintColor: Colors.white,
+      color: bg,
+      surfaceTintColor: bg,
       shape: const CircleBorder(),
       elevation: 0,
       child: InkWell(
@@ -36,7 +40,7 @@ class TtsToggleFab extends StatelessWidget {
             ),
             child: Icon(
               enabled ? Icons.volume_up : Icons.volume_off,
-              color: BbbColors.inkMuted,
+              color: fg,
               size: 22,
             ),
           ),

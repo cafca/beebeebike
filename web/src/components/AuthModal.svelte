@@ -63,33 +63,99 @@
 
 <style>
   .overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(20, 40, 50, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 100;
   }
   .modal {
     position: relative;
-    background: white; padding: 32px; border-radius: 12px; min-width: min(320px, calc(100vw - 32px));
-    box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    background: var(--panel);
+    padding: 32px;
+    border-radius: var(--radius-panel);
+    min-width: min(320px, calc(100vw - 32px));
+    box-shadow: var(--shadow-panel);
+    color: var(--ink);
+    font-family: var(--font-sans);
   }
   .close {
-    position: absolute; top: 10px; right: 10px;
-    width: 28px; height: 28px; border: none; border-radius: 6px;
-    background: white; cursor: pointer; font-size: 20px; line-height: 1;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: var(--radius-fab);
+    background: var(--bg);
+    color: var(--ink-muted);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
-  h2 { margin-bottom: 16px; }
+  .close:hover {
+    color: var(--ink);
+  }
+  h2 {
+    margin-bottom: 16px;
+    font: 600 17px/1.3 var(--font-sans);
+    color: var(--ink);
+  }
   form { display: flex; flex-direction: column; gap: 12px; }
   input {
-    padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-ctrl);
+    font: 500 15px/1.4 var(--font-sans);
+    color: var(--ink);
+    background: var(--panel);
+  }
+  input:focus {
+    outline: 2px solid var(--brand);
+    outline-offset: -1px;
+    border-color: var(--brand);
+  }
+  input::placeholder {
+    color: var(--ink-faint);
   }
   button[type="submit"] {
-    padding: 10px; background: #2563eb; color: white; border: none;
-    border-radius: 6px; cursor: pointer; font-size: 14px;
+    padding: 12px 14px;
+    background: var(--ink);
+    color: var(--panel);
+    border: none;
+    border-radius: var(--radius-ctrl);
+    cursor: pointer;
+    font: 700 15px/1.3 var(--font-sans);
+  }
+  button[type="submit"]:hover:not(:disabled) {
+    opacity: 0.92;
   }
   button[type="submit"]:disabled { opacity: 0.5; }
-  .error { color: #dc2626; font-size: 13px; margin: 0; }
-  .switch { margin-top: 12px; font-size: 13px; text-align: center; }
-  .link { background: none; border: none; color: #2563eb; cursor: pointer; text-decoration: underline; }
+  .error {
+    color: #b91c1c;
+    font: 500 13px/1.3 var(--font-sans);
+    margin: 0;
+  }
+  .switch {
+    margin-top: 12px;
+    font: 500 13px/1.3 var(--font-sans);
+    color: var(--ink-muted);
+    text-align: center;
+  }
+  .link {
+    background: none;
+    border: none;
+    color: var(--brand);
+    cursor: pointer;
+    text-decoration: underline;
+    font: 600 13px/1.3 var(--font-sans);
+    padding: 0;
+  }
 
   @media (max-width: 640px) {
     .modal {

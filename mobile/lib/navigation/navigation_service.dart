@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/foundation.dart';
 
+import '../services/haptics.dart';
+
 typedef CreateController = Future<FerrostarController> Function(
   Map<String, dynamic> osrmJson,
   List<WaypointInput> waypoints,
@@ -92,6 +94,7 @@ class NavigationService {
       if (_rerouteInProgress) return;
       _rerouteInProgress = true;
       _rerouteController.add(true);
+      AppHaptics.offRoute();
       debugPrint(
           'nav: deviation ${deviation.deviationM.toStringAsFixed(0)}m, rerouting');
       try {

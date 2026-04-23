@@ -7,6 +7,7 @@ import '../models/route_preview.dart';
 import '../models/route_state.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
+import '../services/haptics.dart';
 
 typedef RoutePreviewLoader = Future<RoutePreview> Function({
   required Location origin,
@@ -65,11 +66,13 @@ class RouteController extends Notifier<RouteState> {
         error: 'Origin and destination are the same',
         preview: null,
       );
+      AppHaptics.routeError();
       return;
     }
 
     final generation = ++_loadGeneration;
     state = state.copyWith(isLoading: true, error: null, preview: null);
+    AppHaptics.routeCalcStart();
     try {
       final preview = await ref.read(routePreviewLoaderProvider)(
         origin: origin,
@@ -77,9 +80,11 @@ class RouteController extends Notifier<RouteState> {
       );
       if (generation != _loadGeneration) return;
       state = state.copyWith(preview: preview, isLoading: false);
+      AppHaptics.routeSuccess();
     } catch (error) {
       if (generation != _loadGeneration) return;
       state = state.copyWith(isLoading: false, error: error.toString());
+      AppHaptics.routeError();
     }
   }
 

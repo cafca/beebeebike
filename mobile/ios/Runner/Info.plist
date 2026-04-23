@@ -31,17 +31,17 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>BeeBeeBike needs your location to navigate your bike route, including when the screen is locked.</string>
+	<string>beebeebike needs your location to navigate your bike route, including when the screen is locked.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>BeeBeeBike needs your location to navigate your bike route.</string>
+	<string>beebeebike needs your location to navigate your bike route.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

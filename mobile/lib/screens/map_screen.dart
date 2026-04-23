@@ -27,6 +27,7 @@ import '../providers/location_provider.dart';
 import '../providers/map_bearing_provider.dart';
 import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
+import '../services/haptics.dart';
 import '../services/map_style_loader.dart';
 import '../services/route_drawing.dart';
 import '../widgets/arrived_sheet.dart';
@@ -316,6 +317,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _handleFirstFix(UserLocation loc) async {
     debugPrint('nav: first fix');
+    AppHaptics.firstFix();
     final cam = ref.read(navigationCameraControllerProvider);
     cam.onFirstFix();
     final controller = _mapController;
@@ -331,6 +333,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _handleArrival() async {
     debugPrint('nav: arrived');
+    AppHaptics.arrived();
     final cam = ref.read(navigationCameraControllerProvider);
     cam.onArrived();
     if (mounted) setState(() => _rerouting = false);
@@ -603,9 +606,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         preview: preview,
                         onFlyToMyLocation: _flyToCurrentLocation,
                         onResetBearing: _resetBearingToNorth,
-                        onStart: () =>
-                            ref.read(navigationSessionProvider.notifier).state =
-                                true,
+                        onStart: () {
+                          AppHaptics.startRide();
+                          ref
+                              .read(navigationSessionProvider.notifier)
+                              .state = true;
+                        },
                       )
                     : _HomeSheet(
                         key: const ValueKey('home'),

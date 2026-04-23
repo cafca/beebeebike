@@ -22,9 +22,23 @@
   "settingsLanguageSystem": "Systemstandard",
   "settingsLanguageEnglish": "English",
   "settingsLanguageGerman": "Deutsch",
+  "settingsSectionAccount": "Konto",
+  "settingsSectionLanguage": "Sprache",
+  "settingsSectionCredits": "Shoutouts",
+  "settingsCreditOsm": "Kartendaten © OpenStreetMap-Mitwirkende",
+  "settingsCreditMaplibre": "Kartendarstellung mit MapLibre",
+  "settingsCreditGraphhopper": "Routing mit GraphHopper",
+  "settingsCreditPhoton": "Geocoding mit Photon, gehostet von Komoot",
 
   "searchHint": "Wohin?",
   "searchSavedPlaces": "Gespeicherte Orte",
+  "searchSectionQuick": "Schnell",
+  "searchSectionRecent": "Zuletzt",
+  "searchSectionResults": "Ergebnisse",
+  "homeGoHome": "Nach Hause",
+  "routeStartRide": "Los geht's",
+  "routeEta": "Ankunft {time}",
+  "navArrives": "Ankunft um {time}",
 
   "locationCurrent": "Aktueller Standort",
   "locationDroppedPin": "Markierung",
@@ -48,9 +62,5 @@
   "arrivedTitle": "Angekommen",
   "arrivedDone": "Fertig",
 
-  "homeCaveatsTitle": "Einschränkungen",
-  "homeCaveatsBefore": "Du kannst deine gemalten Flächen noch nicht in der App bearbeiten. Mach das auf ",
-  "homeCaveatsAfter": ", dann weit raus- und wieder reinzoomen, damit die Änderungen in der App geladen werden lol.",
-  "homeHowToTitle": "So geht's",
-  "homeHowToBody": "Tippe auf „Wohin?\u201C, um ein Ziel zu suchen, oder tippe irgendwo auf die Karte. Mit dem Pinsel malst du Flächen grün (gute Strecken) oder rot (vermeiden) — die Navigation passt sich deinen Wünschen an. Wenn du in der Web-App ein Zuhause gespeichert hast kannst du mit einem Tap dorthin navigieren."
+  "mapResetNorth": "Nach Norden ausrichten"
 }

@@ -206,6 +206,48 @@ abstract class AppLocalizations {
   /// **'Deutsch'**
   String get settingsLanguageGerman;
 
+  /// No description provided for @settingsSectionAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get settingsSectionAccount;
+
+  /// No description provided for @settingsSectionLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get settingsSectionLanguage;
+
+  /// No description provided for @settingsSectionCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'Shout outs'**
+  String get settingsSectionCredits;
+
+  /// No description provided for @settingsCreditOsm.
+  ///
+  /// In en, this message translates to:
+  /// **'Map data © OpenStreetMap contributors'**
+  String get settingsCreditOsm;
+
+  /// No description provided for @settingsCreditMaplibre.
+  ///
+  /// In en, this message translates to:
+  /// **'Map rendering by MapLibre'**
+  String get settingsCreditMaplibre;
+
+  /// No description provided for @settingsCreditGraphhopper.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing by GraphHopper'**
+  String get settingsCreditGraphhopper;
+
+  /// No description provided for @settingsCreditPhoton.
+  ///
+  /// In en, this message translates to:
+  /// **'Geocoding by Photon, hosted by Komoot'**
+  String get settingsCreditPhoton;
+
   /// No description provided for @searchHint.
   ///
   /// In en, this message translates to:
@@ -217,6 +259,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Saved places'**
   String get searchSavedPlaces;
+
+  /// No description provided for @searchSectionQuick.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick'**
+  String get searchSectionQuick;
+
+  /// No description provided for @searchSectionRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get searchSectionRecent;
+
+  /// No description provided for @searchSectionResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get searchSectionResults;
+
+  /// No description provided for @homeGoHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Go home'**
+  String get homeGoHome;
+
+  /// No description provided for @routeStartRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Start ride'**
+  String get routeStartRide;
+
+  /// No description provided for @routeEta.
+  ///
+  /// In en, this message translates to:
+  /// **'ETA {time}'**
+  String routeEta(String time);
+
+  /// No description provided for @navArrives.
+  ///
+  /// In en, this message translates to:
+  /// **'arrives {time}'**
+  String navArrives(String time);
 
   /// No description provided for @locationCurrent.
   ///
@@ -320,35 +404,11 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get arrivedDone;
 
-  /// No description provided for @homeCaveatsTitle.
+  /// No description provided for @mapResetNorth.
   ///
   /// In en, this message translates to:
-  /// **'Caveats'**
-  String get homeCaveatsTitle;
-
-  /// No description provided for @homeCaveatsBefore.
-  ///
-  /// In en, this message translates to:
-  /// **'You can\'t edit your painted areas yet in the mobile app. Do that on '**
-  String get homeCaveatsBefore;
-
-  /// No description provided for @homeCaveatsAfter.
-  ///
-  /// In en, this message translates to:
-  /// **', then zoom out a lot and back in to load updates in the app.'**
-  String get homeCaveatsAfter;
-
-  /// No description provided for @homeHowToTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'How to use'**
-  String get homeHowToTitle;
-
-  /// No description provided for @homeHowToBody.
-  ///
-  /// In en, this message translates to:
-  /// **'Tap \"Where to?\" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in the web app to get one-tap navigation.'**
-  String get homeHowToBody;
+  /// **'Reset to north'**
+  String get mapResetNorth;
 }
 
 class _AppLocalizationsDelegate

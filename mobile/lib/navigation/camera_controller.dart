@@ -16,7 +16,14 @@ class NavigationCameraController extends ChangeNotifier {
   }
 
   void onTrackingDismissed() {
-    if (_mode != CameraMode.following) return;
+    // Accept dismissals from both following (user pans during active nav)
+    // and awaitingFirstFix (user pans before first GPS fix lands), so the
+    // RecenterFab surfaces in either case. Bailing in arrived keeps the
+    // post-arrival camera flight from flipping us back to free.
+    if (_mode != CameraMode.following &&
+        _mode != CameraMode.awaitingFirstFix) {
+      return;
+    }
     _mode = CameraMode.free;
     notifyListeners();
   }

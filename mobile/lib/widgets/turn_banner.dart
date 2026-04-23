@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/tokens.dart';
+import '../theme/typography.dart';
+
 class TurnBanner extends StatelessWidget {
   const TurnBanner({
     super.key,
@@ -16,23 +19,32 @@ class TurnBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        color: const Color(0xFF2F8F56),
-        borderRadius: BorderRadius.circular(20),
+        color: BbbColors.ink,
+        borderRadius: BorderRadius.circular(BbbRadius.panel),
+        boxShadow: BbbShadow.sm,
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white),
-          const SizedBox(width: 12),
+          Icon(icon, color: Colors.white, size: 29),
+          const SizedBox(width: 14),
           Expanded(
             child: Text(
               primaryText,
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w700),
+              style: BbbText.cardTitle()
+                  .copyWith(color: Colors.white, fontSize: 20),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          Text(distanceText, style: const TextStyle(color: Colors.white)),
+          const SizedBox(width: 10),
+          Text(
+            distanceText,
+            style: BbbText.monoTime(
+              color: Colors.white.withValues(alpha: 0.8),
+            ).copyWith(fontSize: 16),
+          ),
         ],
       ),
     );

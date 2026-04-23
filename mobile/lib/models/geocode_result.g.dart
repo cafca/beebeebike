@@ -13,6 +13,8 @@ _$GeocodeResultImpl _$$GeocodeResultImplFromJson(Map<String, dynamic> json) =>
       label: json['label'] as String,
       lng: (json['lng'] as num).toDouble(),
       lat: (json['lat'] as num).toDouble(),
+      street: json['street'] as String?,
+      housenumber: json['housenumber'] as String?,
     );
 
 Map<String, dynamic> _$$GeocodeResultImplToJson(_$GeocodeResultImpl instance) =>
@@ -22,4 +24,6 @@ Map<String, dynamic> _$$GeocodeResultImplToJson(_$GeocodeResultImpl instance) =>
       'label': instance.label,
       'lng': instance.lng,
       'lat': instance.lat,
+      'street': instance.street,
+      'housenumber': instance.housenumber,
     };

@@ -63,10 +63,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLanguageGerman => 'Deutsch';
 
   @override
+  String get settingsSectionAccount => 'Account';
+
+  @override
+  String get settingsSectionLanguage => 'Language';
+
+  @override
+  String get settingsSectionCredits => 'Shout outs';
+
+  @override
+  String get settingsCreditOsm => 'Map data © OpenStreetMap contributors';
+
+  @override
+  String get settingsCreditMaplibre => 'Map rendering by MapLibre';
+
+  @override
+  String get settingsCreditGraphhopper => 'Routing by GraphHopper';
+
+  @override
+  String get settingsCreditPhoton => 'Geocoding by Photon, hosted by Komoot';
+
+  @override
   String get searchHint => 'Where to?';
 
   @override
   String get searchSavedPlaces => 'Saved places';
+
+  @override
+  String get searchSectionQuick => 'Quick';
+
+  @override
+  String get searchSectionRecent => 'Recent';
+
+  @override
+  String get searchSectionResults => 'Results';
+
+  @override
+  String get homeGoHome => 'Go home';
+
+  @override
+  String get routeStartRide => 'Start ride';
+
+  @override
+  String routeEta(String time) {
+    return 'ETA $time';
+  }
+
+  @override
+  String navArrives(String time) {
+    return 'arrives $time';
+  }
 
   @override
   String get locationCurrent => 'Current location';
@@ -126,20 +172,5 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arrivedDone => 'Done';
 
   @override
-  String get homeCaveatsTitle => 'Caveats';
-
-  @override
-  String get homeCaveatsBefore =>
-      'You can\'t edit your painted areas yet in the mobile app. Do that on ';
-
-  @override
-  String get homeCaveatsAfter =>
-      ', then zoom out a lot and back in to load updates in the app.';
-
-  @override
-  String get homeHowToTitle => 'How to use';
-
-  @override
-  String get homeHowToBody =>
-      'Tap \"Where to?\" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in the web app to get one-tap navigation.';
+  String get mapResetNorth => 'Reset to north';
 }

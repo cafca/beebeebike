@@ -18,19 +18,18 @@ NavigationState _state() => const NavigationState(
 void main() {
   testWidgets('close IconButton fires onClose', (tester) async {
     var closed = 0;
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(
+      child: MaterialApp(
       locale: const Locale('en'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EtaSheet(
           navState: AsyncValue.data(_state()),
-          ttsEnabled: true,
-          onToggleTts: () {},
           onClose: () => closed++,
         ),
       ),
-    ));
+    )));
     final closeBtn = find.widgetWithIcon(IconButton, Icons.close);
     expect(closeBtn, findsOneWidget);
     await tester.tap(closeBtn);
@@ -38,80 +37,55 @@ void main() {
     expect(closed, 1);
   });
 
-  testWidgets('tts IconButton toggles tts icon via onToggleTts',
+  testWidgets('does not render volume controls (moved to FAB)',
       (tester) async {
-    var toggled = 0;
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(
+      child: MaterialApp(
       locale: const Locale('en'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EtaSheet(
           navState: AsyncValue.data(_state()),
-          ttsEnabled: true,
-          onToggleTts: () => toggled++,
           onClose: () {},
         ),
       ),
-    ));
-    expect(find.byIcon(Icons.volume_up), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.volume_up));
-    await tester.pumpAndSettle();
-    expect(toggled, 1);
-  });
-
-  testWidgets('renders volume_off icon when ttsEnabled is false',
-      (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: EtaSheet(
-          navState: AsyncValue.data(_state()),
-          ttsEnabled: false,
-          onToggleTts: () {},
-          onClose: () {},
-        ),
-      ),
-    ));
-    expect(find.byIcon(Icons.volume_off), findsOneWidget);
+    )));
     expect(find.byIcon(Icons.volume_up), findsNothing);
+    expect(find.byIcon(Icons.volume_off), findsNothing);
   });
 
   testWidgets('shows loading fallback when navState is loading',
       (tester) async {
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(
+      child: MaterialApp(
       locale: const Locale('en'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EtaSheet(
           navState: const AsyncValue.loading(),
-          ttsEnabled: true,
-          onToggleTts: () {},
           onClose: () {},
         ),
       ),
-    ));
+    )));
     expect(find.text('Loading...'), findsOneWidget);
   });
 
   testWidgets('shows remaining distance from distanceRemainingM',
       (tester) async {
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(ProviderScope(
+      child: MaterialApp(
       locale: const Locale('en'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EtaSheet(
           navState: AsyncValue.data(_state()),
-          ttsEnabled: true,
-          onToggleTts: () {},
           onClose: () {},
         ),
       ),
-    ));
+    )));
     // _state() has distanceRemainingM: 1500, so expect "1.5 km"
     expect(find.text('1.5 km'), findsOneWidget);
   });

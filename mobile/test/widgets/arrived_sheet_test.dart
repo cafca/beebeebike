@@ -15,7 +15,7 @@ void main() {
     ));
 
     expect(find.text('Arrived'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+    await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(tapped, 1);
   });

@@ -27,10 +27,12 @@ void main() {
       expect(c.mode, CameraMode.free);
     });
 
-    test('onTrackingDismissed is a no-op in awaitingFirstFix', () {
+    test('onTrackingDismissed transitions awaitingFirstFix -> free', () {
+      // User can pan before the first GPS fix lands; we still want the
+      // RecenterFab to surface so they can re-lock when ready.
       final c = NavigationCameraController();
       c.onTrackingDismissed();
-      expect(c.mode, CameraMode.awaitingFirstFix);
+      expect(c.mode, CameraMode.free);
     });
 
     test('onTrackingDismissed is a no-op in arrived', () {
@@ -96,8 +98,8 @@ void main() {
       var notifications = 0;
       c.addListener(() => notifications++);
 
-      // No-ops from awaitingFirstFix
-      c.onTrackingDismissed();
+      // No-ops from awaitingFirstFix (onTrackingDismissed is a real
+      // transition in this state, so it is covered below).
       c.onRecenterTapped();
       c.onZoomChanged(14.0);
       expect(notifications, 0);

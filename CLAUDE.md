@@ -35,7 +35,7 @@ Backend uses `SQLX_OFFLINE=true` for Docker builds. Locally, sqlx connects to Po
 ### Mobile app (iOS only)
 
 - `just setup-mobile` — `flutter pub get` for plugin and app
-- `just dev-ios-sim` — run on iOS simulator against local docker stack (defaults to 127.0.0.1)
+- `just dev-ios-sim` — run on iOS simulator against `BEEBEEBIKE_API_BASE_URL` / `BEEBEEBIKE_TILE_SERVER_BASE_URL` (defaults to `https://beebeebike.com`)
 - `just dev-ios-device <DEVICE>` — run on physical device against dev stack over LAN (auto-detects host IP via `ipconfig getifaddr en0`)
 - `just release-ios-device <DEVICE>` — release-mode run against production URLs (`https://beebeebike.com`)
 - `just test-mobile` — analyze + test for the app

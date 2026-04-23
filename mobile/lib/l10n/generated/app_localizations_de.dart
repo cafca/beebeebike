@@ -63,10 +63,57 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLanguageGerman => 'Deutsch';
 
   @override
+  String get settingsSectionAccount => 'Konto';
+
+  @override
+  String get settingsSectionLanguage => 'Sprache';
+
+  @override
+  String get settingsSectionCredits => 'Shoutouts';
+
+  @override
+  String get settingsCreditOsm => 'Kartendaten © OpenStreetMap-Mitwirkende';
+
+  @override
+  String get settingsCreditMaplibre => 'Kartendarstellung mit MapLibre';
+
+  @override
+  String get settingsCreditGraphhopper => 'Routing mit GraphHopper';
+
+  @override
+  String get settingsCreditPhoton =>
+      'Geocoding mit Photon, gehostet von Komoot';
+
+  @override
   String get searchHint => 'Wohin?';
 
   @override
   String get searchSavedPlaces => 'Gespeicherte Orte';
+
+  @override
+  String get searchSectionQuick => 'Schnell';
+
+  @override
+  String get searchSectionRecent => 'Zuletzt';
+
+  @override
+  String get searchSectionResults => 'Ergebnisse';
+
+  @override
+  String get homeGoHome => 'Nach Hause';
+
+  @override
+  String get routeStartRide => 'Los geht\'s';
+
+  @override
+  String routeEta(String time) {
+    return 'Ankunft $time';
+  }
+
+  @override
+  String navArrives(String time) {
+    return 'Ankunft um $time';
+  }
 
   @override
   String get locationCurrent => 'Aktueller Standort';
@@ -126,20 +173,5 @@ class AppLocalizationsDe extends AppLocalizations {
   String get arrivedDone => 'Fertig';
 
   @override
-  String get homeCaveatsTitle => 'Einschränkungen';
-
-  @override
-  String get homeCaveatsBefore =>
-      'Du kannst deine gemalten Flächen noch nicht in der App bearbeiten. Mach das auf ';
-
-  @override
-  String get homeCaveatsAfter =>
-      ', dann weit raus- und wieder reinzoomen, damit die Änderungen in der App geladen werden lol.';
-
-  @override
-  String get homeHowToTitle => 'So geht\'s';
-
-  @override
-  String get homeHowToBody =>
-      'Tippe auf „Wohin?“, um ein Ziel zu suchen, oder tippe irgendwo auf die Karte. Mit dem Pinsel malst du Flächen grün (gute Strecken) oder rot (vermeiden) — die Navigation passt sich deinen Wünschen an. Wenn du in der Web-App ein Zuhause gespeichert hast kannst du mit einem Tap dorthin navigieren.';
+  String get mapResetNorth => 'Nach Norden ausrichten';
 }

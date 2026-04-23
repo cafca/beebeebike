@@ -6,6 +6,7 @@ import 'l10n/generated/app_localizations.dart';
 import 'providers/auth_provider.dart';
 import 'providers/locale_provider.dart';
 import 'screens/map_screen.dart';
+import 'theme/app_theme.dart';
 
 final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.fromEnvironment());
 
@@ -26,14 +27,7 @@ class BeeBeeBikeApp extends ConsumerWidget {
       locale: localePref.materialLocale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E6F66),
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF7F3EC),
-        useMaterial3: true,
-      ),
+      theme: buildBbbTheme(),
       home: const MapScreen(),
     );
   }

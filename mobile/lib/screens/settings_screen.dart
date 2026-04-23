@@ -1,9 +1,13 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/generated/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/location_provider.dart';
+import '../theme/tokens.dart';
+import '../theme/typography.dart';
 import '../widgets/language_picker.dart';
 import 'login_screen.dart';
 
@@ -13,38 +17,231 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final user = ref.watch(authControllerProvider).valueOrNull;
-    final home = ref.watch(homeLocationProvider).valueOrNull;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsTitle)),
+      backgroundColor: BbbColors.panel,
+      appBar: AppBar(
+        title: Text(l10n.settingsTitle),
+        backgroundColor: BbbColors.panel,
+        foregroundColor: BbbColors.ink,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
       body: ListView(
-        children: [
-          ListTile(
-            title: Text(user?.email ?? l10n.settingsGuest),
-            subtitle: Text(user?.accountType ?? l10n.commonLoading),
-          ),
-          if (home != null)
-            ListTile(
-              title: Text(l10n.settingsHome),
-              subtitle: Text(home.label),
-            ),
-          if (user?.email != null)
-            ListTile(
-              title: Text(l10n.settingsLogOut),
-              onTap: () =>
-                  ref.read(authControllerProvider.notifier).logout(),
-            )
-          else
-            ListTile(
-              title: Text(l10n.settingsLogIn),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              ),
-            ),
-          const Divider(),
-          const LanguagePicker(),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        children: const [
+          _AccountSection(),
+          _SectionDivider(),
+          _LanguageSection(),
+          _SectionDivider(),
+          _CreditsSection(),
         ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
+      child: Text(label.toUpperCase(), style: BbbText.eyebrow()),
+    );
+  }
+}
+
+class _SectionDivider extends StatelessWidget {
+  const _SectionDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      child: Divider(height: 1, thickness: 1, color: BbbColors.divider),
+    );
+  }
+}
+
+class _AccountSection extends ConsumerWidget {
+  const _AccountSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final user = ref.watch(authControllerProvider).valueOrNull;
+    final home = ref.watch(homeLocationProvider).valueOrNull;
+    final loggedIn = user?.email != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(l10n.settingsSectionAccount),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                user?.email ?? l10n.settingsGuest,
+                style: BbbText.cardTitle(),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                user?.accountType ?? l10n.commonLoading,
+                style: BbbText.monoSub(),
+              ),
+            ],
+          ),
+        ),
+        if (home != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.settingsHome, style: BbbText.label()),
+                const SizedBox(height: 2),
+                Text(home.label, style: BbbText.monoSub()),
+              ],
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+          child: _AuthButton(loggedIn: loggedIn),
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthButton extends ConsumerWidget {
+  const _AuthButton({required this.loggedIn});
+
+  final bool loggedIn;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final label = loggedIn ? l10n.settingsLogOut : l10n.settingsLogIn;
+    final bg = loggedIn ? BbbColors.bgAlt : BbbColors.ink;
+    final fg = loggedIn ? BbbColors.ink : Colors.white;
+
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+        onTap: () {
+          if (loggedIn) {
+            ref.read(authControllerProvider.notifier).logout();
+          } else {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            );
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Center(
+            child: Text(label, style: BbbText.cardTitle().copyWith(color: fg)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LanguageSection extends StatelessWidget {
+  const _LanguageSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(l10n.settingsSectionLanguage),
+        const LanguagePicker(),
+        const SizedBox(height: 6),
+      ],
+    );
+  }
+}
+
+class _CreditsSection extends StatelessWidget {
+  const _CreditsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(l10n.settingsSectionCredits),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+          child: _CreditsList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _CreditsList extends StatelessWidget {
+  const _CreditsList();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _CreditLink(
+          label: l10n.settingsCreditOsm,
+          url: 'https://www.openstreetmap.org/copyright',
+        ),
+        const SizedBox(height: 8),
+        _CreditLink(
+          label: l10n.settingsCreditMaplibre,
+          url: 'https://maplibre.org/',
+        ),
+        const SizedBox(height: 8),
+        _CreditLink(
+          label: l10n.settingsCreditGraphhopper,
+          url: 'https://www.graphhopper.com/',
+        ),
+        const SizedBox(height: 8),
+        _CreditLink(
+          label: l10n.settingsCreditPhoton,
+          url: 'https://photon.komoot.io/',
+        ),
+      ],
+    );
+  }
+}
+
+class _CreditLink extends StatelessWidget {
+  const _CreditLink({required this.label, required this.url});
+
+  final String label;
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        text: label,
+        style: BbbText.body().copyWith(color: BbbColors.brand),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () => launchUrl(
+                Uri.parse(url),
+                mode: LaunchMode.externalApplication,
+              ),
       ),
     );
   }

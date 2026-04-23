@@ -28,18 +28,18 @@
   button {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
-    border: 1px solid #ddd;
-    background: white;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    border-radius: var(--radius-fab);
+    border: 1px solid var(--divider);
+    background: var(--panel);
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #374151;
+    color: var(--ink);
   }
-  button:hover { background: #f3f4f6; }
-  button:active { background: #e5e7eb; }
+  button:hover { background: var(--bg); }
+  button:active { background: var(--bg-alt); }
 
   @media (max-width: 640px) {
     .zoom-controls {

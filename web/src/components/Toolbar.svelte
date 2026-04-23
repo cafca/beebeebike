@@ -1,5 +1,6 @@
 <script>
   import { brush, ratingTools, undo, redo, syncBrushSizePreview, togglePaintMode } from '../lib/brush.svelte.js';
+  import PaintRollerIcon from '../lib/PaintRollerIcon.svelte';
 
   let showSizePreview = $state(false);
   let hidePreviewTimer;
@@ -35,12 +36,9 @@
     class:active={brush.paintMode}
     onclick={togglePaintMode}
     title={brush.paintMode ? 'Exit paint mode' : 'Enter paint mode (draw with touch/click)'}
+    aria-pressed={brush.paintMode}
   >
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="2" y="3" width="16" height="6" rx="1"/>
-      <path d="M18 6h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-9v4"/>
-      <path d="M11 16v5"/>
-    </svg>
+    <PaintRollerIcon size={24} />
   </button>
 
   <div class="color-strip">
@@ -116,19 +114,19 @@
     right: 24px;
     margin: 0 auto;
     width: fit-content;
-    background: white;
+    background: var(--panel);
+    border: 1px solid var(--divider);
     padding: 10px 12px;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    border-radius: var(--radius-ctrl);
+    box-shadow: var(--shadow-sm);
     z-index: 10;
     display: flex;
     gap: 12px;
     align-items: center;
   }
   .instructions {
-    color: #374151;
-    font-size: 13px;
-    line-height: 1.25;
+    color: var(--ink-muted);
+    font: 500 13px/1.3 var(--font-sans);
     min-width: 0;
     flex-shrink: 0;
   }
@@ -149,17 +147,15 @@
     right: 3px;
     bottom: 2px;
     color: white;
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    font: 700 10px/1 var(--font-mono);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   }
   .color-btn:first-child { border-radius: 6px 0 0 6px; }
   .color-btn:last-child { border-radius: 0 6px 6px 0; }
   .color-btn.active {
     transform: scale(1.15);
-    border-color: white;
-    box-shadow: 0 0 0 2px #333;
+    border-color: var(--panel);
+    box-shadow: 0 0 0 2px var(--ink);
     z-index: 1;
   }
   .brush-controls {
@@ -181,11 +177,12 @@
   .brush-size-ring {
     border: 2px solid;
     border-radius: 50%;
-    background: rgba(255,255,255,0.08);
-    box-shadow: 0 0 0 4px rgba(255,255,255,0.92), 0 2px 10px rgba(0,0,0,0.22);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.92), 0 2px 10px rgba(0, 0, 0, 0.22);
   }
   .brush-controls input {
     width: 80px;
+    accent-color: var(--brand);
   }
   .undo-redo-inline {
     display: flex;
@@ -194,37 +191,46 @@
   .undo-redo-inline button {
     width: 32px;
     height: 32px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    background: white;
+    border: 1px solid var(--divider);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--ink-muted);
     cursor: pointer;
-    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .undo-redo-inline button:hover:not(:disabled) {
+    color: var(--ink);
+    background: var(--bg);
   }
   .undo-redo-inline button:disabled {
     opacity: 0.3;
     cursor: default;
+    color: var(--ink-faint);
   }
   .undo-redo-fab {
     display: none;
   }
   .paint-toggle {
-    width: 40px;
-    height: 40px;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    background: white;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-ctrl);
+    background: var(--panel);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #374151;
+    color: var(--ink);
     flex-shrink: 0;
-    transition: background 0.05s, border-color 0.05s;
+    box-shadow: var(--shadow-sm);
+    transition: background 0.05s, border-color 0.05s, box-shadow 0.05s;
   }
   .paint-toggle.active {
-    background: #2563eb;
-    border-color: #2563eb;
-    color: white;
+    background: var(--brand-soft);
+    border-color: var(--brand);
+    box-shadow: 0 0 0 2px var(--brand-soft), var(--shadow-sm);
   }
 
   @media (max-width: 800px) {
@@ -250,9 +256,8 @@
     .paint-toggle {
       width: 40px;
       height: 40px;
-      border: 2px solid transparent;
-      border-radius: 6px 0 0 6px;
-      background: #e5e7eb;
+      border: 1px solid var(--divider);
+      border-radius: var(--radius-ctrl);
     }
     .color-btn:first-child {
       border-radius: 0;
@@ -275,16 +280,20 @@
     .undo-redo-fab button {
       width: 48px;
       height: 48px;
-      border: 1px solid #ddd;
-      border-radius: 50%;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      border: 1px solid var(--divider);
+      border-radius: var(--radius-fab);
+      background: var(--panel);
+      color: var(--ink);
+      box-shadow: var(--shadow-sm);
       cursor: pointer;
-      font-size: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .undo-redo-fab button:disabled {
       opacity: 0.3;
       cursor: default;
+      color: var(--ink-faint);
     }
   }
 </style>

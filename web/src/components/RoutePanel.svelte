@@ -30,15 +30,24 @@
 
 <style>
   .route-panel {
-    background: white; padding: 10px 16px; border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    font-size: 14px; display: flex; gap: 8px; align-items: center;
+    background: var(--panel);
+    padding: 10px 16px;
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-panel);
+    font: 600 12px/1.3 var(--font-mono);
+    color: var(--ink-muted);
+    display: flex;
+    gap: 8px;
+    align-items: center;
     white-space: nowrap;
   }
-  .sep { color: #999; }
+  .sep { color: var(--ink-faint); }
   .spinner {
-    width: 14px; height: 14px; border-radius: 50%;
-    border: 2px solid #d1d5db; border-top-color: #155e75;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid var(--divider);
+    border-top-color: var(--brand);
     animation: spin 0.8s linear infinite;
     display: inline-block;
   }

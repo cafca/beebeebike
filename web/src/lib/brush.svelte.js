@@ -4,15 +4,16 @@ import { api } from './api.js';
 import { refreshOverlay } from './overlay.js';
 import { suppressNextMapClick } from './paintGesture.js';
 import { computeRoute, route } from './routing.svelte.js';
+import { colors } from './tokens.js';
 
 export const ratingTools = [
-  { value: -7, color: '#c0392b' },
-  { value: -3, color: '#e74c3c' },
-  { value: -1, color: '#f1948a' },
-  { value: 0,  color: '#6b7280' },
-  { value: 1,  color: '#76d7c4' },
-  { value: 3,  color: '#1abc9c' },
-  { value: 7,  color: '#0e6655' },
+  { value: -7, color: colors.ramp[0] },
+  { value: -3, color: colors.ramp[1] },
+  { value: -1, color: colors.ramp[2] },
+  { value: 0,  color: colors.ramp[3] },
+  { value: 1,  color: colors.ramp[4] },
+  { value: 3,  color: colors.ramp[5] },
+  { value: 7,  color: colors.ramp[6] },
 ];
 
 // Shared reactive state

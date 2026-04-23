@@ -37,6 +37,10 @@ just dev-ios-sim
 
 > Android support is planned for a future release.
 
+## Deployment notes
+
+The rating overlay uses Server-Sent Events on `/api/ratings/events` to push paint changes to connected clients. Any reverse proxy in front of the backend must disable response buffering and caching on that path, keep the upstream `Connection` header empty, and set a long read timeout (hours, not seconds). Without those settings nginx (and most other proxies) will buffer the stream until the timeout fires, so clients see an open socket that never delivers any events. Local dev hits the backend directly and is not affected.
+
 ## Contributing
 
 Contributions are welcome. Please open an issue first so we can talk through the idea, the shape of the change, and any bike-brain edge cases before you start building.

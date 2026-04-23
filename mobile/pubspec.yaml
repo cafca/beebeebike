@@ -29,6 +29,7 @@ dependencies:
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0
   google_fonts: ^6.2.1
+  sentry_flutter: ^8.0.0
   ferrostar_flutter:
     path: ../packages/ferrostar_flutter
 

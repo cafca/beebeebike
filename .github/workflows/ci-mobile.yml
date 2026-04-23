@@ -44,6 +44,7 @@ jobs:
   test-mobile-ios:
     name: Flutter integration tests (iOS simulator)
     runs-on: macos-latest
+    if: github.event_name == 'push'
 
     steps:
       - uses: actions/checkout@v4

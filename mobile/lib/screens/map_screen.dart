@@ -59,6 +59,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _ttsEnabled = true;
   bool _rerouting = false;
   bool _browseAutocentered = false;
+  double? _lastLoggedZoom;
 
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
@@ -319,11 +320,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     cam.onFirstFix();
     final controller = _mapController;
     if (controller == null) return;
-    await controller.animateCamera(CameraUpdate.newLatLngZoom(
-        LatLng(loc.lat, loc.lng), cam.followZoom));
-    if (!mounted) return;
+    // Enable tracking first so maplibre drives the camera target, then
+    // apply zoom. newLatLngZoom before trackingCompass gets clobbered —
+    // the tracking mode kicks in and resets zoom to whatever it was.
     await controller
         .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+    if (!mounted) return;
+    await controller.animateCamera(CameraUpdate.zoomTo(cam.followZoom));
   }
 
   Future<void> _handleArrival() async {
@@ -530,6 +533,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 if (c == null) return;
                 final zoom = c.cameraPosition?.zoom;
                 if (zoom != null) {
+                  if (_lastLoggedZoom == null ||
+                      (zoom - _lastLoggedZoom!).abs() >= 0.01) {
+                    debugPrint('zoom: ${zoom.toStringAsFixed(2)}');
+                    _lastLoggedZoom = zoom;
+                  }
                   ref
                       .read(navigationCameraControllerProvider)
                       .onZoomChanged(zoom);
@@ -880,8 +888,10 @@ class _RouteSheet extends ConsumerWidget {
                       durationMinutes: (preview!.time / 60000).round(),
                       distanceKm: preview!.distance / 1000,
                       onStart: onStart,
-                      onClose: () =>
-                          ref.read(routeControllerProvider.notifier).clear(),
+                      onClose: () {
+                        ref.read(routeControllerProvider.notifier).clear();
+                        onFlyToMyLocation();
+                      },
                     ),
                 ],
               ),

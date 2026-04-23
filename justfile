@@ -34,7 +34,9 @@ dev:
 
 [group('dev')]
 dev-ios-sim:
-    cd mobile && flutter run -d ios
+    cd mobile && flutter run -d iPhone \
+      --dart-define=BEEBEEBIKE_API_BASE_URL={{IOS_DEVICE_API}} \
+      --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL={{IOS_DEVICE_TILES}}
 
 [group('dev')]
 dev-ios-device DEVICE:

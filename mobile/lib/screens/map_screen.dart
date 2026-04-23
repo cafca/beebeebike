@@ -457,6 +457,20 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     ref.listen<AsyncValue<Location?>>(homeLocationProvider, (_, next) {
       _updateHomeMarker(next.valueOrNull);
     });
+    ref.listen<RatingOverlayState>(ratingOverlayControllerProvider,
+        (prev, next) {
+      // One-shot toast: fires exactly when liveSyncDegraded flips false→true.
+      // Happens once per app session (either the client flag is off, or the
+      // server 404s the SSE endpoint on first connect).
+      if (prev?.liveSyncDegraded != true && next.liveSyncDegraded) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Live sync unavailable. Painted areas update on next app start.'),
+          ),
+        );
+      }
+    });
     ref.listen<RouteState>(routeControllerProvider, _onRouteStateChanged);
     ref.listen<AsyncValue<NavigationState>>(
         navigationStateProvider, _onNavStateChange);
@@ -547,9 +561,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 if ((bearing - current).abs() > 0.1) {
                   ref.read(mapBearingProvider.notifier).state = bearing;
                 }
-                ref
-                    .read(ratingOverlayControllerProvider.notifier)
-                    .onCameraIdle();
               },
             ),
           ),

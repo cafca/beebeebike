@@ -98,7 +98,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
-          _SectionHeader('QUICK'),
+          _SectionHeader(l10n.searchSectionQuick.toUpperCase()),
           _SearchRow(
             icon: Icons.my_location,
             title: l10n.locationCurrent,
@@ -139,7 +139,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       ];
     }
     return [
-      _SectionHeader('RESULTS'),
+      _SectionHeader(l10n.searchSectionResults.toUpperCase()),
       for (final r in _results)
         _SearchRow(
           icon: Icons.place_outlined,
@@ -160,8 +160,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   List<Widget> _buildRecentSection(List<Location> history) {
     if (history.isEmpty) return const [];
+    final l10n = AppLocalizations.of(context)!;
     return [
-      _SectionHeader('RECENT'),
+      _SectionHeader(l10n.searchSectionRecent.toUpperCase()),
       for (final h in history)
         _SearchRow(
           icon: Icons.history,

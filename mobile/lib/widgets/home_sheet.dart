@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../models/location.dart';
 import '../providers/home_eta_provider.dart';
 import '../providers/location_provider.dart';
@@ -145,6 +146,7 @@ class _GoHomeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final subtitle = _subtitle();
     final bg = enabled ? BbbColors.ink : BbbColors.bgAlt;
     final fg = enabled ? Colors.white : BbbColors.inkFaint;
@@ -183,7 +185,7 @@ class _GoHomeButton extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Go home',
+                      l10n.homeGoHome,
                       style: BbbText.cardTitle().copyWith(color: fg),
                     ),
                     if (subtitle != null) ...[
@@ -336,15 +338,16 @@ class _RecentSectionState extends ConsumerState<_RecentSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final history = ref.watch(searchHistoryProvider).take(3).toList();
     if (history.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(top: 18, bottom: 10),
-          child: _EyebrowLabel('RECENT'),
+        Padding(
+          padding: const EdgeInsets.only(top: 18, bottom: 10),
+          child: _EyebrowLabel(l10n.searchSectionRecent.toUpperCase()),
         ),
         for (var i = 0; i < history.length; i++)
           SavedItem(

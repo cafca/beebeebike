@@ -89,6 +89,7 @@ class _DataStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final mono = BbbText.monoTime();
     final sep = TextSpan(
       text: '  ·  ',
@@ -102,7 +103,7 @@ class _DataStrip extends StatelessWidget {
           sep,
           TextSpan(text: '${distanceKm.toStringAsFixed(1)} km'),
           sep,
-          TextSpan(text: 'ETA $eta'),
+          TextSpan(text: l10n.routeEta(eta)),
         ],
       ),
     );
@@ -139,6 +140,7 @@ class _StartRideButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Material(
       color: BbbColors.ink,
       borderRadius: BorderRadius.circular(BbbRadius.ctrl),
@@ -149,7 +151,7 @@ class _StartRideButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
           child: Center(
             child: Text(
-              'Start ride',
+              l10n.routeStartRide,
               style: BbbText.cardTitle().copyWith(color: Colors.white),
             ),
           ),

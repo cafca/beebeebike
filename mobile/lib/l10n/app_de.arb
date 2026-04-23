@@ -32,6 +32,13 @@
 
   "searchHint": "Wohin?",
   "searchSavedPlaces": "Gespeicherte Orte",
+  "searchSectionQuick": "Schnell",
+  "searchSectionRecent": "Zuletzt",
+  "searchSectionResults": "Ergebnisse",
+  "homeGoHome": "Nach Hause",
+  "routeStartRide": "Los geht's",
+  "routeEta": "Ankunft {time}",
+  "navArrives": "Ankunft um {time}",
 
   "locationCurrent": "Aktueller Standort",
   "locationDroppedPin": "Markierung",

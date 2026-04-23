@@ -91,6 +91,31 @@ class AppLocalizationsDe extends AppLocalizations {
   String get searchSavedPlaces => 'Gespeicherte Orte';
 
   @override
+  String get searchSectionQuick => 'Schnell';
+
+  @override
+  String get searchSectionRecent => 'Zuletzt';
+
+  @override
+  String get searchSectionResults => 'Ergebnisse';
+
+  @override
+  String get homeGoHome => 'Nach Hause';
+
+  @override
+  String get routeStartRide => 'Los geht\'s';
+
+  @override
+  String routeEta(String time) {
+    return 'Ankunft $time';
+  }
+
+  @override
+  String navArrives(String time) {
+    return 'Ankunft um $time';
+  }
+
+  @override
   String get locationCurrent => 'Aktueller Standort';
 
   @override

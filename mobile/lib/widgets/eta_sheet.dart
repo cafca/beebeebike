@@ -104,7 +104,7 @@ class EtaSheet extends ConsumerWidget {
                     style: BbbText.monoTime(color: BbbColors.inkFaint),
                   ),
                   Text(
-                    'arrives $arrival',
+                    l10n.navArrives(arrival),
                     style: BbbText.monoTime(color: BbbColors.inkMuted),
                   ),
                 ],

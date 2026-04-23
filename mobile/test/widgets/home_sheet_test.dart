@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/providers/route_provider.dart';
 import 'package:beebeebike/widgets/home_sheet.dart';
@@ -34,15 +35,18 @@ Widget _host({
       sheetController: controller,
     ),
   );
+  final app = MaterialApp(
+    locale: const Locale('en'),
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: widget,
+  );
   if (container != null) {
-    return UncontrolledProviderScope(
-      container: container,
-      child: MaterialApp(home: widget),
-    );
+    return UncontrolledProviderScope(container: container, child: app);
   }
   return ProviderScope(
     overrides: testProviderOverrides(prefs: prefs, homeLocation: homeLocation),
-    child: MaterialApp(home: widget),
+    child: app,
   );
 }
 

@@ -32,6 +32,19 @@
 
   "searchHint": "Where to?",
   "searchSavedPlaces": "Saved places",
+  "searchSectionQuick": "Quick",
+  "searchSectionRecent": "Recent",
+  "searchSectionResults": "Results",
+  "homeGoHome": "Go home",
+  "routeStartRide": "Start ride",
+  "routeEta": "ETA {time}",
+  "@routeEta": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "navArrives": "arrives {time}",
+  "@navArrives": {
+    "placeholders": { "time": { "type": "String" } }
+  },
 
   "locationCurrent": "Current location",
   "locationDroppedPin": "Dropped pin",

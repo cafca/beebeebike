@@ -90,6 +90,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchSavedPlaces => 'Saved places';
 
   @override
+  String get searchSectionQuick => 'Quick';
+
+  @override
+  String get searchSectionRecent => 'Recent';
+
+  @override
+  String get searchSectionResults => 'Results';
+
+  @override
+  String get homeGoHome => 'Go home';
+
+  @override
+  String get routeStartRide => 'Start ride';
+
+  @override
+  String routeEta(String time) {
+    return 'ETA $time';
+  }
+
+  @override
+  String navArrives(String time) {
+    return 'arrives $time';
+  }
+
+  @override
   String get locationCurrent => 'Current location';
 
   @override

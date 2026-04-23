@@ -260,6 +260,48 @@ abstract class AppLocalizations {
   /// **'Saved places'**
   String get searchSavedPlaces;
 
+  /// No description provided for @searchSectionQuick.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick'**
+  String get searchSectionQuick;
+
+  /// No description provided for @searchSectionRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get searchSectionRecent;
+
+  /// No description provided for @searchSectionResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get searchSectionResults;
+
+  /// No description provided for @homeGoHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Go home'**
+  String get homeGoHome;
+
+  /// No description provided for @routeStartRide.
+  ///
+  /// In en, this message translates to:
+  /// **'Start ride'**
+  String get routeStartRide;
+
+  /// No description provided for @routeEta.
+  ///
+  /// In en, this message translates to:
+  /// **'ETA {time}'**
+  String routeEta(String time);
+
+  /// No description provided for @navArrives.
+  ///
+  /// In en, this message translates to:
+  /// **'arrives {time}'**
+  String navArrives(String time);
+
   /// No description provided for @locationCurrent.
   ///
   /// In en, this message translates to:

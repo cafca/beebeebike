@@ -149,22 +149,4 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get mapResetNorth => 'Nach Norden ausrichten';
-
-  @override
-  String get homeCaveatsTitle => 'Einschränkungen';
-
-  @override
-  String get homeCaveatsBefore =>
-      'Du kannst deine gemalten Flächen noch nicht in der App bearbeiten. Mach das auf ';
-
-  @override
-  String get homeCaveatsAfter =>
-      ', dann weit raus- und wieder reinzoomen, damit die Änderungen in der App geladen werden lol.';
-
-  @override
-  String get homeHowToTitle => 'So geht\'s';
-
-  @override
-  String get homeHowToBody =>
-      'Tippe auf „Wohin?“, um ein Ziel zu suchen, oder tippe irgendwo auf die Karte. Mit dem Pinsel malst du Flächen grün (gute Strecken) oder rot (vermeiden) — die Navigation passt sich deinen Wünschen an. Wenn du in der Web-App ein Zuhause gespeichert hast kannst du mit einem Tap dorthin navigieren.';
 }

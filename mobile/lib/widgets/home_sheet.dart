@@ -1,8 +1,6 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../models/location.dart';
 import '../providers/home_eta_provider.dart';
@@ -67,10 +65,7 @@ class _HomeSheetState extends ConsumerState<HomeSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _RecentSection(sheetController: widget.sheetController),
               ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 24, 20, 34),
-                child: _FootNotes(),
-              ),
+              const SizedBox(height: 24),
             ],
           ),
         );
@@ -368,52 +363,3 @@ class _RecentSectionState extends ConsumerState<_RecentSection> {
   }
 }
 
-class _FootNotes extends StatelessWidget {
-  const _FootNotes();
-
-  @override
-  Widget build(BuildContext context) {
-    final bodyStyle = BbbText.body().copyWith(color: BbbColors.inkMuted);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _EyebrowLabel('CAVEATS'),
-        const SizedBox(height: 10),
-        Text.rich(
-          TextSpan(
-            style: bodyStyle,
-            children: [
-              const TextSpan(
-                text:
-                    "You can't edit your painted areas yet in the mobile app. Do that on ",
-              ),
-              TextSpan(
-                text: 'beebeebike.com',
-                style: bodyStyle.copyWith(
-                  color: BbbColors.brand,
-                  decoration: TextDecoration.underline,
-                ),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () => launchUrl(
-                        Uri.parse('https://beebeebike.com'),
-                        mode: LaunchMode.externalApplication,
-                      ),
-              ),
-              const TextSpan(
-                text:
-                    ', then zoom out a lot and back in to load updates in the app.',
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        const _EyebrowLabel('HOW TO USE'),
-        const SizedBox(height: 10),
-        Text(
-          'Tap "Wohin?" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in the web app to get one-tap navigation.',
-          style: bodyStyle,
-        ),
-      ],
-    );
-  }
-}

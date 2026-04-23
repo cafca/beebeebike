@@ -179,7 +179,7 @@ class _SearchRow extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Row(
           children: [
             SizedBox(width: 22, height: 22, child: Center(child: leading)),
@@ -220,7 +220,7 @@ class _GhostIconButton extends StatelessWidget {
       height: 28,
       child: IconButton(
         icon: Icon(icon, size: 18),
-        color: enabled ? BbbColors.inkMuted : BbbColors.inkFaint,
+        color: enabled ? BbbColors.ink : BbbColors.inkMuted,
         onPressed: onTap,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),

@@ -24,6 +24,7 @@ import '../providers/navigation_camera_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/navigation_session_provider.dart';
 import '../providers/location_provider.dart';
+import '../providers/map_bearing_provider.dart';
 import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
 import '../services/map_style_loader.dart';
@@ -58,7 +59,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _ttsEnabled = true;
   bool _rerouting = false;
   bool _browseAutocentered = false;
-  double _bearing = 0;
 
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
@@ -527,8 +527,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                       .onZoomChanged(zoom);
                 }
                 final bearing = c.cameraPosition?.bearing ?? 0;
-                if ((bearing - _bearing).abs() > 0.1) {
-                  setState(() => _bearing = bearing);
+                final current = ref.read(mapBearingProvider);
+                if ((bearing - current).abs() > 0.1) {
+                  ref.read(mapBearingProvider.notifier).state = bearing;
                 }
                 ref
                     .read(ratingOverlayControllerProvider.notifier)
@@ -549,10 +550,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               rerouting: _rerouting,
               onToggleTts: () => setState(() => _ttsEnabled = !_ttsEnabled),
               onRecenter: _handleRecenterTap,
+              onResetBearing: _resetBearingToNorth,
             ),
-          // Custom top-right stack replacing MapLibre's built-in compass +
-          // attribution chrome. Compass only surfaces when the map is
-          // actually rotated; info button is always tappable.
+          // Custom info button replacing MapLibre's built-in attribution
+          // chrome. Compass sits inline above each RecenterFab instead
+          // (see _CompassFabInline).
           Align(
             alignment: Alignment.topRight,
             child: SafeArea(
@@ -561,20 +563,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   top: navActive ? 96 : 90,
                   right: 16,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (_bearing.abs() > 0.5) ...[
-                      _CompassButton(
-                        bearing: _bearing,
-                        onTap: _resetBearingToNorth,
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                    const _MapInfoButton(),
-                  ],
-                ),
+                child: const _MapInfoButton(),
               ),
             ),
           ),
@@ -601,6 +590,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         routeState: routeState,
                         preview: preview,
                         onFlyToMyLocation: _flyToCurrentLocation,
+                        onResetBearing: _resetBearingToNorth,
                         onStart: () =>
                             ref.read(navigationSessionProvider.notifier).state =
                                 true,
@@ -608,6 +598,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     : _HomeSheet(
                         key: const ValueKey('home'),
                         onFlyToMyLocation: _flyToCurrentLocation,
+                        onResetBearing: _resetBearingToNorth,
                         onNavigateHome: _navigateHome,
                       ),
           ),
@@ -626,10 +617,12 @@ class _HomeSheet extends ConsumerStatefulWidget {
   const _HomeSheet({
     super.key,
     required this.onFlyToMyLocation,
+    required this.onResetBearing,
     required this.onNavigateHome,
   });
 
   final VoidCallback onFlyToMyLocation;
+  final VoidCallback onResetBearing;
   final VoidCallback onNavigateHome;
 
   @override
@@ -660,7 +653,14 @@ class _HomeSheetState extends ConsumerState<_HomeSheet> {
             return Positioned(
               right: 16,
               bottom: sheetPx + 8,
-              child: _RecenterCircleFab(onTap: widget.onFlyToMyLocation),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _CompassFabInline(onResetBearing: widget.onResetBearing),
+                  _RecenterCircleFab(onTap: widget.onFlyToMyLocation),
+                ],
+              ),
             );
           },
         ),
@@ -749,38 +749,46 @@ class _RecenterCircleFabState extends State<_RecenterCircleFab>
 // Compass + attribution — replace MapLibre's built-in chrome.
 // ---------------------------------------------------------------------------
 
-class _CompassButton extends StatelessWidget {
-  const _CompassButton({required this.bearing, required this.onTap});
+/// Inline compass that sits above a RecenterFab in each sheet. Reads
+/// the map bearing from [mapBearingProvider] and renders nothing when
+/// the map is ~north-up; otherwise shows a rotated glyph + spacer,
+/// tapping animates the map back to bearing 0.
+class _CompassFabInline extends ConsumerWidget {
+  const _CompassFabInline({required this.onResetBearing});
 
-  final double bearing;
-  final VoidCallback onTap;
+  final VoidCallback onResetBearing;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bearing = ref.watch(mapBearingProvider);
+    if (bearing.abs() <= 0.5) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context)!;
-    return Tooltip(
-      message: l10n.mapResetNorth,
-      child: Material(
-        shape: const CircleBorder(),
-        color: BbbColors.panel,
-        elevation: 0,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              color: BbbColors.panel,
-              shape: BoxShape.circle,
-              boxShadow: BbbShadow.sm,
-            ),
-            child: Transform.rotate(
-              angle: -bearing * math.pi / 180,
-              child: const Icon(
-                Icons.navigation,
-                size: 18,
-                color: BbbColors.ink,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Tooltip(
+        message: l10n.mapResetNorth,
+        child: Material(
+          shape: const CircleBorder(),
+          color: BbbColors.panel,
+          elevation: 0,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onResetBearing,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: BbbColors.panel,
+                shape: BoxShape.circle,
+                boxShadow: BbbShadow.sm,
+              ),
+              child: Transform.rotate(
+                angle: -bearing * math.pi / 180,
+                child: const Icon(
+                  Icons.navigation,
+                  size: 18,
+                  color: BbbColors.ink,
+                ),
               ),
             ),
           ),
@@ -885,12 +893,14 @@ class _RouteSheet extends ConsumerWidget {
     required this.routeState,
     required this.preview,
     required this.onFlyToMyLocation,
+    required this.onResetBearing,
     required this.onStart,
   });
 
   final RouteState routeState;
   final RoutePreview? preview;
   final VoidCallback onFlyToMyLocation;
+  final VoidCallback onResetBearing;
   final VoidCallback onStart;
 
   @override
@@ -904,7 +914,14 @@ class _RouteSheet extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
-            child: _RecenterCircleFab(onTap: onFlyToMyLocation),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _CompassFabInline(onResetBearing: onResetBearing),
+                _RecenterCircleFab(onTap: onFlyToMyLocation),
+              ],
+            ),
           ),
           Container(
             width: double.infinity,
@@ -1019,12 +1036,14 @@ class _NavTopBar extends ConsumerWidget {
     required this.rerouting,
     required this.onToggleTts,
     required this.onRecenter,
+    required this.onResetBearing,
   });
 
   final bool ttsEnabled;
   final bool rerouting;
   final VoidCallback onToggleTts;
   final VoidCallback onRecenter;
+  final VoidCallback onResetBearing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1083,6 +1102,7 @@ class _NavTopBar extends ConsumerWidget {
                   TtsToggleFab(enabled: ttsEnabled, onTap: onToggleTts),
                   if (cam.mode == CameraMode.free) ...[
                     const SizedBox(height: 12),
+                    _CompassFabInline(onResetBearing: onResetBearing),
                     RecenterFab(onTap: onRecenter),
                   ],
                 ],

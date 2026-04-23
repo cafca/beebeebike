@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
+
 class BeeBeeBikeSearchBar extends StatelessWidget {
   const BeeBeeBikeSearchBar({
     super.key,
@@ -12,6 +14,7 @@ class BeeBeeBikeSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -24,9 +27,9 @@ class BeeBeeBikeSearchBar extends StatelessWidget {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(18),
                   onTap: onTap,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    child: Text('Search here...'),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Text(l10n.searchHint),
                   ),
                 ),
               ),

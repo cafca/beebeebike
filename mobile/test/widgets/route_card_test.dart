@@ -1,3 +1,4 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/providers/route_provider.dart';
 import 'package:beebeebike/widgets/route_card.dart';
@@ -8,12 +9,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/test_helpers.dart';
 
+MaterialApp _localizedApp(Widget child) => MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: child,
+    );
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('shows Mein Standort and Wohin? when no route state',
+  testWidgets('shows current location and where-to hint when no route state',
       (tester) async {
     final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
@@ -23,8 +31,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Mein Standort'), findsOneWidget);
-    expect(find.text('Wohin?'), findsOneWidget);
+    expect(find.text('Current location'), findsOneWidget);
+    expect(find.text('Where to?'), findsOneWidget);
   });
 
   testWidgets('shows custom origin name when non-GPS origin set',
@@ -38,9 +46,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
-          home: Scaffold(body: RouteCard()),
-        ),
+        child: _localizedApp(const Scaffold(body: RouteCard())),
       ),
     );
 
@@ -56,10 +62,10 @@ void main() {
     await tester.pump();
 
     expect(find.text('Brandenburger Tor'), findsOneWidget);
-    expect(find.text('Mein Standort'), findsNothing);
+    expect(find.text('Current location'), findsNothing);
   });
 
-  testWidgets('shows Mein Standort when origin has id gps', (tester) async {
+  testWidgets('shows current location when origin has id gps', (tester) async {
     final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
       overrides: testProviderOverrides(prefs: prefs),
@@ -69,25 +75,23 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
-          home: Scaffold(body: RouteCard()),
-        ),
+        child: _localizedApp(const Scaffold(body: RouteCard())),
       ),
     );
 
     container.read(routeControllerProvider.notifier).setOrigin(
           const Location(
             id: 'gps',
-            name: 'Mein Standort',
-            label: 'Mein Standort',
+            name: 'Current location',
+            label: 'Current location',
             lng: 13.4533,
             lat: 52.5065,
           ),
         );
     await tester.pump();
 
-    expect(find.text('Mein Standort'), findsOneWidget);
-    expect(find.text('Wohin?'), findsOneWidget);
+    expect(find.text('Current location'), findsOneWidget);
+    expect(find.text('Where to?'), findsOneWidget);
   });
 
   testWidgets('shows destination name when destination set', (tester) async {
@@ -100,9 +104,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
-          home: Scaffold(body: RouteCard()),
-        ),
+        child: _localizedApp(const Scaffold(body: RouteCard())),
       ),
     );
 
@@ -118,7 +120,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Alexanderplatz'), findsOneWidget);
-    expect(find.text('Wohin?'), findsNothing);
+    expect(find.text('Where to?'), findsNothing);
   });
 
   testWidgets('shows person icon on origin row and swap icon on destination row',
@@ -154,7 +156,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: Scaffold(body: RouteCard())),
+        child: _localizedApp(const Scaffold(body: RouteCard())),
       ),
     );
 

@@ -11,7 +11,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('always shows Mein Standort tile at top', (tester) async {
+  testWidgets('always shows current location tile at top', (tester) async {
     final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       buildTestWidget(
@@ -20,11 +20,11 @@ void main() {
       ),
     );
 
-    expect(find.text('Mein Standort'), findsOneWidget);
+    expect(find.text('Current location'), findsOneWidget);
     expect(find.byIcon(Icons.my_location), findsOneWidget);
   });
 
-  testWidgets('tapping Mein Standort pops with gps Location', (tester) async {
+  testWidgets('tapping current location pops with gps Location', (tester) async {
     final prefs = await SharedPreferences.getInstance();
     Location? poppedResult;
 
@@ -48,12 +48,12 @@ void main() {
     await tester.tap(find.text('Open Search'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Mein Standort'));
+    await tester.tap(find.text('Current location'));
     await tester.pumpAndSettle();
 
     expect(poppedResult, isNotNull);
     expect(poppedResult!.id, 'gps');
-    expect(poppedResult!.name, 'Mein Standort');
+    expect(poppedResult!.name, 'Current location');
   });
 
   testWidgets('shows home location tile when homeLocation provided',
@@ -76,7 +76,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.home_outlined), findsOneWidget);
-    expect(find.text('Zuhause'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
     expect(find.text('Meine Straße 1, Neukölln'), findsOneWidget);
   });
 
@@ -112,7 +112,7 @@ void main() {
     await tester.tap(find.text('Open Search'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Zuhause'));
+    await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
 
     expect(poppedResult, isNotNull);

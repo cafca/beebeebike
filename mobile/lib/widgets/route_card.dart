@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../models/location.dart';
 import '../providers/route_provider.dart';
 import '../providers/search_history_provider.dart';
@@ -11,22 +12,22 @@ import '../screens/settings_screen.dart';
 class RouteCard extends ConsumerWidget {
   const RouteCard({super.key});
 
-  Future<Location> _resolveGps() async {
+  Future<Location> _resolveGps(String label) async {
     try {
       final pos = await Geolocator.getLastKnownPosition() ??
           await Geolocator.getCurrentPosition();
       return Location(
         id: 'gps',
-        name: 'Mein Standort',
-        label: 'Mein Standort',
+        name: label,
+        label: label,
         lng: pos.longitude,
         lat: pos.latitude,
       );
     } catch (_) {
-      return const Location(
+      return Location(
         id: 'gps',
-        name: 'Mein Standort',
-        label: 'Mein Standort',
+        name: label,
+        label: label,
         lng: 13.4533,
         lat: 52.5065,
       );
@@ -34,11 +35,12 @@ class RouteCard extends ConsumerWidget {
   }
 
   Future<void> _openOriginSearch(BuildContext context, WidgetRef ref) async {
+    final gpsLabel = AppLocalizations.of(context)!.locationCurrent;
     final result = await Navigator.of(context).push<Location>(
       MaterialPageRoute(builder: (_) => const SearchScreen()),
     );
     if (result == null || !context.mounted) return;
-    final origin = result.id == 'gps' ? await _resolveGps() : result;
+    final origin = result.id == 'gps' ? await _resolveGps(gpsLabel) : result;
     if (!context.mounted) return;
     if (result.id != 'gps') {
       ref.read(searchHistoryProvider.notifier).remember(result);
@@ -48,17 +50,19 @@ class RouteCard extends ConsumerWidget {
 
   Future<void> _openDestinationSearch(
       BuildContext context, WidgetRef ref) async {
+    final gpsLabel = AppLocalizations.of(context)!.locationCurrent;
     final result = await Navigator.of(context).push<Location>(
       MaterialPageRoute(builder: (_) => const SearchScreen()),
     );
     if (result == null || !context.mounted) return;
-    final destination = result.id == 'gps' ? await _resolveGps() : result;
+    final destination =
+        result.id == 'gps' ? await _resolveGps(gpsLabel) : result;
     if (!context.mounted) return;
     if (result.id != 'gps') {
       ref.read(searchHistoryProvider.notifier).remember(result);
     }
     if (ref.read(routeControllerProvider).origin == null) {
-      final gpsOrigin = await _resolveGps();
+      final gpsOrigin = await _resolveGps(gpsLabel);
       if (!context.mounted) return;
       ref.read(routeControllerProvider.notifier).setOrigin(gpsOrigin);
     }
@@ -66,6 +70,7 @@ class RouteCard extends ConsumerWidget {
   }
 
   Future<void> _swap(BuildContext context, WidgetRef ref) async {
+    final gpsLabel = AppLocalizations.of(context)!.locationCurrent;
     final routeState = ref.read(routeControllerProvider);
     final origin = routeState.origin;
     final destination = routeState.destination;
@@ -74,7 +79,7 @@ class RouteCard extends ConsumerWidget {
     final newOrigin = destination;
     final Location newDestination;
     if (origin == null || origin.id == 'gps') {
-      newDestination = await _resolveGps();
+      newDestination = await _resolveGps(gpsLabel);
     } else {
       newDestination = origin;
     }
@@ -85,13 +90,14 @@ class RouteCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final routeState = ref.watch(routeControllerProvider);
     final origin = routeState.origin;
     final destination = routeState.destination;
 
     final String originLabel;
     if (origin == null || origin.id == 'gps') {
-      originLabel = 'Mein Standort';
+      originLabel = l10n.locationCurrent;
     } else {
       originLabel = origin.name;
     }
@@ -155,7 +161,7 @@ class RouteCard extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      destLabel ?? 'Wohin?',
+                      destLabel ?? l10n.searchHint,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: hasDestination ? null : Colors.grey,
                           ),

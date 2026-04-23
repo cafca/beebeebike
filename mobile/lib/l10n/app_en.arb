@@ -1,0 +1,68 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "beebeebike",
+
+  "commonLoading": "Loading...",
+
+  "loginTitle": "Log in",
+  "loginSubmit": "Log in",
+  "loginEmail": "Email",
+  "loginPassword": "Password",
+  "loginErrorEmptyEmail": "Enter your email",
+  "loginErrorEmptyPassword": "Enter your password",
+  "loginErrorInvalid": "Invalid email or password",
+
+  "settingsTitle": "Settings",
+  "settingsGuest": "Guest",
+  "settingsHome": "Home",
+  "settingsLogOut": "Log out",
+  "settingsLogIn": "Log in",
+  "settingsLanguage": "Language",
+  "settingsLanguageSystem": "System default",
+  "settingsLanguageEnglish": "English",
+  "settingsLanguageGerman": "Deutsch",
+
+  "searchHint": "Where to?",
+  "searchSavedPlaces": "Saved places",
+
+  "locationCurrent": "Current location",
+  "locationDroppedPin": "Dropped pin",
+  "locationFetchError": "Could not get current location: {error}",
+  "@locationFetchError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "mapLoadError": "Failed to load map: {error}",
+  "@mapLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+
+  "routeLoadError": "Could not load route",
+  "routeClearTooltip": "Clear route",
+  "routeStart": "Start",
+  "routeSummary": "🚲 {minutes} min · {distance} km",
+  "@routeSummary": {
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "distance": { "type": "String" }
+    }
+  },
+
+  "navStarting": "Starting navigation...",
+  "navError": "Navigation error",
+  "navOnRoute": "On route",
+  "navMuteVoice": "Mute voice",
+  "navEnableVoice": "Enable voice",
+  "navEndNavigation": "End navigation",
+  "navRerouting": "Rerouting…",
+
+  "arrivedTitle": "Arrived",
+  "arrivedDone": "Done",
+
+  "homeCaveatsTitle": "Caveats",
+  "homeCaveatsBefore": "You can't edit your painted areas yet in the mobile app. Do that on ",
+  "homeCaveatsAfter": ", then zoom out a lot and back in to load updates in the app.",
+  "homeHowToTitle": "How to use",
+  "homeHowToBody": "Tap \"Where to?\" to search for a destination, or tap anywhere on the map. Use the brush tool to paint areas green (good cycling) or red (avoid) — your ratings shape future routes. Set a home address in the web app to get one-tap navigation."
+}

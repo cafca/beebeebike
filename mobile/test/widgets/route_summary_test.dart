@@ -1,3 +1,4 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/widgets/route_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -5,6 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('renders duration and distance', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: RouteSummary(
           durationMinutes: 12,
@@ -20,6 +24,9 @@ void main() {
   testWidgets('Start button fires onStart', (tester) async {
     var tapped = 0;
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: RouteSummary(
           durationMinutes: 12,
@@ -35,6 +42,9 @@ void main() {
 
   testWidgets('close button hidden when onClose is null', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: RouteSummary(
           durationMinutes: 12,
@@ -50,6 +60,9 @@ void main() {
       (tester) async {
     var closed = 0;
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: RouteSummary(
           durationMinutes: 12,

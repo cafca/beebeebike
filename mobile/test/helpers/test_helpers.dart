@@ -1,6 +1,7 @@
 import 'package:beebeebike/api/client.dart';
 import 'package:beebeebike/app.dart';
 import 'package:beebeebike/config/app_config.dart';
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/models/route_preview.dart';
 import 'package:beebeebike/models/user.dart';
@@ -326,6 +327,11 @@ Widget buildTestWidget(
       loginSucceeds: loginSucceeds,
       homeLocation: homeLocation,
     ),
-    child: MaterialApp(home: child),
+    child: MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: child,
+    ),
   );
 }

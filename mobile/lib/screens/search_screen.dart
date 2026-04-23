@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/client.dart';
 import '../api/geocode_api.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/geocode_result.dart';
 import '../models/location.dart';
 import '../providers/location_provider.dart';
@@ -63,6 +64,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final history = ref.watch(searchHistoryProvider);
     final homeLocation = ref.watch(homeLocationProvider).valueOrNull;
     final hasQuery = _controller.text.trim().isNotEmpty;
@@ -73,8 +75,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         title: TextField(
           controller: _controller,
           autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Suche...',
+          decoration: InputDecoration(
+            hintText: l10n.searchHint,
             border: InputBorder.none,
           ),
           onChanged: _onChanged,
@@ -88,11 +90,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         children: [
           ListTile(
             leading: const Icon(Icons.my_location),
-            title: const Text('Mein Standort'),
-            onTap: () => _selectLocation(const Location(
+            title: Text(l10n.locationCurrent),
+            onTap: () => _selectLocation(Location(
               id: 'gps',
-              name: 'Mein Standort',
-              label: 'Mein Standort',
+              name: l10n.locationCurrent,
+              label: l10n.locationCurrent,
               lng: 0,
               lat: 0,
             )),
@@ -100,7 +102,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           if (homeLocation != null)
             ListTile(
               leading: const Icon(Icons.home_outlined),
-              title: const Text('Zuhause'),
+              title: Text(l10n.settingsHome),
               subtitle: homeLocation.label.isNotEmpty
                   ? Text(homeLocation.label)
                   : null,

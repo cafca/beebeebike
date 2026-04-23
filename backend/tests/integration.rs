@@ -991,6 +991,10 @@ async fn navigate_proxies_graphhopper_response_verbatim() {
     let resp = server
         .post("/api/navigate")
         .add_header(hname, hval)
+        .add_header(
+            axum::http::header::ACCEPT_LANGUAGE,
+            axum::http::HeaderValue::from_static("de"),
+        )
         .json(&json!({
             "origin": [13.405, 52.52],
             "destination": [13.45, 52.51],
@@ -1003,6 +1007,56 @@ async fn navigate_proxies_graphhopper_response_verbatim() {
     let body: Value = resp.json();
     assert_eq!(body, navigate_json);
 
+    graphhopper.verify().await;
+}
+
+#[tokio::test]
+async fn navigate_uses_english_locale_when_accept_language_is_en() {
+    if std::env::var("TEST_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let graphhopper = MockServer::start().await;
+
+    let navigate_json = json!({
+        "routes": [{ "legs": [] }],
+        "waypoints": []
+    });
+
+    Mock::given(method("POST"))
+        .and(path("/navigate"))
+        .and(body_partial_json(json!({
+            "profile": "bike",
+            "locale": "en",
+            "type": "mapbox"
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(navigate_json.clone()))
+        .expect(1)
+        .mount(&graphhopper)
+        .await;
+
+    let Some(server) = setup_with_graphhopper_url(graphhopper.uri()).await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+    let (hname, hval) = with_session(&session);
+
+    let resp = server
+        .post("/api/navigate")
+        .add_header(hname, hval)
+        .add_header(
+            axum::http::header::ACCEPT_LANGUAGE,
+            axum::http::HeaderValue::from_static("en"),
+        )
+        .json(&json!({
+            "origin": [13.405, 52.52],
+            "destination": [13.45, 52.51],
+            "rating_weight": 1.0,
+            "distance_influence": 42.0
+        }))
+        .await;
+
+    resp.assert_status_ok();
     graphhopper.verify().await;
 }
 

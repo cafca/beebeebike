@@ -1,3 +1,4 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/widgets/eta_sheet.dart';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/material.dart';
@@ -18,6 +19,9 @@ void main() {
   testWidgets('close IconButton fires onClose', (tester) async {
     var closed = 0;
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EtaSheet(
           navState: AsyncValue.data(_state()),
@@ -38,6 +42,9 @@ void main() {
       (tester) async {
     var toggled = 0;
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EtaSheet(
           navState: AsyncValue.data(_state()),
@@ -56,6 +63,9 @@ void main() {
   testWidgets('renders volume_off icon when ttsEnabled is false',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EtaSheet(
           navState: AsyncValue.data(_state()),
@@ -72,6 +82,9 @@ void main() {
   testWidgets('shows loading fallback when navState is loading',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EtaSheet(
           navState: const AsyncValue.loading(),
@@ -87,6 +100,9 @@ void main() {
   testWidgets('shows remaining distance from distanceRemainingM',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: EtaSheet(
           navState: AsyncValue.data(_state()),

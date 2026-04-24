@@ -161,15 +161,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboarding2Bullet1 =>
-      'Deine Bewertungen, deine gespeicherten Standorte und — nur mit Konto — deine E-Mail plus Passwort-Hash liegen auf einem Hetzner-Server in Deutschland.';
+      'Deine Bewertungen, gespeicherten Standorte, E-Mail und Passwort-Hash liegen auf einem Hetzner-Server in Deutschland.';
 
   @override
   String get onboarding2Bullet2 =>
-      'Ortssuche: Deine Eingabe wird über unseren Server an den Geocoding-Dienst Photon (betrieben von der Komoot GmbH, Deutschland) weitergeleitet. Konto-Daten werden dabei nicht übertragen.';
-
-  @override
-  String get onboarding2Bullet3 =>
-      'Ohne Konto bleibst du anonym — wir setzen nur eine zufällige Sitzungs-ID.';
+      'Ortssuche: Deine Eingabe wird über unseren Server an den Geocoding-Dienst Photon (betrieben von der Komoot GmbH, Deutschland) weitergeleitet. Deine Konto-Daten werden dabei nicht übertragen.';
 
   @override
   String get onboarding2Bullet4 =>
@@ -180,7 +176,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboarding3Body =>
-      'Du kannst beebeebike sofort ohne Konto nutzen. Mit einem kostenlosen Konto kannst du auf beebeebike.com am Rechner schneller malen — deine Bewertungen landen automatisch auf dem Handy.';
+      'Male deine Bewertungen am Rechner auf beebeebike.com — sie landen automatisch auf dem Handy. Zum Loslegen einloggen.';
 
   @override
   String get searchHint => 'Wohin?';

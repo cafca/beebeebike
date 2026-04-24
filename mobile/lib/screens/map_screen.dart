@@ -37,6 +37,7 @@ import '../widgets/arrived_sheet.dart';
 import '../widgets/brush_fab.dart';
 import '../widgets/eta_sheet.dart';
 import '../widgets/home_sheet.dart';
+import '../widgets/paint_pan_recognizer.dart';
 import '../widgets/paint_sheet.dart';
 import '../widgets/recenter_fab.dart';
 import '../widgets/rerouting_toast.dart';
@@ -1316,9 +1317,10 @@ class _PaintGestureWrap extends StatelessWidget {
     // zero recognizers and fall through to the child.
     final gestures = enabled
         ? <Type, GestureRecognizerFactory>{
-            PanGestureRecognizer:
-                GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
-              PanGestureRecognizer.new,
+            PaintPanGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<
+                    PaintPanGestureRecognizer>(
+              PaintPanGestureRecognizer.new,
               (r) {
                 r.onStart = (d) async {
                   final latLng = await toLatLng(_point(d.localPosition));
@@ -1329,6 +1331,8 @@ class _PaintGestureWrap extends StatelessWidget {
                   onPanUpdate(latLng);
                 };
                 r.onEnd = (_) => onPanEnd();
+                // Fires when a second pointer lands mid-stroke — recognizer
+                // rejects itself so the brush can drop the partial polygon.
                 r.onCancel = onPanCancel;
               },
             ),

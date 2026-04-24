@@ -30,7 +30,6 @@ import '../services/rating_overlay.dart';
 import '../services/route_drawing.dart';
 import '../theme/tokens.dart';
 import '../widgets/brush_fab.dart';
-import '../widgets/map/compass_fab_inline.dart';
 import '../widgets/map/home_sheet_container.dart';
 import '../widgets/map/nav_top_bar.dart';
 import '../widgets/map/navigation_sheet.dart';
@@ -645,10 +644,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
           ),
           if (!navActive)
-            const SafeArea(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: RouteCard(),
+            AnimatedSlide(
+              offset: paintMode ? const Offset(0, -3) : Offset.zero,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: const SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: RouteCard(),
+                ),
               ),
             ),
           if (navActive)
@@ -677,10 +681,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             false,
                   )
                 : paintMode
-                    ? _PaintSheetWrapper(
-                        key: const ValueKey('paint'),
-                        onResetBearing: _resetBearingToNorth,
-                      )
+                    ? const _PaintSheetWrapper(key: ValueKey('paint'))
                     : routeActive
                         ? RouteSheet(
                             key: const ValueKey('route'),
@@ -709,15 +710,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Paint-mode FAB column: undo + redo on top, then compass, brush. Used by
+// Paint-mode FAB column: undo + redo on top, then the brush toggle. Used by
 // the paint sheet wrapper only; home/route sheets render their own column
 // without undo/redo via HomeSheetContainer / RouteSheet.
 // ---------------------------------------------------------------------------
 
 class _PaintFabColumn extends ConsumerWidget {
-  const _PaintFabColumn({required this.onResetBearing});
-
-  final VoidCallback onResetBearing;
+  const _PaintFabColumn();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -745,8 +744,6 @@ class _PaintFabColumn extends ConsumerWidget {
           loading: brush.activeOp == BrushOp.redo,
           onPressed: notifier.redo,
         ),
-        const SizedBox(height: 12),
-        CompassFabInline(onResetBearing: onResetBearing),
         const SizedBox(height: 12),
         const BrushFab(),
       ],
@@ -820,12 +817,7 @@ class _UndoRedoFab extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _PaintSheetWrapper extends StatelessWidget {
-  const _PaintSheetWrapper({
-    super.key,
-    required this.onResetBearing,
-  });
-
-  final VoidCallback onResetBearing;
+  const _PaintSheetWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -834,12 +826,12 @@ class _PaintSheetWrapper extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
+        children: const [
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
-            child: _PaintFabColumn(onResetBearing: onResetBearing),
+            padding: EdgeInsets.fromLTRB(0, 0, 16, 8),
+            child: _PaintFabColumn(),
           ),
-          const PaintSheet(),
+          PaintSheet(),
         ],
       ),
     );

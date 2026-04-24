@@ -105,8 +105,12 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
       if (!ref.read(ttsEnabledProvider)) return;
       try {
         await tts.speak(text);
-      } catch (e, st) {
-        reportError(e, st, context: 'nav.tts');
+      } catch (e) {
+        // TTS speak fails routinely on audio-session interruptions, silent
+        // mode switches, and mid-utterance cancellations. Drop a breadcrumb
+        // for context around nearby issues but don't surface as its own
+        // GlitchTip event — the noise swamps anything actionable.
+        addBreadcrumb('nav.tts speak failed: $e', category: 'tts');
       }
     },
   );

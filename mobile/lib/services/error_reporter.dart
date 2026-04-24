@@ -22,3 +22,14 @@ void reportError(
     withScope: (scope) => scope.setTag('context', context),
   );
 }
+
+/// Record a breadcrumb attached to subsequent Sentry events, and mirror it to
+/// `debugPrint` in debug builds. Use for high-frequency, non-actionable events
+/// (e.g. transient TTS failures) so they provide context when a real error
+/// lands without becoming their own GlitchTip issues.
+void addBreadcrumb(String message, {String? category}) {
+  if (kDebugMode) debugPrint('${category ?? "breadcrumb"}: $message');
+  Sentry.addBreadcrumb(
+    Breadcrumb(message: message, category: category, level: SentryLevel.info),
+  );
+}

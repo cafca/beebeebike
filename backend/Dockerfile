@@ -17,13 +17,15 @@ ENV SQLX_OFFLINE=true
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/backend/target \
-    cargo build --release && \
-    cp target/release/beebeebike-backend /usr/local/bin/beebeebike-backend
+    cargo build --release --bin beebeebike-backend --bin undo_bench && \
+    cp target/release/beebeebike-backend /usr/local/bin/beebeebike-backend && \
+    cp target/release/undo_bench /usr/local/bin/undo_bench
 
 FROM debian:bookworm-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=backend-builder /usr/local/bin/beebeebike-backend /usr/local/bin/
+COPY --from=backend-builder /usr/local/bin/undo_bench /usr/local/bin/
 COPY --from=web-builder /app/web/dist /app/web/dist
 ENV STATIC_DIR=/app/web/dist
 CMD ["beebeebike-backend"]

@@ -4,23 +4,18 @@
 //! history depths, so operators can pick an informed value for
 //! `BEEBEEBIKE_MAX_UNDO_HISTORY`.
 //!
-//! Run with `just bench-undo` or directly:
+//! Run via `just bench-undo` (local) or `just bench-undo-prod` (prod host).
 //!
-//! ```text
-//! cargo run --release --bin undo_bench -- --confirm \
-//!     --depths 1,5,10,15,20,25,50 --geometry-size medium
-//! ```
-//!
-//! The tool creates an ephemeral anonymous user, seeds `paint_events` with
-//! synthetic polygons, re-runs `rebuild_rated_areas_for_user` in a rolled-back
-//! transaction N times per depth, and prints a latency table plus a
-//! recommendation derived from `--rtt-ms` and `--target-ms`.
-
+//! The tool never touches the application database. It connects to the
+//! Postgres server referenced by `DATABASE_URL`, creates a fresh throwaway
+//! database (`beebeebike_bench_<uuid>`), runs migrations into it, seeds
+//! synthetic paint events, benchmarks replay, and drops the database on exit.
+//! Safe to run against prod.
 use std::time::{Duration, Instant};
 
 use beebeebike_backend::ratings::{apply_paint, Target};
 use rand::Rng;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use uuid::Uuid;
 
 #[derive(Clone, Copy)]
@@ -42,9 +37,9 @@ impl GeomSize {
 
     fn radius_deg(self) -> f64 {
         match self {
-            GeomSize::Small => 0.001,  // ~ 100 m
-            GeomSize::Medium => 0.003, // ~ 300 m
-            GeomSize::Large => 0.008,  // ~ 900 m
+            GeomSize::Small => 0.001,
+            GeomSize::Medium => 0.003,
+            GeomSize::Large => 0.008,
         }
     }
 
@@ -63,8 +58,6 @@ struct Args {
     geom_size: GeomSize,
     rtt_ms: u64,
     target_ms: u64,
-    confirm: bool,
-    confirm_prod: bool,
 }
 
 impl Args {
@@ -75,8 +68,6 @@ impl Args {
         let mut geom_size = GeomSize::Medium;
         let mut rtt_ms = 120u64;
         let mut target_ms = 250u64;
-        let mut confirm = false;
-        let mut confirm_prod = false;
 
         while let Some(arg) = args.next() {
             match arg.as_str() {
@@ -113,8 +104,6 @@ impl Args {
                         .parse()
                         .map_err(|e: std::num::ParseIntError| e.to_string())?;
                 }
-                "--confirm" => confirm = true,
-                "--confirm-prod" => confirm_prod = true,
                 "--help" | "-h" => {
                     print_help();
                     std::process::exit(0);
@@ -136,8 +125,6 @@ impl Args {
             geom_size,
             rtt_ms,
             target_ms,
-            confirm,
-            confirm_prod,
         })
     }
 }
@@ -146,8 +133,10 @@ fn print_help() {
     eprintln!(
         "undo_bench — measure undo replay latency across stack depths
 
-  --confirm                Required. Acknowledges the tool writes throwaway rows.
-  --confirm-prod           Required if the DB looks like production (many users).
+Connects to the Postgres server at DATABASE_URL, creates a throwaway
+database, runs migrations, benchmarks, and drops the database. The
+application DB is never touched.
+
   --depths a,b,c           Stack depths to measure. Default: 1,5,10,15,20,25,35,50,75,100
   --iterations N           Samples per depth. Default: 10
   --geometry-size SIZE     small | medium | large (default: medium)
@@ -159,11 +148,9 @@ fn print_help() {
 }
 
 fn random_polygon_geojson(rng: &mut impl Rng, size: GeomSize) -> String {
-    // Berlin-ish bbox, roomy enough that strokes overlap occasionally
     let cx = rng.gen_range(13.30..13.50);
     let cy = rng.gen_range(52.45..52.55);
     let r = size.radius_deg();
-    // Square polygon with small random skew, winding CCW
     let skew = rng.gen_range(-0.0002..0.0002);
     let coords = [
         (cx - r, cy - r),
@@ -195,8 +182,6 @@ async fn rebuild_for_user(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: Uuid,
 ) -> Result<(), sqlx::Error> {
-    // Mirrors ratings::rebuild_rated_areas_for_user, inlined here to keep
-    // that function pub(crate) while still exercising the same work.
     sqlx::query("DELETE FROM rated_areas WHERE user_id = $1")
         .bind(user_id)
         .execute(&mut **tx)
@@ -243,31 +228,59 @@ async fn main() {
         }
     };
 
-    if !args.confirm {
-        eprintln!("refusing to run without --confirm (the tool writes throwaway rows)");
-        std::process::exit(2);
-    }
-
     let db_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://beebeebike:beebeebike@localhost:5432/beebeebike".into());
+
+    if let Err(e) = run(&db_url, args).await {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    }
+}
+
+async fn run(db_url: &str, args: Args) -> Result<(), String> {
+    let base_opts: PgConnectOptions = db_url
+        .parse()
+        .map_err(|e| format!("invalid DATABASE_URL: {e}"))?;
+
+    let admin = PgPoolOptions::new()
+        .max_connections(1)
+        .connect_with(base_opts.clone())
+        .await
+        .map_err(|e| format!("connect admin: {e}"))?;
+
+    let bench_db = format!("beebeebike_bench_{}", Uuid::new_v4().simple());
+    sqlx::query(&format!("CREATE DATABASE \"{bench_db}\""))
+        .execute(&admin)
+        .await
+        .map_err(|e| format!("CREATE DATABASE: {e}"))?;
+
+    eprintln!("Created throwaway DB {bench_db}; will DROP on exit.");
+
+    let bench_opts = base_opts.clone().database(&bench_db);
+    let result = run_with_db(bench_opts, &args).await;
+
+    // Drop the bench DB no matter what. FORCE disconnects any leftover sessions.
+    if let Err(e) = sqlx::query(&format!("DROP DATABASE \"{bench_db}\" WITH (FORCE)"))
+        .execute(&admin)
+        .await
+    {
+        eprintln!("warning: failed to drop bench DB {bench_db}: {e}");
+    }
+
+    result
+}
+
+async fn run_with_db(bench_opts: PgConnectOptions, args: &Args) -> Result<(), String> {
     let db = PgPoolOptions::new()
         .max_connections(2)
-        .connect(&db_url)
+        .connect_with(bench_opts)
         .await
-        .expect("connect");
+        .map_err(|e| format!("connect bench: {e}"))?;
 
-    // Prod guard: hand-wavy user-count heuristic.
-    let user_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
-        .fetch_one(&db)
+    sqlx::migrate!("./migrations")
+        .run(&db)
         .await
-        .expect("count users");
-    if user_count > 100 && !args.confirm_prod {
-        eprintln!(
-            "database has {user_count} users — looks like production. \
-             Pass --confirm-prod if you really mean it."
-        );
-        std::process::exit(2);
-    }
+        .map_err(|e| format!("migrate: {e}"))?;
 
     let max_depth = *args.depths.iter().max().expect("non-empty");
     let email = format!("undo-bench-{}@example.invalid", Uuid::new_v4());
@@ -277,16 +290,14 @@ async fn main() {
     .bind(&email)
     .fetch_one(&db)
     .await
-    .expect("insert user");
+    .map_err(|e| format!("insert user: {e}"))?;
 
     eprintln!(
-        "Seeding {max_depth} paint events for synthetic user {user_id} ({} polygons)…",
+        "Seeding {max_depth} paint events ({} polygons)…",
         args.geom_size.label()
     );
 
     let mut rng = rand::thread_rng();
-    // Insert all events as status=0; no baseline rows yet. rebuild will replay
-    // exactly the active slice chosen per-depth below.
     const VALUES: [i32; 6] = [-7, -3, -1, 1, 3, 7];
     for seq in 1..=max_depth {
         let geom = random_polygon_geojson(&mut rng, args.geom_size);
@@ -303,20 +314,20 @@ async fn main() {
         .bind(value as i16)
         .execute(&db)
         .await
-        .expect("insert paint_event");
+        .map_err(|e| format!("insert paint_event: {e}"))?;
     }
 
     println!(
-        "\nUndo replay benchmark — {}\nDB: {}  |  geometry-size: {}  |  iterations: {}\n",
+        "\nUndo replay benchmark — {}\nServer: {}  |  geometry-size: {}  |  iterations: {}\n",
         chrono::Utc::now().to_rfc3339(),
-        redact(&db_url),
+        redact_host(db.connect_options().as_ref()),
         args.geom_size.label(),
         args.iterations,
     );
     println!(" depth |  mean    p50    p95    p99  | active rows");
     println!("-------+------------------------------+-------------");
 
-    let mut results: Vec<(usize, f64, f64)> = Vec::new(); // (depth, p95_ms, mean_ms)
+    let mut results: Vec<(usize, f64, f64)> = Vec::new();
 
     let mut depths_sorted = args.depths.clone();
     depths_sorted.sort_unstable();
@@ -324,12 +335,11 @@ async fn main() {
         if depth > max_depth {
             continue;
         }
-        // Set exactly `depth` events active (the most recent by seq).
         sqlx::query("UPDATE paint_events SET status = 0 WHERE user_id = $1")
             .bind(user_id)
             .execute(&db)
             .await
-            .expect("reset status");
+            .map_err(|e| format!("reset status: {e}"))?;
         if depth < max_depth {
             let cutoff = (max_depth - depth) as i64;
             sqlx::query("UPDATE paint_events SET status = 1 WHERE user_id = $1 AND seq <= $2")
@@ -337,20 +347,18 @@ async fn main() {
                 .bind(cutoff)
                 .execute(&db)
                 .await
-                .expect("trim status");
+                .map_err(|e| format!("trim status: {e}"))?;
         }
 
         let mut samples: Vec<Duration> = Vec::with_capacity(args.iterations);
         for _ in 0..args.iterations {
-            let mut tx = db.begin().await.expect("begin");
+            let mut tx = db.begin().await.map_err(|e| format!("begin tx: {e}"))?;
             let start = Instant::now();
             rebuild_for_user(&mut tx, user_id)
                 .await
-                .expect("rebuild_for_user");
+                .map_err(|e| format!("rebuild_for_user: {e}"))?;
             samples.push(start.elapsed());
-            // Roll back so the next iteration starts with the same rated_areas
-            // shape (empty — rebuild fills it, rollback drops it).
-            tx.rollback().await.expect("rollback");
+            tx.rollback().await.map_err(|e| format!("rollback: {e}"))?;
         }
 
         let mut ms: Vec<f64> = samples.iter().map(|d| d.as_secs_f64() * 1000.0).collect();
@@ -366,7 +374,6 @@ async fn main() {
         results.push((depth, p95, mean));
     }
 
-    // Recommendation
     let budget = args.target_ms as f64 - args.rtt_ms as f64;
     let recommended = results
         .iter()
@@ -391,34 +398,12 @@ async fn main() {
         ),
     }
 
-    // Cleanup
-    sqlx::query("DELETE FROM users WHERE id = $1")
-        .bind(user_id)
-        .execute(&db)
-        .await
-        .expect("delete user");
-    sqlx::query("DELETE FROM rated_areas_baseline WHERE user_id = $1")
-        .bind(user_id)
-        .execute(&db)
-        .await
-        .expect("delete baseline");
+    db.close().await;
+    Ok(())
 }
 
-fn redact(url: &str) -> String {
-    // Strip any password between `://user:PW@` so we don't print credentials.
-    if let Some(scheme_end) = url.find("://") {
-        let rest = &url[scheme_end + 3..];
-        if let Some(at) = rest.find('@') {
-            let creds = &rest[..at];
-            if let Some(colon) = creds.find(':') {
-                return format!(
-                    "{}://{}:***@{}",
-                    &url[..scheme_end],
-                    &creds[..colon],
-                    &rest[at + 1..]
-                );
-            }
-        }
-    }
-    url.to_string()
+fn redact_host(opts: &PgConnectOptions) -> String {
+    // sqlx doesn't expose host/port getters cleanly; print a stable summary
+    // using Debug + regex-free extraction is overkill. Just show "postgres:<bench_db>".
+    format!("postgres:{}", opts.get_database().unwrap_or("<unknown>"))
 }

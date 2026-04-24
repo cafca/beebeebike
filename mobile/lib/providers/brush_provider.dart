@@ -6,6 +6,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 import '../api/ratings_paint_api.dart';
 import '../providers/rating_overlay_provider.dart';
+import '../providers/route_provider.dart';
 import '../services/brush_geometry.dart';
 import '../services/brush_overlay.dart';
 
@@ -187,6 +188,14 @@ class BrushController extends Notifier<BrushState> {
     }
   }
 
+  void _maybeRecomputeRoute() {
+    final route = ref.read(routeControllerProvider);
+    if (route.origin == null || route.destination == null) return;
+    unawaited(
+      ref.read(routeControllerProvider.notifier).recomputePreview(),
+    );
+  }
+
   Future<void> _submit({
     required Map<String, dynamic> geometry,
     required int? targetId,
@@ -214,6 +223,7 @@ class BrushController extends Notifier<BrushState> {
         await overlay.refreshAfterPaint();
       }
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
+      _maybeRecomputeRoute();
     } catch (e) {
       _log('brush: paint failed: $e');
     } finally {

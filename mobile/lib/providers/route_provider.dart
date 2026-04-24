@@ -91,4 +91,6 @@ class RouteController extends Notifier<RouteState> {
   void clear() {
     state = const RouteState();
   }
+
+  Future<void> recomputePreview() => _maybeLoadPreview();
 }

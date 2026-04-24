@@ -37,7 +37,6 @@ import '../widgets/arrived_sheet.dart';
 import '../widgets/brush_fab.dart';
 import '../widgets/eta_sheet.dart';
 import '../widgets/home_sheet.dart';
-import '../widgets/paint_pan_recognizer.dart';
 import '../widgets/paint_sheet.dart';
 import '../widgets/recenter_fab.dart';
 import '../widgets/rerouting_toast.dart';
@@ -68,8 +67,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _ttsEnabled = true;
   bool _rerouting = false;
   bool _browseAutocentered = false;
-  double? _pinchStartZoom;
-  double? _pinchLastZoom;
 
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
@@ -561,27 +558,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 b.startStroke(latLng);
                 await b.endStroke(tapFeatureLookup: _probeRatingFeature);
               },
-              onScaleStart: (_) {
-                final c = _mapController;
-                if (c == null) return;
-                final z = c.cameraPosition?.zoom ?? 14;
-                _pinchStartZoom = z;
-                _pinchLastZoom = z;
-                _brushNotifier?.cancelStroke();
-              },
-              onScaleUpdate: (details) {
-                final c = _mapController;
-                final start = _pinchStartZoom;
-                final last = _pinchLastZoom;
-                if (c == null || start == null || last == null) return;
-                if (details.scale <= 0) return;
-                final newZoom = start + math.log(details.scale) / math.ln2;
-                final delta = newZoom - last;
-                _pinchLastZoom = newZoom;
-                c.moveCamera(
-                  CameraUpdate.zoomBy(delta, details.localFocalPoint),
-                );
-              },
               toLatLng: (p) async {
                 final c = _mapController;
                 if (c == null) return const LatLng(0, 0);
@@ -611,13 +587,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 // every pointer event (pan/pinch/rotate) when wrapped in a
                 // Scaffold that otherwise wins the gesture arena on iOS.
                 //
-                // Paint mode: empty set so no platform-view recognizer joins
-                // the Flutter arena. Any recognizer added here also claims
-                // single-pointer events via `startTrackingPointer` in its
-                // `addAllowedPointer`, which blocks the outer
-                // PaintPanGestureRecognizer from winning single-finger
-                // arenas. Instead, pinch is driven manually from the outer
-                // RawGestureDetector's MultiPointerScaleGestureRecognizer.
+                // Paint mode: empty set so pointers fall through to the
+                // outer RawGestureDetector (paint strokes). Map pans/zooms
+                // are already disabled via the *GesturesEnabled bools above,
+                // so the canvas stays static while painting.
                 gestureRecognizers: paintMode
                     ? const <Factory<OneSequenceGestureRecognizer>>{}
                     : <Factory<OneSequenceGestureRecognizer>>{
@@ -1309,8 +1282,6 @@ class _PaintGestureWrap extends StatelessWidget {
     required this.onPanEnd,
     required this.onPanCancel,
     required this.onTap,
-    required this.onScaleStart,
-    required this.onScaleUpdate,
     required this.toLatLng,
     required this.child,
   });
@@ -1321,8 +1292,6 @@ class _PaintGestureWrap extends StatelessWidget {
   final VoidCallback onPanEnd;
   final VoidCallback onPanCancel;
   final ValueChanged<LatLng> onTap;
-  final ValueChanged<ScaleStartDetails> onScaleStart;
-  final ValueChanged<ScaleUpdateDetails> onScaleUpdate;
   final Future<LatLng> Function(math.Point<double>) toLatLng;
   final Widget child;
 
@@ -1337,10 +1306,9 @@ class _PaintGestureWrap extends StatelessWidget {
     // zero recognizers and fall through to the child.
     final gestures = enabled
         ? <Type, GestureRecognizerFactory>{
-            PaintPanGestureRecognizer:
-                GestureRecognizerFactoryWithHandlers<
-                    PaintPanGestureRecognizer>(
-              PaintPanGestureRecognizer.new,
+            PanGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
+              PanGestureRecognizer.new,
               (r) {
                 r.onStart = (d) async {
                   final latLng = await toLatLng(_point(d.localPosition));
@@ -1351,9 +1319,6 @@ class _PaintGestureWrap extends StatelessWidget {
                   onPanUpdate(latLng);
                 };
                 r.onEnd = (_) => onPanEnd();
-                // Fires when the arena rejects us after onStart fired — i.e.
-                // a second pointer landed mid-stroke and we released the
-                // gesture to the sibling MultiPointerScaleGestureRecognizer.
                 r.onCancel = onPanCancel;
               },
             ),
@@ -1365,15 +1330,6 @@ class _PaintGestureWrap extends StatelessWidget {
                   final latLng = await toLatLng(_point(d.localPosition));
                   onTap(latLng);
                 };
-              },
-            ),
-            MultiPointerScaleGestureRecognizer:
-                GestureRecognizerFactoryWithHandlers<
-                    MultiPointerScaleGestureRecognizer>(
-              MultiPointerScaleGestureRecognizer.new,
-              (r) {
-                r.onStart = onScaleStart;
-                r.onUpdate = onScaleUpdate;
               },
             ),
           }

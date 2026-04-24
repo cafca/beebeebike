@@ -122,21 +122,42 @@ fn parse_bbox(bbox: &str) -> Result<(f64, f64, f64, f64), AppError> {
 // Core helpers
 // ---------------------------------------------------------------------------
 
-/// Apply a single paint operation to `rated_areas` within an open transaction.
-/// This is the clipping logic extracted so it can be called both from the
-/// paint endpoint and from `rebuild_rated_areas_for_user`.
-async fn apply_paint(
+/// Target table for `apply_paint`. The enum keeps the set of valid table
+/// names closed so the `format!` below cannot become a SQL-injection vector.
+#[derive(Clone, Copy)]
+pub enum Target {
+    /// The derived, live state served to the client.
+    RatedAreas,
+    /// The squashed snapshot that sits below the undo stack.
+    Baseline,
+}
+
+impl Target {
+    fn table(self) -> &'static str {
+        match self {
+            Target::RatedAreas => "rated_areas",
+            Target::Baseline => "rated_areas_baseline",
+        }
+    }
+}
+
+/// Apply a single paint operation to the given target table within an open
+/// transaction. Shared by the paint endpoint, `rebuild_rated_areas_for_user`,
+/// and the baseline squash loop.
+pub async fn apply_paint(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: Uuid,
     geometry_json: &str,
     value: i32,
+    target: Target,
 ) -> Result<(i64, i64), AppError> {
+    let table = target.table();
     // Sanitize incoming GeoJSON: ST_MakeValid fixes self-intersections,
     // ST_CollectionExtract(..., 3) keeps only polygon components. Applied
     // at every use of the input geometry below.
     //
     // Step 1: Delete fully covered polygons
-    let deleted_row = sqlx::query_as::<_, CountRow>(
+    let deleted_row = sqlx::query_as::<_, CountRow>(&format!(
         r#"
         WITH input AS (
             SELECT ST_CollectionExtract(
@@ -145,14 +166,14 @@ async fn apply_paint(
             ) AS g
         ),
         deleted AS (
-            DELETE FROM rated_areas
+            DELETE FROM {table}
             WHERE user_id = $1
               AND ST_Covers((SELECT g FROM input), geometry)
             RETURNING 1
         )
         SELECT COUNT(*) AS count FROM deleted
-        "#,
-    )
+        "#
+    ))
     .bind(user_id)
     .bind(geometry_json)
     .fetch_one(&mut **tx)
@@ -164,7 +185,7 @@ async fn apply_paint(
     // rows that render as distinct features with a visible seam. Skipped for
     // eraser (value == 0) since no value-0 rows are ever stored.
     let merge_row = if value != 0 {
-        sqlx::query_as::<_, MergeRow>(
+        sqlx::query_as::<_, MergeRow>(&format!(
             r#"
             WITH input AS (
                 SELECT ST_CollectionExtract(
@@ -173,7 +194,7 @@ async fn apply_paint(
                 ) AS g
             ),
             deleted_same AS (
-                DELETE FROM rated_areas
+                DELETE FROM {table}
                 WHERE user_id = $1
                   AND value = $3
                   AND ST_Intersects(geometry, (SELECT g FROM input))
@@ -184,7 +205,7 @@ async fn apply_paint(
                 COUNT(*) AS count
             FROM deleted_same
             "#,
-        )
+        ))
         .bind(user_id)
         .bind(geometry_json)
         .bind(value)
@@ -201,7 +222,7 @@ async fn apply_paint(
     // intersecting rows are already gone (Step 2a), so this is effectively
     // "clip non-matching values". ST_MakeValid(geometry) on the stored side
     // is belt-and-suspenders against legacy invalid rows.
-    let clipped_row = sqlx::query_as::<_, CountRow>(
+    let clipped_row = sqlx::query_as::<_, CountRow>(&format!(
         r#"
         WITH input AS (
             SELECT ST_CollectionExtract(
@@ -210,7 +231,7 @@ async fn apply_paint(
             ) AS g
         ),
         overlapping AS (
-            DELETE FROM rated_areas
+            DELETE FROM {table}
             WHERE user_id = $1
               AND ST_Intersects(geometry, (SELECT g FROM input))
             RETURNING user_id, value,
@@ -222,7 +243,7 @@ async fn apply_paint(
             WHERE NOT ST_IsEmpty(clipped)
         ),
         inserted AS (
-            INSERT INTO rated_areas (user_id, geometry, value)
+            INSERT INTO {table} (user_id, geometry, value)
             SELECT user_id, geom, value
             FROM fragments
             WHERE ST_GeometryType(geom) = 'ST_Polygon'
@@ -230,8 +251,8 @@ async fn apply_paint(
             RETURNING 1
         )
         SELECT COUNT(*) AS count FROM overlapping
-        "#,
-    )
+        "#
+    ))
     .bind(user_id)
     .bind(geometry_json)
     .fetch_one(&mut **tx)
@@ -242,7 +263,7 @@ async fn apply_paint(
     // input before insert so same-value paints merge into a single row.
     // ST_Dump splits multi-polygon results into separate rows.
     if value != 0 {
-        sqlx::query(
+        sqlx::query(&format!(
             r#"
             WITH input AS (
                 SELECT ST_CollectionExtract(
@@ -265,14 +286,14 @@ async fn apply_paint(
             parts AS (
                 SELECT (ST_Dump(g)).geom AS g FROM merged
             )
-            INSERT INTO rated_areas (user_id, geometry, value)
+            INSERT INTO {table} (user_id, geometry, value)
             SELECT $1, g, $3 FROM parts
             WHERE g IS NOT NULL
               AND NOT ST_IsEmpty(g)
               AND ST_GeometryType(g) = 'ST_Polygon'
               AND ST_Area(g) > 0
-            "#,
-        )
+            "#
+        ))
         .bind(user_id)
         .bind(geometry_json)
         .bind(value)
@@ -284,7 +305,9 @@ async fn apply_paint(
     Ok((deleted_row.count + merge_row.count, clipped_row.count))
 }
 
-/// Wipe a user's `rated_areas` and rebuild by replaying all active paint events.
+/// Wipe a user's `rated_areas` and rebuild from `rated_areas_baseline` plus
+/// all active paint events. With the undo-history cap, the replay loop runs
+/// at most `config.max_undo_history` iterations — O(cap) per undo.
 async fn rebuild_rated_areas_for_user(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     user_id: Uuid,
@@ -293,6 +316,21 @@ async fn rebuild_rated_areas_for_user(
         .bind(user_id)
         .execute(&mut **tx)
         .await?;
+
+    // Seed with the squashed baseline. Polygons here are already non-overlapping
+    // (apply_paint maintains that invariant in both tables), so a plain copy is
+    // equivalent to replaying the squashed events.
+    sqlx::query(
+        r#"
+        INSERT INTO rated_areas (user_id, geometry, value)
+        SELECT user_id, geometry, value
+        FROM rated_areas_baseline
+        WHERE user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await?;
 
     let events = sqlx::query_as::<_, EventRow>(
         r#"
@@ -307,10 +345,122 @@ async fn rebuild_rated_areas_for_user(
     .await?;
 
     for event in events {
-        apply_paint(tx, user_id, &event.geometry, event.value as i32).await?;
+        apply_paint(
+            tx,
+            user_id,
+            &event.geometry,
+            event.value as i32,
+            Target::RatedAreas,
+        )
+        .await?;
     }
 
     Ok(())
+}
+
+/// Pop active paint events older than `cap` and squash them into the
+/// baseline. Runs within the caller's transaction. Typical call squashes
+/// zero or one event (steady state); larger batches happen during startup
+/// backfill or when the operator lowers `max_undo_history`.
+pub(crate) async fn squash_excess_history(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    user_id: Uuid,
+    cap: i64,
+) -> Result<u64, AppError> {
+    let mut squashed = 0u64;
+    loop {
+        let active: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM paint_events WHERE user_id = $1 AND status = 0",
+        )
+        .bind(user_id)
+        .fetch_one(&mut **tx)
+        .await?;
+        if active <= cap {
+            break;
+        }
+        let oldest = sqlx::query_as::<_, EventRow>(
+            r#"
+            SELECT id, ST_AsGeoJSON(geometry) AS geometry, value
+            FROM paint_events
+            WHERE user_id = $1 AND status = 0
+            ORDER BY seq ASC
+            LIMIT 1
+            "#,
+        )
+        .bind(user_id)
+        .fetch_optional(&mut **tx)
+        .await?;
+        let Some(evt) = oldest else {
+            break;
+        };
+        apply_paint(
+            tx,
+            user_id,
+            &evt.geometry,
+            evt.value as i32,
+            Target::Baseline,
+        )
+        .await?;
+        sqlx::query("DELETE FROM paint_events WHERE id = $1")
+            .bind(evt.id)
+            .execute(&mut **tx)
+            .await?;
+        squashed += 1;
+    }
+    // Defensive: also trim the redo stack to the same cap. New paints wipe
+    // the redo stack wholesale, so this normally does nothing.
+    sqlx::query(
+        r#"
+        DELETE FROM paint_events
+        WHERE id IN (
+            SELECT id FROM paint_events
+            WHERE user_id = $1 AND status = 1
+            ORDER BY seq DESC
+            OFFSET $2
+        )
+        "#,
+    )
+    .bind(user_id)
+    .bind(cap)
+    .execute(&mut **tx)
+    .await?;
+    Ok(squashed)
+}
+
+/// One-shot startup backfill: apply the history cap to every user that
+/// currently exceeds it. Idempotent — a re-run is a no-op because the loop
+/// terminates as soon as `active <= cap`. Intended to be called once, after
+/// migrations, on backend boot.
+pub async fn backfill_baseline_once(db: &sqlx::PgPool, cap: usize) -> Result<u64, AppError> {
+    let cap = cap as i64;
+    let users: Vec<(Uuid,)> = sqlx::query_as(
+        r#"
+        SELECT user_id FROM paint_events
+        WHERE status = 0
+        GROUP BY user_id
+        HAVING COUNT(*) > $1
+        "#,
+    )
+    .bind(cap)
+    .fetch_all(db)
+    .await?;
+
+    let total_users = users.len();
+    let mut total_squashed = 0u64;
+    for (user_id,) in users {
+        let mut tx = db.begin().await?;
+        total_squashed += squash_excess_history(&mut tx, user_id, cap).await?;
+        tx.commit().await?;
+    }
+    if total_users > 0 {
+        tracing::info!(
+            users = total_users,
+            squashed = total_squashed,
+            cap,
+            "baseline backfill: applied undo-history cap to existing users"
+        );
+    }
+    Ok(total_squashed)
 }
 
 /// Fire `NOTIFY ratings_changed` inside the given transaction. Called by
@@ -464,8 +614,20 @@ pub async fn paint(
     .await?;
 
     // Apply to the derived cache
-    let (deleted_count, clipped_count) =
-        apply_paint(&mut tx, user_id, &geometry_json, body.value).await?;
+    let (deleted_count, clipped_count) = apply_paint(
+        &mut tx,
+        user_id,
+        &geometry_json,
+        body.value,
+        Target::RatedAreas,
+    )
+    .await?;
+
+    // Enforce the undo-history cap: squash oldest active events into the
+    // baseline until at most `cap` remain. This bounds the work that future
+    // undo calls do in `rebuild_rated_areas_for_user`.
+    let cap = state.config.max_undo_history as i64;
+    squash_excess_history(&mut tx, user_id, cap).await?;
 
     // Fetch the id of the newly created rated_area (if any)
     let created_id = if body.value != 0 {
@@ -559,7 +721,14 @@ pub async fn redo(
             .execute(&mut *tx)
             .await?;
 
-        apply_paint(&mut tx, user_id, &event.geometry, event.value as i32).await?;
+        apply_paint(
+            &mut tx,
+            user_id,
+            &event.geometry,
+            event.value as i32,
+            Target::RatedAreas,
+        )
+        .await?;
         notify_change(&mut tx, &state, user_id).await?;
     }
 

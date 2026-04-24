@@ -68,6 +68,26 @@ test: test-backend test-web test-mobile test-ferrostar-flutter-plugin
 test-backend:
     cd backend && cargo test
 
+# Measure undo replay latency against a local Postgres (auto-starts the
+# dev db container). Bench creates a throwaway DB and drops it on exit.
+# Pass extra args after the recipe name, e.g.
+#   just bench-undo --depths 1,5,10,20 --geometry-size large
+[group('test')]
+bench-undo *ARGS:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    docker compose -f compose.yml -f compose.dev.yml up -d db
+    until docker exec beebeebike-db pg_isready -U beebeebike >/dev/null 2>&1; do sleep 0.2; done
+    cd backend && DATABASE_URL="${DATABASE_URL:-postgres://beebeebike:beebeebike@localhost:5432/beebeebike}" \
+        cargo run --release --bin undo_bench -- {{ARGS}}
+
+# Run the bench against a prod host's Postgres via the shipped backend image.
+# Safe against prod: bench creates and drops its own throwaway database. Run
+# from the host where compose.prod.yml lives (e.g. helena, ~/beebeebike).
+[group('test')]
+bench-undo-prod *ARGS:
+    docker compose -f compose.prod.yml exec backend undo_bench {{ARGS}}
+
 # vitest unit tests + mobile-style parity; run `just build-web` first if the build matters
 [group('test')]
 test-web:

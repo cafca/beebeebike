@@ -1,4 +1,4 @@
-use beebeebike_backend::{build_router, config::Config, ratings_events, AppState};
+use beebeebike_backend::{build_router, config::Config, ratings, ratings_events, AppState};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 
@@ -25,6 +25,13 @@ async fn main() {
         .run(&db)
         .await
         .expect("Failed to run migrations");
+
+    // Apply the undo-history cap to any pre-existing users who exceed it.
+    // Idempotent: subsequent boots with nothing to squash are a cheap
+    // GROUP BY query with zero rows returned.
+    ratings::backfill_baseline_once(&db, config.max_undo_history)
+        .await
+        .expect("baseline backfill failed");
 
     // Spawn the Postgres LISTEN task only when the SSE pipeline is enabled.
     // Flipping BEEBEEBIKE_RATINGS_SSE_ENABLED=false and restarting the

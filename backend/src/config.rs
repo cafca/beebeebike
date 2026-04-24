@@ -9,6 +9,11 @@ pub struct Config {
     pub rating_weight: f64,
     pub distance_influence: f64,
     pub max_areas_per_request: usize,
+    /// Maximum active undo steps kept in `paint_events`. Events beyond this
+    /// are squashed into `rated_areas_baseline` and removed. Bounds the cost
+    /// of `rebuild_rated_areas_for_user` (O(cap) per undo). Tune with the
+    /// `undo_bench` binary against your DB/hardware.
+    pub max_undo_history: usize,
     /// Kill switch for the rating-change SSE pipeline. When `false` the
     /// backend neither spawns the Postgres LISTEN task nor registers the
     /// `/api/ratings/events` route, and paint/undo/redo skip their
@@ -41,6 +46,11 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(200),
+            max_undo_history: env::var("BEEBEEBIKE_MAX_UNDO_HISTORY")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .filter(|&n: &usize| n >= 1)
+                .unwrap_or(15),
             ratings_events_enabled: env::var("BEEBEEBIKE_RATINGS_SSE_ENABLED")
                 .ok()
                 .map(|v| !matches!(v.to_lowercase().as_str(), "0" | "false" | "no"))
@@ -90,6 +100,7 @@ mod tests {
                 "RATING_WEIGHT",
                 "DISTANCE_INFLUENCE",
                 "MAX_AREAS_PER_REQUEST",
+                "BEEBEEBIKE_MAX_UNDO_HISTORY",
                 "BEEBEEBIKE_RATINGS_SSE_ENABLED",
             ] {
                 env::remove_var(var);
@@ -103,10 +114,32 @@ mod tests {
         assert!((config.rating_weight - 0.5).abs() < 1e-9);
         assert!((config.distance_influence - 70.0).abs() < 1e-9);
         assert_eq!(config.max_areas_per_request, 200);
+        assert_eq!(config.max_undo_history, 15);
         assert!(
             config.ratings_events_enabled,
             "SSE should default to enabled"
         );
+    }
+
+    #[test]
+    fn max_undo_history_env_override() {
+        with_env_vars(&[("BEEBEEBIKE_MAX_UNDO_HISTORY", "25")], || {
+            let config = Config::from_env();
+            assert_eq!(config.max_undo_history, 25);
+        });
+    }
+
+    #[test]
+    fn max_undo_history_rejects_zero_and_non_numeric() {
+        for bad in ["0", "abc", ""] {
+            with_env_vars(&[("BEEBEEBIKE_MAX_UNDO_HISTORY", bad)], || {
+                let config = Config::from_env();
+                assert_eq!(
+                    config.max_undo_history, 15,
+                    "invalid value {bad:?} should fall back to default"
+                );
+            });
+        }
     }
 
     #[test]

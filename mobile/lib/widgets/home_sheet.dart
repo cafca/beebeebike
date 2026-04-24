@@ -12,12 +12,11 @@ import '../providers/search_history_provider.dart';
 import '../screens/login_screen.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
-import 'paint_roller_icon.dart';
 import 'saved_item.dart';
 
 /// Landing-state bottom sheet. Two snap points: peek (~16 %) and a mid
-/// stop sized to fit the Go Home row + three recent items. Paint FAB is
-/// visually present but disabled in this build.
+/// stop sized to fit the Go Home row + three recent items. The paint
+/// brush FAB lives in the map-screen overlay column, not here.
 class HomeSheet extends ConsumerStatefulWidget {
   const HomeSheet({
     super.key,
@@ -109,22 +108,13 @@ class _GoHomeRow extends ConsumerWidget {
     final enabled = home != null;
     final eta = enabled ? ref.watch(homeEtaMinutesProvider) : null;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: loggedIn
-              ? _GoHomeButton(
-                  enabled: enabled,
-                  etaMinutes: eta,
-                  onTap: enabled ? onNavigateHome : null,
-                )
-              : const _LogInButton(),
-        ),
-        const SizedBox(width: 10),
-        const _PaintFab(enabled: false),
-      ],
-    );
+    return loggedIn
+        ? _GoHomeButton(
+            enabled: enabled,
+            etaMinutes: eta,
+            onTap: enabled ? onNavigateHome : null,
+          )
+        : const _LogInButton();
   }
 }
 
@@ -257,35 +247,6 @@ class _GoHomeButton extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PaintFab extends StatelessWidget {
-  const _PaintFab({required this.enabled});
-
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: enabled ? 'Paint mode' : 'Paint mode (coming soon)',
-      child: Opacity(
-        opacity: enabled ? 1 : 0.55,
-        child: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: BbbColors.panel,
-            borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-            border: Border.all(color: BbbColors.divider, width: 1),
-            boxShadow: BbbShadow.sm,
-          ),
-          child: const Center(
-            child: PaintRollerIcon(size: 24),
           ),
         ),
       ),

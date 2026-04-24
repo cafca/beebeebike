@@ -112,5 +112,16 @@
   "arrivedTitle": "Arrived",
   "arrivedDone": "Done",
 
-  "mapResetNorth": "Reset to north"
+  "mapResetNorth": "Reset to north",
+
+  "paintEnter": "Paint mode",
+  "paintExit": "Exit paint mode",
+  "paintDisabled": "Paint mode (coming soon)",
+  "paintEraser": "Eraser",
+  "paintRatingLabel": "Rating {value}",
+  "@paintRatingLabel": {
+    "placeholders": { "value": { "type": "int" } }
+  },
+  "paintUndo": "Undo",
+  "paintRedo": "Redo"
 }

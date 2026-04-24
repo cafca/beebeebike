@@ -267,4 +267,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapResetNorth => 'Reset to north';
+
+  @override
+  String get paintEnter => 'Paint mode';
+
+  @override
+  String get paintExit => 'Exit paint mode';
+
+  @override
+  String get paintDisabled => 'Paint mode (coming soon)';
+
+  @override
+  String get paintEraser => 'Eraser';
+
+  @override
+  String paintRatingLabel(int value) {
+    return 'Rating $value';
+  }
+
+  @override
+  String get paintUndo => 'Undo';
+
+  @override
+  String get paintRedo => 'Redo';
 }

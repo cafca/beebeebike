@@ -63,7 +63,7 @@ import 'app_localizations_en.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,16 +86,16 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
-    Locale('en')
+    Locale('en'),
   ];
 
   /// No description provided for @appTitle.
@@ -577,6 +577,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset to north'**
   String get mapResetNorth;
+
+  /// No description provided for @paintEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint mode'**
+  String get paintEnter;
+
+  /// No description provided for @paintExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit paint mode'**
+  String get paintExit;
+
+  /// No description provided for @paintDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint mode (coming soon)'**
+  String get paintDisabled;
+
+  /// No description provided for @paintEraser.
+  ///
+  /// In en, this message translates to:
+  /// **'Eraser'**
+  String get paintEraser;
+
+  /// No description provided for @paintRatingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating {value}'**
+  String paintRatingLabel(int value);
+
+  /// No description provided for @paintUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get paintUndo;
+
+  /// No description provided for @paintRedo.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get paintRedo;
 }
 
 class _AppLocalizationsDelegate
@@ -606,8 +648,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

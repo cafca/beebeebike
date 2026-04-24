@@ -52,6 +52,8 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
   RatingOverlaySurface? _overlay;
   CancelToken? _inFlight;
   RatingEventsClient? _eventsClient;
+  bool _authListenerWired = false;
+  Map<String, dynamic>? _lastCollection;
 
   @override
   RatingOverlayState build() {
@@ -63,13 +65,22 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
     return const RatingOverlayState();
   }
 
-  /// Attach the overlay. Idempotent — a second call while already attached
-  /// is a no-op, which matters because MapLibre's `onStyleLoadedCallback`
-  /// can fire more than once (style reload on theme change, retry, etc.).
+  /// Attach the overlay to the current MapLibre style.
+  ///
+  /// Called from `onStyleLoadedCallback`, which fires on first style load
+  /// and on every subsequent style reload — including MapLibre platform-view
+  /// recreation triggered by our paint-mode `gestureRecognizers` toggle.
+  /// The prior overlay reference points at a dead native view in that case,
+  /// so we unconditionally detach it and attach fresh layers to the new
+  /// style. Auth wiring runs once per controller lifetime.
   Future<void> attach({required OverlayAttacher attachOverlay}) async {
-    if (_overlay != null) {
-      _log('rating-overlay: attach skipped (already attached)');
-      return;
+    final prior = _overlay;
+    _overlay = null;
+    if (prior != null) {
+      _log('rating-overlay: reattaching (prior overlay discarded)');
+      try {
+        await prior.detach();
+      } catch (_) {}
     }
     _log('rating-overlay: attach start');
     try {
@@ -79,8 +90,18 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
       _log('rating-overlay: attach FAILED: $e\n$st');
       return;
     }
-    // Wire up auth *after* a successful attach so we react to login/logout
-    // without leaking a listener on a half-initialized overlay.
+    if (_authListenerWired) {
+      // Re-populate the new native view with current data. The events
+      // client keeps running across view recreation, so we only need the
+      // one-shot sync here.
+      if (ref.read(authControllerProvider).valueOrNull != null) {
+        _fullSync();
+      }
+      return;
+    }
+    _authListenerWired = true;
+    // Wire up auth *after* the first successful attach so we react to
+    // login/logout without leaking a listener on a half-initialized overlay.
     ref.listen<AsyncValue<User?>>(authControllerProvider, (prev, next) {
       // `valueOrNull` instead of `.value`: the latter rethrows when the
       // state is `AsyncError` (e.g. anonymous-auth connection refused in
@@ -170,6 +191,37 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
     await overlay?.detach();
   }
 
+  /// Trigger an immediate full sync. Called by brush after a paint that
+  /// involved server-side clipping, where we can't reconstruct the final
+  /// state locally.
+  Future<void> refreshAfterPaint() => _fullSync();
+
+  /// Optimistically append a single rating polygon to the overlay without
+  /// hitting the network. Safe only when the backend reported no clipping
+  /// or deletions — otherwise the local and server views diverge until the
+  /// next full sync.
+  Future<void> appendLocal({
+    required Map<String, dynamic> geometry,
+    required int value,
+    int? id,
+  }) async {
+    final overlay = _overlay;
+    if (overlay == null) return;
+    final prev = _lastCollection;
+    final features = <dynamic>[
+      if (prev != null) ...((prev['features'] as List?) ?? const []),
+      {
+        'type': 'Feature',
+        if (id != null) 'id': id,
+        'properties': {'value': value, if (id != null) 'id': id},
+        'geometry': geometry,
+      },
+    ];
+    final next = {'type': 'FeatureCollection', 'features': features};
+    await overlay.update(next);
+    _lastCollection = next;
+  }
+
   Future<void> _fullSync() async {
     final overlay = _overlay;
     if (overlay == null) {
@@ -189,6 +241,7 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
       final features = data['features'] as List<dynamic>? ?? const [];
       _log('rating-overlay: sync ok, features=${features.length}');
       await overlay.update(data);
+      _lastCollection = data;
     } on DioException catch (e) {
       if (CancelToken.isCancel(e)) return;
       _log('rating-overlay: sync failed status=${e.response?.statusCode} '

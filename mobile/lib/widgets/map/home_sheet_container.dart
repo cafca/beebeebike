@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../brush_fab.dart';
 import '../home_sheet.dart';
 import 'compass_fab_inline.dart';
 import 'recenter_circle_fab.dart';
@@ -53,6 +54,8 @@ class _HomeSheetContainerState extends ConsumerState<HomeSheetContainer> {
                 children: [
                   CompassFabInline(onResetBearing: widget.onResetBearing),
                   RecenterCircleFab(onTap: widget.onFlyToMyLocation),
+                  const SizedBox(height: 12),
+                  const BrushFab(),
                 ],
               ),
             );

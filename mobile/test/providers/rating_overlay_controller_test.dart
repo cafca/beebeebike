@@ -191,7 +191,8 @@ Future<void> _pump() => Future<void>.delayed(Duration.zero);
 String get _expectedBbox => kBerlinSyncBbox.toQueryString();
 
 void main() {
-  test('attach is idempotent when called twice', () async {
+  test('attach detaches prior overlay and re-attaches on repeat calls',
+      () async {
     final s = _setup();
     addTearDown(s.container.dispose);
     await s.container.read(authControllerProvider.future);
@@ -199,26 +200,52 @@ void main() {
     final controller =
         s.container.read(ratingOverlayControllerProvider.notifier);
 
-    var attachCount = 0;
+    final overlays = <_FakeOverlay>[];
 
-    await controller.attach(
-      attachOverlay: () async {
-        attachCount++;
-        return _FakeOverlay();
-      },
-    );
-    expect(attachCount, 1);
+    Future<_FakeOverlay> factory() async {
+      final o = _FakeOverlay();
+      overlays.add(o);
+      return o;
+    }
 
-    // Second attach must NOT re-run the factory. MapLibre's
-    // onStyleLoadedCallback can fire more than once and would otherwise try
-    // to re-add an already-registered source + layers.
-    await controller.attach(
-      attachOverlay: () async {
-        attachCount++;
-        return _FakeOverlay();
-      },
-    );
-    expect(attachCount, 1);
+    await controller.attach(attachOverlay: factory);
+    expect(overlays, hasLength(1));
+
+    // MapLibre's onStyleLoadedCallback fires again whenever the underlying
+    // platform view is recreated (e.g. paint-mode `gestureRecognizers`
+    // toggle). The new native view has no layers, so we must drop the stale
+    // overlay reference and attach fresh source+layers to the new style.
+    await controller.attach(attachOverlay: factory);
+    expect(overlays, hasLength(2),
+        reason: 'second attach must rebuild the overlay');
+    expect(overlays[0].detaches, 1,
+        reason: 'prior overlay must be detached before a fresh attach');
+  });
+
+  test('re-attach repopulates data without rewiring auth listener',
+      () async {
+    final s = _setup();
+    addTearDown(s.container.dispose);
+    await s.container.read(authControllerProvider.future);
+
+    final controller =
+        s.container.read(ratingOverlayControllerProvider.notifier);
+
+    await controller.attach(attachOverlay: () async => _FakeOverlay());
+    await _pump();
+    expect(s.api.calls, hasLength(1), reason: 'first attach syncs');
+
+    await controller.attach(attachOverlay: () async => _FakeOverlay());
+    await _pump();
+    expect(s.api.calls, hasLength(2),
+        reason: 're-attach must refetch to populate the new view');
+
+    // One auth listener — a login should trigger exactly one clear+sync,
+    // not N where N = attach count.
+    s.auth.setUser(_named);
+    await _pump();
+    expect(s.api.calls, hasLength(3),
+        reason: 'auth change must sync exactly once regardless of reattaches');
   });
 
   test('attach fetches once with the Berlin sync bbox when logged in',

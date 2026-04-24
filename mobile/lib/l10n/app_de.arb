@@ -94,5 +94,13 @@
   "arrivedTitle": "Angekommen",
   "arrivedDone": "Fertig",
 
-  "mapResetNorth": "Nach Norden ausrichten"
+  "mapResetNorth": "Nach Norden ausrichten",
+
+  "paintEnter": "Malmodus",
+  "paintExit": "Malmodus beenden",
+  "paintDisabled": "Malmodus (bald verfügbar)",
+  "paintEraser": "Radierer",
+  "paintRatingLabel": "Bewertung {value}",
+  "paintUndo": "Rückgängig",
+  "paintRedo": "Wiederherstellen"
 }

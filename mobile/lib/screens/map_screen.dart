@@ -14,6 +14,7 @@ import '../models/location.dart';
 import '../models/route_state.dart';
 import '../navigation/location_converter.dart';
 import '../navigation/nav_constants.dart';
+import '../providers/brush_provider.dart';
 import '../providers/navigation_camera_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/navigation_session_provider.dart';
@@ -21,14 +22,19 @@ import '../providers/location_provider.dart';
 import '../providers/map_bearing_provider.dart';
 import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
+import '../services/brush_overlay.dart';
 import '../services/haptics.dart';
 import '../services/home_marker_service.dart';
 import '../services/map_style_loader.dart';
+import '../services/rating_overlay.dart';
 import '../services/route_drawing.dart';
+import '../theme/tokens.dart';
+import '../widgets/brush_fab.dart';
 import '../widgets/map/home_sheet_container.dart';
 import '../widgets/map/nav_top_bar.dart';
 import '../widgets/map/navigation_sheet.dart';
 import '../widgets/map/route_sheet.dart';
+import '../widgets/paint_sheet.dart';
 import '../widgets/route_card.dart';
 
 final _berlinBounds = LatLngBounds(
@@ -48,12 +54,17 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   RouteOverlay? _routeOverlay;
   final HomeMarkerService _homeMarker = HomeMarkerService();
   RatingOverlayController? _ratingOverlayNotifier;
+  BrushOverlay? _brushOverlay;
+  BrushController? _brushNotifier;
   bool _ttsEnabled = true;
   bool _rerouting = false;
   bool _browseAutocentered = false;
+  int _paintPointerCount = 0;
+  bool _paintMultiTouch = false;
 
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
+    if (ref.read(brushControllerProvider).paintMode) return;
     if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     final notifier = ref.read(routeControllerProvider.notifier);
@@ -120,6 +131,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             bottom: mq.padding.bottom + 224.0,
           ),
         );
+      }
+    }
+
+    // Dim the existing overlay while a recompute is in flight (preview
+    // unchanged, isLoading toggling). Replacement below handles the
+    // un-dim path by redrawing from scratch at full opacity.
+    if (previous?.isLoading != next.isLoading && next.preview != null) {
+      final overlay = _routeOverlay;
+      if (overlay != null) {
+        await overlay.setDimmed(controller, next.isLoading);
       }
     }
 
@@ -378,17 +399,40 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         );
   }
 
+  Future<TapFeature?> _probeRatingFeature(LatLng coords) async {
+    final controller = _mapController;
+    if (controller == null) return null;
+    try {
+      final screen = await controller.toScreenLocation(coords);
+      final point =
+          math.Point<double>(screen.x.toDouble(), screen.y.toDouble());
+      final features = await controller.queryRenderedFeatures(
+        point,
+        [RatingOverlay.fillLayerId],
+        null,
+      );
+      if (features.isEmpty) return null;
+      final feature = features.first as Map<String, dynamic>;
+      final props = feature['properties'] as Map<String, dynamic>?;
+      final geom = feature['geometry'] as Map<String, dynamic>?;
+      final id = props?['id'];
+      if (id is! int || geom == null) return null;
+      return TapFeature(areaId: id, geometry: geom);
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   void dispose() {
-    // Detach rating overlay before MapLibre tears down its surface to
-    // avoid leaking the source + layers through hot restarts. `dispose`
-    // can't be async, so we explicitly mark the detach future as
-    // fire-and-forget; the work is quick (removeLayer / removeSource) and
-    // safe to race against MapLibre's own teardown because detach swallows
-    // errors from an already-destroyed surface. We use the cached notifier
-    // because `ref` is not usable once the element is being disposed.
+    // Detach rating + brush overlays before MapLibre tears down its surface
+    // to avoid leaking sources/layers through hot restarts. `dispose` can't
+    // be async; detaches are fire-and-forget and swallow errors from an
+    // already-destroyed surface.
     final notifier = _ratingOverlayNotifier;
     if (notifier != null) unawaited(notifier.detach());
+    final brush = _brushOverlay;
+    if (brush != null) unawaited(brush.detach());
     super.dispose();
   }
 
@@ -399,10 +443,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     // without touching `ref` after unmount.
     _ratingOverlayNotifier ??=
         ref.read(ratingOverlayControllerProvider.notifier);
+    _brushNotifier ??= ref.read(brushControllerProvider.notifier);
     final routeState = ref.watch(routeControllerProvider);
     final preview = routeState.preview;
     final styleAsync = ref.watch(mapStyleProvider);
     final navActive = ref.watch(navigationSessionProvider);
+    final paintMode = ref.watch(
+      brushControllerProvider.select((s) => s.paintMode),
+    );
     final routeActive = routeState.isLoading ||
         routeState.error != null ||
         preview != null;
@@ -432,6 +480,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     ref.listen<bool>(navigationSessionProvider, (prev, next) {
       if (prev == next) return;
       if (next) {
+        _brushNotifier?.forceOff();
         _startNavigationSession();
       } else if (prev == true) {
         _endNavigationSession();
@@ -445,78 +494,165 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) =>
                 Center(child: Text(l10n.mapLoadError(e.toString()))),
-            data: (style) => MapLibreMap(
-              styleString: style,
-              initialCameraPosition: const CameraPosition(
-                target: LatLng(52.5200, 13.4050),
-                zoom: 13,
-              ),
-              cameraTargetBounds: CameraTargetBounds(_berlinBounds),
-              minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
-              myLocationEnabled: true,
-              myLocationTrackingMode: MyLocationTrackingMode.none,
-              trackCameraPosition: true,
-              // Hide built-in compass + attribution chrome. Compass is
-              // redrawn inline above each RecenterFab (CompassFabInline);
-              // attribution is inlined under each sheet's CTA (MapAttribution).
-              compassEnabled: false,
-              attributionButtonMargins: const math.Point(-1000, -1000),
-              // EagerGestureRecognizer: map claims all pointer events so pinch,
-              // rotate and pan work when wrapped in a Scaffold/MaterialApp
-              // that otherwise wins the gesture arena on iOS.
-              gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-                Factory<OneSequenceGestureRecognizer>(
-                  () => EagerGestureRecognizer(),
+            data: (style) => Listener(
+              behavior: HitTestBehavior.translucent,
+              // Track physical pointer-down count across the whole map,
+              // independent of gesture-arena state. While the map is in
+              // paint mode, a second finger landing cancels any in-flight
+              // stroke and latches a "multi-touch dirty" flag so further
+              // onPan* callbacks no-op until every finger has lifted.
+              // Without this the stock PanGestureRecognizer keeps tracking
+              // pointer #1 through a pinch/pan attempt and paints a line
+              // the user didn't mean to draw.
+              onPointerDown: (_) {
+                _paintPointerCount++;
+                if (_paintPointerCount >= 2 && paintMode) {
+                  _paintMultiTouch = true;
+                  _brushNotifier?.cancelStroke();
+                }
+              },
+              onPointerUp: (_) {
+                if (_paintPointerCount > 0) _paintPointerCount--;
+                if (_paintPointerCount == 0) _paintMultiTouch = false;
+              },
+              onPointerCancel: (_) {
+                if (_paintPointerCount > 0) _paintPointerCount--;
+                if (_paintPointerCount == 0) _paintMultiTouch = false;
+              },
+              child: _PaintGestureWrap(
+                enabled: paintMode,
+                onPanStart: (latLng) {
+                  if (_paintMultiTouch) return;
+                  final b = _brushNotifier;
+                  if (b == null) return;
+                  b.startStroke(latLng);
+                },
+                onPanUpdate: (latLng) {
+                  if (_paintMultiTouch) return;
+                  final b = _brushNotifier;
+                  final c = _mapController;
+                  if (b == null || c == null) return;
+                  final zoom = c.cameraPosition?.zoom ?? 14;
+                  b.addPoint(latLng, zoom);
+                },
+                onPanEnd: () async {
+                  if (_paintMultiTouch) {
+                    _brushNotifier?.cancelStroke();
+                    return;
+                  }
+                  final b = _brushNotifier;
+                  if (b == null) return;
+                  await b.endStroke(tapFeatureLookup: _probeRatingFeature);
+                },
+                onPanCancel: () {
+                  _brushNotifier?.cancelStroke();
+                },
+                onTap: (latLng) async {
+                  if (_paintMultiTouch) return;
+                  final b = _brushNotifier;
+                  if (b == null) return;
+                  b.startStroke(latLng);
+                  await b.endStroke(tapFeatureLookup: _probeRatingFeature);
+                },
+                toLatLng: (p) async {
+                  final c = _mapController;
+                  if (c == null) return const LatLng(0, 0);
+                  return c.toLatLng(p);
+                },
+                child: MapLibreMap(
+                  styleString: style,
+                  initialCameraPosition: const CameraPosition(
+                    target: LatLng(52.5200, 13.4050),
+                    zoom: 13,
+                  ),
+                  cameraTargetBounds: CameraTargetBounds(_berlinBounds),
+                  minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
+                  myLocationEnabled: true,
+                  myLocationTrackingMode: MyLocationTrackingMode.none,
+                  trackCameraPosition: true,
+                  scrollGesturesEnabled: !paintMode,
+                  rotateGesturesEnabled: !paintMode,
+                  tiltGesturesEnabled: !paintMode,
+                  zoomGesturesEnabled: !paintMode,
+                  // Hide built-in compass + attribution chrome. Compass is
+                  // redrawn inline above each RecenterFab (CompassFabInline);
+                  // attribution is inlined under each sheet's CTA.
+                  compassEnabled: false,
+                  attributionButtonMargins: const math.Point(-1000, -1000),
+                  // Non-paint mode: EagerGestureRecognizer so the map claims
+                  // every pointer event (pan/pinch/rotate) when wrapped in a
+                  // Scaffold that otherwise wins the gesture arena on iOS.
+                  //
+                  // Paint mode: empty set so pointers fall through to the
+                  // outer RawGestureDetector (paint strokes). Map pans/zooms
+                  // are already disabled via the *GesturesEnabled bools
+                  // above, so the canvas stays static while painting.
+                  gestureRecognizers: paintMode
+                      ? const <Factory<OneSequenceGestureRecognizer>>{}
+                      : <Factory<OneSequenceGestureRecognizer>>{
+                          Factory<OneSequenceGestureRecognizer>(
+                            () => EagerGestureRecognizer(),
+                          ),
+                        },
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                  },
+                  onUserLocationUpdated: (loc) => _handleBrowseLocationUpdate(
+                      loc.position.latitude, loc.position.longitude),
+                  onStyleLoadedCallback: () async {
+                    // Attach rating overlay AFTER style is loaded — MapLibre
+                    // silently ignores addGeoJsonSource / addLayer calls
+                    // made before the style is ready. Route line and markers
+                    // are added later via the annotation APIs and sit above
+                    // all custom style layers by default, so the overlay
+                    // stays visually below them. `attachToMap` is idempotent
+                    // in case the style reloads.
+                    final c = _mapController;
+                    if (c == null) return;
+                    await ref
+                        .read(ratingOverlayControllerProvider.notifier)
+                        .attachToMap(c);
+                    _brushOverlay?.detach();
+                    _brushOverlay = await BrushOverlay.attach(c);
+                    _brushNotifier?.attach(surface: _brushOverlay!);
+                    _updateHomeMarker(
+                        ref.read(homeLocationProvider).valueOrNull);
+                  },
+                  onMapClick: _handleMapTap,
+                  onCameraTrackingDismissed: () {
+                    ref
+                        .read(navigationCameraControllerProvider)
+                        .onTrackingDismissed();
+                  },
+                  onCameraIdle: () {
+                    final c = _mapController;
+                    if (c == null) return;
+                    final zoom = c.cameraPosition?.zoom;
+                    if (zoom != null) {
+                      ref
+                          .read(navigationCameraControllerProvider)
+                          .onZoomChanged(zoom);
+                    }
+                    final bearing = c.cameraPosition?.bearing ?? 0;
+                    final current = ref.read(mapBearingProvider);
+                    if ((bearing - current).abs() > 0.1) {
+                      ref.read(mapBearingProvider.notifier).state = bearing;
+                    }
+                  },
                 ),
-              },
-              onMapCreated: (controller) {
-                _mapController = controller;
-              },
-              onUserLocationUpdated: (loc) => _handleBrowseLocationUpdate(
-                  loc.position.latitude, loc.position.longitude),
-              onStyleLoadedCallback: () {
-                // Attach rating overlay AFTER style is loaded — MapLibre
-                // silently ignores addGeoJsonSource / addLayer calls made
-                // before the style is ready. Route line and markers are
-                // added later via the annotation APIs and sit above all
-                // custom style layers by default, so the overlay stays
-                // visually below them. `attachToMap` is idempotent in case
-                // the style reloads.
-                final c = _mapController;
-                if (c == null) return;
-                ref
-                    .read(ratingOverlayControllerProvider.notifier)
-                    .attachToMap(c);
-                _updateHomeMarker(ref.read(homeLocationProvider).valueOrNull);
-              },
-              onMapClick: _handleMapTap,
-              onCameraTrackingDismissed: () {
-                ref
-                    .read(navigationCameraControllerProvider)
-                    .onTrackingDismissed();
-              },
-              onCameraIdle: () {
-                final c = _mapController;
-                if (c == null) return;
-                final zoom = c.cameraPosition?.zoom;
-                if (zoom != null) {
-                  ref
-                      .read(navigationCameraControllerProvider)
-                      .onZoomChanged(zoom);
-                }
-                final bearing = c.cameraPosition?.bearing ?? 0;
-                final current = ref.read(mapBearingProvider);
-                if ((bearing - current).abs() > 0.1) {
-                  ref.read(mapBearingProvider.notifier).state = bearing;
-                }
-              },
+              ),
             ),
           ),
           if (!navActive)
-            const SafeArea(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: RouteCard(),
+            AnimatedSlide(
+              offset: paintMode ? const Offset(0, -3) : Offset.zero,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: const SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: RouteCard(),
+                ),
               ),
             ),
           if (navActive)
@@ -544,29 +680,238 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         ref.read(navigationSessionProvider.notifier).state =
                             false,
                   )
-                : routeActive
-                    ? RouteSheet(
-                        key: const ValueKey('route'),
-                        routeState: routeState,
-                        preview: preview,
-                        onFlyToMyLocation: _flyToCurrentLocation,
-                        onResetBearing: _resetBearingToNorth,
-                        onStart: () {
-                          AppHaptics.startRide();
-                          ref
-                              .read(navigationSessionProvider.notifier)
-                              .state = true;
-                        },
-                      )
-                    : HomeSheetContainer(
-                        key: const ValueKey('home'),
-                        onFlyToMyLocation: _flyToCurrentLocation,
-                        onResetBearing: _resetBearingToNorth,
-                        onNavigateHome: _navigateHome,
-                      ),
+                : paintMode
+                    ? const _PaintSheetWrapper(key: ValueKey('paint'))
+                    : routeActive
+                        ? RouteSheet(
+                            key: const ValueKey('route'),
+                            routeState: routeState,
+                            preview: preview,
+                            onFlyToMyLocation: _flyToCurrentLocation,
+                            onResetBearing: _resetBearingToNorth,
+                            onStart: () {
+                              AppHaptics.startRide();
+                              ref
+                                  .read(navigationSessionProvider.notifier)
+                                  .state = true;
+                            },
+                          )
+                        : HomeSheetContainer(
+                            key: const ValueKey('home'),
+                            onFlyToMyLocation: _flyToCurrentLocation,
+                            onResetBearing: _resetBearingToNorth,
+                            onNavigateHome: _navigateHome,
+                          ),
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Paint-mode FAB column: undo + redo on top, then the brush toggle. Used by
+// the paint sheet wrapper only; home/route sheets render their own column
+// without undo/redo via HomeSheetContainer / RouteSheet.
+// ---------------------------------------------------------------------------
+
+class _PaintFabColumn extends ConsumerWidget {
+  const _PaintFabColumn();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final brush = ref.watch(brushControllerProvider);
+    final notifier = ref.read(brushControllerProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _UndoRedoFab(
+          tooltip: l10n.paintUndo,
+          keyValue: 'undo-fab',
+          icon: Icons.undo,
+          enabled: brush.canUndo && !brush.busy,
+          loading: brush.activeOp == BrushOp.undo,
+          onPressed: notifier.undo,
+        ),
+        const SizedBox(height: 8),
+        _UndoRedoFab(
+          tooltip: l10n.paintRedo,
+          keyValue: 'redo-fab',
+          icon: Icons.redo,
+          enabled: brush.canRedo && !brush.busy,
+          loading: brush.activeOp == BrushOp.redo,
+          onPressed: notifier.redo,
+        ),
+        const SizedBox(height: 12),
+        const BrushFab(),
+      ],
+    );
+  }
+}
+
+class _UndoRedoFab extends StatelessWidget {
+  const _UndoRedoFab({
+    required this.tooltip,
+    required this.keyValue,
+    required this.icon,
+    required this.enabled,
+    required this.loading,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final String keyValue;
+  final IconData icon;
+  final bool enabled;
+  final bool loading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = enabled || loading;
+    final bg = active ? BbbColors.panel : BbbColors.bgAlt;
+    final fg = active ? BbbColors.ink : BbbColors.inkFaint;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        key: ValueKey(keyValue),
+        shape: const CircleBorder(),
+        elevation: 0,
+        color: bg,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: enabled ? onPressed : null,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: bg,
+              shape: BoxShape.circle,
+              boxShadow: BbbShadow.sm,
+            ),
+            child: Center(
+              child: loading
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(fg),
+                      ),
+                    )
+                  : Icon(icon, color: fg, size: 22),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Paint sheet wrapper — stacks the paint FAB column above the PaintSheet
+// body so undo/redo, compass, and the brush toggle stay visible while color
+// chips are open.
+// ---------------------------------------------------------------------------
+
+class _PaintSheetWrapper extends StatelessWidget {
+  const _PaintSheetWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: const [
+          Padding(
+            padding: EdgeInsets.fromLTRB(0, 0, 16, 8),
+            child: _PaintFabColumn(),
+          ),
+          PaintSheet(),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Paint-mode gesture wrapper. When [enabled], intercepts single-pointer
+// pans (brush strokes) and single taps (recolor/erase existing polygons).
+// When off, child receives all gestures as usual.
+// ---------------------------------------------------------------------------
+
+class _PaintGestureWrap extends StatelessWidget {
+  const _PaintGestureWrap({
+    required this.enabled,
+    required this.onPanStart,
+    required this.onPanUpdate,
+    required this.onPanEnd,
+    required this.onPanCancel,
+    required this.onTap,
+    required this.toLatLng,
+    required this.child,
+  });
+
+  final bool enabled;
+  final ValueChanged<LatLng> onPanStart;
+  final ValueChanged<LatLng> onPanUpdate;
+  final VoidCallback onPanEnd;
+  final VoidCallback onPanCancel;
+  final ValueChanged<LatLng> onTap;
+  final Future<LatLng> Function(math.Point<double>) toLatLng;
+  final Widget child;
+
+  math.Point<double> _point(Offset o) => math.Point(o.dx, o.dy);
+
+  @override
+  Widget build(BuildContext context) {
+    // Always render RawGestureDetector so the widget tree shape stays stable
+    // when `enabled` toggles. Reparenting MapLibreMap (by wrapping/unwrapping
+    // it) disposes the underlying UiKitView — which blows away our rating
+    // overlay layers until the next style reload. When disabled, we register
+    // zero recognizers and fall through to the child.
+    final gestures = enabled
+        ? <Type, GestureRecognizerFactory>{
+            PanGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
+              PanGestureRecognizer.new,
+              (r) {
+                // Report positions from the initial pointer-down event, not
+                // from where slop was resolved. Without this the brush stroke
+                // jumps ~18px away from the finger on touch-down.
+                r.dragStartBehavior = DragStartBehavior.down;
+                r.onStart = (d) async {
+                  final latLng = await toLatLng(_point(d.localPosition));
+                  onPanStart(latLng);
+                };
+                r.onUpdate = (d) async {
+                  final latLng = await toLatLng(_point(d.localPosition));
+                  onPanUpdate(latLng);
+                };
+                r.onEnd = (_) => onPanEnd();
+                r.onCancel = onPanCancel;
+              },
+            ),
+            TapGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+              TapGestureRecognizer.new,
+              (r) {
+                r.onTapUp = (d) async {
+                  final latLng = await toLatLng(_point(d.localPosition));
+                  onTap(latLng);
+                };
+              },
+            ),
+          }
+        : const <Type, GestureRecognizerFactory>{};
+    return RawGestureDetector(
+      behavior: enabled ? HitTestBehavior.opaque : HitTestBehavior.translucent,
+      gestures: gestures,
+      child: child,
     );
   }
 }

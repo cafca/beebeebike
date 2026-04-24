@@ -268,4 +268,27 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get mapResetNorth => 'Nach Norden ausrichten';
+
+  @override
+  String get paintEnter => 'Malmodus';
+
+  @override
+  String get paintExit => 'Malmodus beenden';
+
+  @override
+  String get paintDisabled => 'Malmodus (bald verfügbar)';
+
+  @override
+  String get paintEraser => 'Radierer';
+
+  @override
+  String paintRatingLabel(int value) {
+    return 'Bewertung $value';
+  }
+
+  @override
+  String get paintUndo => 'Rückgängig';
+
+  @override
+  String get paintRedo => 'Wiederherstellen';
 }

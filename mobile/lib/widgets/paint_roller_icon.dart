@@ -5,10 +5,19 @@ import '../theme/tokens.dart';
 /// Custom paint-roller glyph — yellow roller head with ink frame + handle.
 /// 24×24 canvas per style-guide Paint FAB spec.
 class PaintRollerIcon extends StatelessWidget {
-  const PaintRollerIcon({super.key, this.size = 24, this.disabled = false});
+  const PaintRollerIcon({
+    super.key,
+    this.size = 24,
+    this.disabled = false,
+    this.color,
+  });
 
   final double size;
   final bool disabled;
+
+  /// Override for the ink-colored strokes. Defaults to [BbbColors.ink]
+  /// ([BbbColors.inkFaint] when [disabled]).
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -16,21 +25,23 @@ class PaintRollerIcon extends StatelessWidget {
       width: size,
       height: size,
       child: CustomPaint(
-        painter: _PaintRollerPainter(disabled: disabled),
+        painter: _PaintRollerPainter(disabled: disabled, color: color),
       ),
     );
   }
 }
 
 class _PaintRollerPainter extends CustomPainter {
-  _PaintRollerPainter({required this.disabled});
+  _PaintRollerPainter({required this.disabled, this.color});
 
   final bool disabled;
+  final Color? color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final scale = size.width / 24.0;
-    final ink = disabled ? BbbColors.inkFaint : BbbColors.ink;
+    final ink = color ??
+        (disabled ? BbbColors.inkFaint : BbbColors.ink);
     final yellow = disabled
         ? BbbColors.accentYellow.withValues(alpha: 0.45)
         : BbbColors.accentYellow;
@@ -74,5 +85,5 @@ class _PaintRollerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _PaintRollerPainter old) =>
-      old.disabled != disabled;
+      old.disabled != disabled || old.color != color;
 }

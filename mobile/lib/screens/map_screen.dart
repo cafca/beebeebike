@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/foundation.dart';
@@ -10,15 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
 
-import '../theme/tokens.dart';
-
 import '../l10n/generated/app_localizations.dart';
 import '../models/location.dart';
-import '../models/route_preview.dart';
 import '../models/route_state.dart';
-import '../navigation/camera_controller.dart';
 import '../navigation/location_converter.dart';
-import '../navigation/maneuver_icons.dart';
 import '../navigation/nav_constants.dart';
 import '../providers/brush_provider.dart';
 import '../providers/navigation_camera_provider.dart';
@@ -30,20 +24,20 @@ import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
 import '../services/brush_overlay.dart';
 import '../services/haptics.dart';
+import '../services/home_marker_service.dart';
 import '../services/map_style_loader.dart';
 import '../services/rating_overlay.dart';
 import '../services/route_drawing.dart';
-import '../widgets/arrived_sheet.dart';
+import '../theme/tokens.dart';
 import '../widgets/brush_fab.dart';
-import '../widgets/eta_sheet.dart';
-import '../widgets/home_sheet.dart';
+import '../widgets/map/compass_fab_inline.dart';
+import '../widgets/map/home_sheet_container.dart';
+import '../widgets/map/nav_top_bar.dart';
+import '../widgets/map/navigation_sheet.dart';
+import '../widgets/map/recenter_circle_fab.dart';
+import '../widgets/map/route_sheet.dart';
 import '../widgets/paint_sheet.dart';
-import '../widgets/recenter_fab.dart';
-import '../widgets/rerouting_toast.dart';
 import '../widgets/route_card.dart';
-import '../widgets/route_summary.dart';
-import '../widgets/tts_toggle_fab.dart';
-import '../widgets/turn_banner.dart';
 
 final _berlinBounds = LatLngBounds(
   southwest: const LatLng(52.3, 13.0),
@@ -60,7 +54,7 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   MapLibreMapController? _mapController;
   RouteOverlay? _routeOverlay;
-  Symbol? _homeMarker;
+  final HomeMarkerService _homeMarker = HomeMarkerService();
   RatingOverlayController? _ratingOverlayNotifier;
   BrushOverlay? _brushOverlay;
   BrushController? _brushNotifier;
@@ -225,50 +219,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     ));
   }
 
-  static Future<Uint8List> _createHomeMarkerImage() async {
-    const double size = 52;
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    canvas.drawCircle(
-      const Offset(size / 2, size / 2),
-      size / 2,
-      Paint()..color = const Color(0xFF3B82F6),
-    );
-    final tp = TextPainter(textDirection: TextDirection.ltr)
-      ..text = TextSpan(
-        text: String.fromCharCode(Icons.home.codePoint),
-        style: TextStyle(
-          fontSize: size * 0.72,
-          fontFamily: Icons.home.fontFamily,
-          package: Icons.home.fontPackage,
-          color: Colors.white,
-        ),
-      )
-      ..layout();
-    tp.paint(canvas, Offset((size - tp.width) / 2, (size - tp.height) / 2));
-    final picture = recorder.endRecording();
-    final img = await picture.toImage(size.toInt(), size.toInt());
-    final data = await img.toByteData(format: ui.ImageByteFormat.png);
-    return data!.buffer.asUint8List();
-  }
-
   Future<void> _updateHomeMarker(Location? home) async {
     final controller = _mapController;
     if (controller == null) return;
-    final existing = _homeMarker;
-    if (existing != null) {
-      await controller.removeSymbol(existing);
-      _homeMarker = null;
-    }
-    if (home != null) {
-      await controller.addImage('home-marker', await _createHomeMarkerImage());
-      _homeMarker = await controller.addSymbol(SymbolOptions(
-        geometry: LatLng(home.lat, home.lng),
-        iconImage: 'home-marker',
-        iconSize: 1.0,
-        iconAnchor: 'center',
-      ));
-    }
+    await _homeMarker.update(controller, home);
   }
 
   Future<void> _handleBrowseLocationUpdate(double lat, double lng) async {
@@ -623,7 +577,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   tiltGesturesEnabled: !paintMode,
                   zoomGesturesEnabled: !paintMode,
                   // Hide built-in compass + attribution chrome. Compass is
-                  // redrawn inline above each RecenterFab (_CompassFabInline);
+                  // redrawn inline above each RecenterFab (CompassFabInline);
                   // attribution is inlined under each sheet's CTA.
                   compassEnabled: false,
                   attributionButtonMargins: const math.Point(-1000, -1000),
@@ -699,7 +653,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               ),
             ),
           if (navActive)
-            _NavTopBar(
+            NavTopBar(
               ttsEnabled: _ttsEnabled,
               rerouting: _rerouting,
               onToggleTts: () => setState(() => _ttsEnabled = !_ttsEnabled),
@@ -717,7 +671,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               child: child,
             ),
             child: navActive
-                ? _NavigationSheet(
+                ? NavigationSheet(
                     key: const ValueKey('nav'),
                     onClose: () =>
                         ref.read(navigationSessionProvider.notifier).state =
@@ -730,7 +684,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                         onResetBearing: _resetBearingToNorth,
                       )
                     : routeActive
-                        ? _RouteSheet(
+                        ? RouteSheet(
                             key: const ValueKey('route'),
                             routeState: routeState,
                             preview: preview,
@@ -743,7 +697,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                                   .state = true;
                             },
                           )
-                        : _HomeSheet(
+                        : HomeSheetContainer(
                             key: const ValueKey('home'),
                             onFlyToMyLocation: _flyToCurrentLocation,
                             onResetBearing: _resetBearingToNorth,
@@ -757,201 +711,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Home sheet wrapper — hosts the HomeSheet widget plus a recenter FAB whose
-// vertical position tracks the sheet's current snap size.
+// Paint-mode FAB column: undo + redo on top, then compass, recenter, brush.
+// Used by the paint sheet wrapper only; home/route sheets render their own
+// column without undo/redo via HomeSheetContainer / RouteSheet.
 // ---------------------------------------------------------------------------
 
-class _HomeSheet extends ConsumerStatefulWidget {
-  const _HomeSheet({
-    super.key,
-    required this.onFlyToMyLocation,
-    required this.onResetBearing,
-    required this.onNavigateHome,
-  });
-
-  final VoidCallback onFlyToMyLocation;
-  final VoidCallback onResetBearing;
-  final VoidCallback onNavigateHome;
-
-  @override
-  ConsumerState<_HomeSheet> createState() => _HomeSheetState();
-}
-
-class _HomeSheetState extends ConsumerState<_HomeSheet> {
-  final _sheetController = DraggableScrollableController();
-
-  @override
-  void dispose() {
-    _sheetController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-
-    return Stack(
-      children: [
-        AnimatedBuilder(
-          animation: _sheetController,
-          builder: (context, _) {
-            final size =
-                _sheetController.isAttached ? _sheetController.size : 0.16;
-            final sheetPx = size * mq.size.height;
-            return Positioned(
-              right: 16,
-              bottom: sheetPx + 8,
-              child: _MapFabColumn(
-                onFlyToMyLocation: widget.onFlyToMyLocation,
-                onResetBearing: widget.onResetBearing,
-              ),
-            );
-          },
-        ),
-        HomeSheet(
-          onNavigateHome: widget.onNavigateHome,
-          sheetController: _sheetController,
-        ),
-      ],
-    );
-  }
-}
-
-class _RecenterCircleFab extends StatefulWidget {
-  const _RecenterCircleFab({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  State<_RecenterCircleFab> createState() => _RecenterCircleFabState();
-}
-
-class _RecenterCircleFabState extends State<_RecenterCircleFab>
-    with SingleTickerProviderStateMixin {
-  bool _pressed = false;
-  late final AnimationController _flash = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 220),
-    value: 1.0,
-  );
-
-  @override
-  void dispose() {
-    _flash.dispose();
-    super.dispose();
-  }
-
-  void _handleTap() {
-    setState(() => _pressed = false);
-    widget.onTap();
-    _flash.forward(from: 0);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: _pressed ? 0.96 : 1.0,
-      duration: const Duration(milliseconds: 100),
-      curve: Curves.easeOut,
-      child: Material(
-        // color: BbbColors.panel,
-        // surfaceTintColor: BbbColors.panel,
-        shape: const CircleBorder(),
-        elevation: 0,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTapDown: (_) => setState(() => _pressed = true),
-          onTapCancel: () => setState(() => _pressed = false),
-          onTap: _handleTap,
-          child: Container(
-            width: 52,
-            height: 52,
-            decoration: const BoxDecoration(
-              color: BbbColors.panel,
-              shape: BoxShape.circle,
-              boxShadow: BbbShadow.sm,
-            ),
-            child: AnimatedBuilder(
-              animation: _flash,
-              builder: (context, _) {
-                final color = Color.lerp(
-                  BbbColors.brand,
-                  BbbColors.inkMuted,
-                  Curves.easeOut.transform(_flash.value),
-                )!;
-                return Icon(Icons.my_location, color: color, size: 22);
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Compass + attribution — replace MapLibre's built-in chrome.
-// ---------------------------------------------------------------------------
-
-/// Inline compass that sits above a RecenterFab in each sheet. Reads
-/// the map bearing from [mapBearingProvider] and renders nothing when
-/// the map is ~north-up; otherwise shows a rotated glyph + spacer,
-/// tapping animates the map back to bearing 0.
-class _CompassFabInline extends ConsumerWidget {
-  const _CompassFabInline({required this.onResetBearing});
-
-  final VoidCallback onResetBearing;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bearing = ref.watch(mapBearingProvider);
-    if (bearing.abs() <= 0.5) return const SizedBox.shrink();
-    final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Tooltip(
-        message: l10n.mapResetNorth,
-        child: Material(
-          shape: const CircleBorder(),
-          color: BbbColors.panel,
-          elevation: 0,
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onResetBearing,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: const BoxDecoration(
-                color: BbbColors.panel,
-                shape: BoxShape.circle,
-                boxShadow: BbbShadow.sm,
-              ),
-              child: Transform.rotate(
-                angle: -bearing * math.pi / 180,
-                child: const Icon(
-                  Icons.navigation,
-                  size: 22,
-                  color: BbbColors.ink,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
-// ---------------------------------------------------------------------------
-// Shared right-side FAB column — rendered by every non-nav sheet. Order from
-// top to bottom: undo, redo (paint mode only), compass (when bearing ≠ 0),
-// recenter, brush. Brush sits at the bottom so it stays at a predictable spot
-// as the column above it grows or shrinks.
-// ---------------------------------------------------------------------------
-
-class _MapFabColumn extends ConsumerWidget {
-  const _MapFabColumn({
+class _PaintFabColumn extends ConsumerWidget {
+  const _PaintFabColumn({
     required this.onFlyToMyLocation,
     required this.onResetBearing,
   });
@@ -968,30 +734,28 @@ class _MapFabColumn extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (brush.paintMode) ...[
-          _UndoRedoFab(
-            tooltip: l10n.paintUndo,
-            keyValue: 'undo-fab',
-            heroTag: 'brush-undo-fab',
-            icon: Icons.undo,
-            enabled: brush.canUndo && !brush.busy,
-            loading: brush.activeOp == BrushOp.undo,
-            onPressed: notifier.undo,
-          ),
-          const SizedBox(height: 8),
-          _UndoRedoFab(
-            tooltip: l10n.paintRedo,
-            keyValue: 'redo-fab',
-            heroTag: 'brush-redo-fab',
-            icon: Icons.redo,
-            enabled: brush.canRedo && !brush.busy,
-            loading: brush.activeOp == BrushOp.redo,
-            onPressed: notifier.redo,
-          ),
-          const SizedBox(height: 12),
-        ],
-        _CompassFabInline(onResetBearing: onResetBearing),
-        _RecenterCircleFab(onTap: onFlyToMyLocation),
+        _UndoRedoFab(
+          tooltip: l10n.paintUndo,
+          keyValue: 'undo-fab',
+          heroTag: 'brush-undo-fab',
+          icon: Icons.undo,
+          enabled: brush.canUndo && !brush.busy,
+          loading: brush.activeOp == BrushOp.undo,
+          onPressed: notifier.undo,
+        ),
+        const SizedBox(height: 8),
+        _UndoRedoFab(
+          tooltip: l10n.paintRedo,
+          keyValue: 'redo-fab',
+          heroTag: 'brush-redo-fab',
+          icon: Icons.redo,
+          enabled: brush.canRedo && !brush.busy,
+          loading: brush.activeOp == BrushOp.redo,
+          onPressed: notifier.redo,
+        ),
+        const SizedBox(height: 12),
+        CompassFabInline(onResetBearing: onResetBearing),
+        RecenterCircleFab(onTap: onFlyToMyLocation),
         const SizedBox(height: 12),
         const BrushFab(),
       ],
@@ -1045,7 +809,7 @@ class _UndoRedoFab extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Paint sheet wrapper — stacks the shared FAB column above the PaintSheet
+// Paint sheet wrapper — stacks the paint FAB column above the PaintSheet
 // body so the brush FAB, undo/redo, and recenter controls stay visible while
 // color chips are open.
 // ---------------------------------------------------------------------------
@@ -1070,7 +834,7 @@ class _PaintSheetWrapper extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
-            child: _MapFabColumn(
+            child: _PaintFabColumn(
               onFlyToMyLocation: onFlyToMyLocation,
               onResetBearing: onResetBearing,
             ),
@@ -1078,237 +842,6 @@ class _PaintSheetWrapper extends StatelessWidget {
           const PaintSheet(),
         ],
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Route sheet — slides up over home sheet when a route is active (loading,
-// error, or preview ready). Fixed height; not draggable.
-// ---------------------------------------------------------------------------
-
-class _RouteSheet extends ConsumerWidget {
-  const _RouteSheet({
-    super.key,
-    required this.routeState,
-    required this.preview,
-    required this.onFlyToMyLocation,
-    required this.onResetBearing,
-    required this.onStart,
-  });
-
-  final RouteState routeState;
-  final RoutePreview? preview;
-  final VoidCallback onFlyToMyLocation;
-  final VoidCallback onResetBearing;
-  final VoidCallback onStart;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
-            child: _MapFabColumn(
-              onFlyToMyLocation: onFlyToMyLocation,
-              onResetBearing: onResetBearing,
-            ),
-          ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            decoration: const BoxDecoration(
-              color: BbbColors.panel,
-              borderRadius:
-                  BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
-              boxShadow: BbbShadow.panel,
-            ),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (routeState.isLoading)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: CircularProgressIndicator(),
-                      ),
-                    )
-                  else if (routeState.error != null)
-                    Row(
-                      children: [
-                        const Icon(Icons.error_outline, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(l10n.routeLoadError,
-                              style: Theme.of(context).textTheme.bodyMedium),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => ref
-                              .read(routeControllerProvider.notifier)
-                              .clear(),
-                          padding: EdgeInsets.zero,
-                          visualDensity: VisualDensity.compact,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ],
-                    )
-                  else if (preview != null)
-                    RouteSummary(
-                      durationMinutes: (preview!.time / 60000).round(),
-                      distanceKm: preview!.distance / 1000,
-                      onStart: onStart,
-                      onClose: () {
-                        ref.read(routeControllerProvider.notifier).clear();
-                        onFlyToMyLocation();
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Navigation sheet — slides up over route sheet during active navigation.
-// Fixed height; not draggable.
-// ---------------------------------------------------------------------------
-
-class _NavigationSheet extends ConsumerWidget {
-  const _NavigationSheet({
-    super.key,
-    required this.onClose,
-  });
-
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final navState = ref.watch(navigationStateProvider);
-    final cam = ref.watch(navigationCameraControllerProvider);
-
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          color: BbbColors.panel,
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(BbbRadius.sheetTop)),
-          boxShadow: BbbShadow.panel,
-        ),
-        child: SafeArea(
-          top: false,
-          child: cam.mode == CameraMode.arrived
-              ? ArrivedSheet(onDone: onClose)
-              : EtaSheet(
-                  navState: navState,
-                  onClose: onClose,
-                ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Nav top bar — TurnBanner + RecenterFab, shown during navigation above
-// the navigation sheet.
-// ---------------------------------------------------------------------------
-
-class _NavTopBar extends ConsumerWidget {
-  const _NavTopBar({
-    required this.ttsEnabled,
-    required this.rerouting,
-    required this.onToggleTts,
-    required this.onRecenter,
-    required this.onResetBearing,
-  });
-
-  final bool ttsEnabled;
-  final bool rerouting;
-  final VoidCallback onToggleTts;
-  final VoidCallback onRecenter;
-  final VoidCallback onResetBearing;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final navState = ref.watch(navigationStateProvider);
-    final cam = ref.watch(navigationCameraControllerProvider);
-
-    return Stack(
-      children: [
-        Align(
-          alignment: Alignment.topCenter,
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                navState.when(
-                  loading: () => TurnBanner(
-                    primaryText: l10n.navStarting,
-                    distanceText: '',
-                  ),
-                  error: (e, _) => TurnBanner(
-                    primaryText: l10n.navError,
-                    distanceText: '',
-                    icon: Icons.error_outline,
-                  ),
-                  data: (state) => TurnBanner(
-                    primaryText:
-                        state.currentVisual?.primaryText ?? l10n.navOnRoute,
-                    distanceText: state.progress != null
-                        ? formatDistance(
-                            state.progress!.distanceToNextManeuverM)
-                        : '',
-                    icon: state.currentVisual != null
-                        ? iconForManeuver(
-                            state.currentVisual!.maneuverType,
-                            state.currentVisual!.maneuverModifier,
-                          )
-                        : Icons.straight,
-                  ),
-                ),
-                if (rerouting) const ReroutingToast(),
-              ],
-            ),
-          ),
-        ),
-        Align(
-          alignment: Alignment.bottomRight,
-          child: SafeArea(
-            child: Padding(
-              padding:
-                  const EdgeInsets.only(right: 16, bottom: kEtaSheetHeight),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  TtsToggleFab(enabled: ttsEnabled, onTap: onToggleTts),
-                  if (cam.mode == CameraMode.free) ...[
-                    const SizedBox(height: 12),
-                    _CompassFabInline(onResetBearing: onResetBearing),
-                    RecenterFab(onTap: onRecenter),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

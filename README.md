@@ -1,8 +1,14 @@
+<p align="left">
+  <img src="design/logo/AppIcon-1024.png" alt="beebeebike app icon" width="160" />
+</p>
+
 # beebeebike
 
 beebeebike is a cycling-oriented Berlin routing app. I like thinking about map ux and this is an experiment where I wondered: what if you could just draw on the map where you love and hate to cycle? 
 
-The app uses those personal ratings when calculating routes, so your trips can bend toward your favorite segments and away from the ones you would rather never see again. It is a Svelte frontend, Rust/Axum backend, PostgreSQL/PostGIS database, MapLibre map, and GraphHopper routing stack.
+The app uses those personal ratings when calculating routes, so your trips can bend toward your favorite segments and away from the ones you would rather never see again. 
+
+There is a web app and a mobile app. Both share a Rust backend with PostgreSQL/PostGIS database and Graphhopper router and both use MapLibre to render the map. The web app is built in Svelte and the mobile app uses Flutter. Currently there is only an iOS version. Search uses a Photon geocoding service hosted by Komoot while this is still in testing.
 
 ## Quickstart
 

@@ -46,6 +46,12 @@ dev_dependencies:
   json_serializable: ^6.9.0
   http_mock_adapter: ^0.6.1
   mocktail: ^1.0.4
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  ios: true
+  image_path: "../design/logo/AppIcon-1024.png"
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true

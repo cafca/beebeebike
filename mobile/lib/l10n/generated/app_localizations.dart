@@ -389,20 +389,14 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding2Bullet1.
   ///
   /// In en, this message translates to:
-  /// **'Your ratings, saved places and — only with an account — your email plus a password hash live on a Hetzner server in Germany.'**
+  /// **'Your ratings, saved places, email and password hash live on a Hetzner server in Germany.'**
   String get onboarding2Bullet1;
 
   /// No description provided for @onboarding2Bullet2.
   ///
   /// In en, this message translates to:
-  /// **'Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). No account data is sent along.'**
+  /// **'Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). Your account data is not sent along.'**
   String get onboarding2Bullet2;
-
-  /// No description provided for @onboarding2Bullet3.
-  ///
-  /// In en, this message translates to:
-  /// **'Without an account you stay anonymous — we only set a random session ID.'**
-  String get onboarding2Bullet3;
 
   /// No description provided for @onboarding2Bullet4.
   ///
@@ -419,7 +413,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding3Body.
   ///
   /// In en, this message translates to:
-  /// **'You can use beebeebike right away without an account. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.'**
+  /// **'Paint your ratings on beebeebike.com in the browser — they sync to your phone automatically. Sign in to get started.'**
   String get onboarding3Body;
 
   /// No description provided for @searchHint.

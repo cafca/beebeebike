@@ -5,9 +5,9 @@ import '../l10n/generated/app_localizations.dart';
 import '../providers/onboarding_provider.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
+import '../widgets/login_form.dart';
 import '../widgets/onboarding_dots.dart';
 import '../widgets/onboarding_page.dart';
-import 'login_screen.dart';
 import 'privacy_policy_screen.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -43,14 +43,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  Future<void> _finish({bool openLogin = false}) async {
-    await ref.read(onboardingCompletedProvider.notifier).complete();
+  Future<void> _onLoginSuccess() async {
     if (!mounted) return;
-    if (openLogin) {
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
-    }
+    await ref.read(onboardingCompletedProvider.notifier).complete();
   }
 
   void _openPrivacyPolicy() {
@@ -87,7 +82,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   bullets: [
                     l10n.onboarding2Bullet1,
                     l10n.onboarding2Bullet2,
-                    l10n.onboarding2Bullet3,
                     l10n.onboarding2Bullet4,
                   ],
                   footer: Align(
@@ -110,37 +104,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   eyebrow: _eyebrow(2),
                   headline: l10n.onboarding3Headline,
                   body: l10n.onboarding3Body,
-                  actions: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      FilledButton(
-                        key: const ValueKey('onboarding-finish'),
-                        onPressed: () => _finish(),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(BbbRadius.ctrl),
-                          ),
-                        ),
-                        child: Text(l10n.onboardingFinish),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton(
-                        onPressed: () => _finish(openLogin: true),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: BbbColors.ink,
-                          side: const BorderSide(color: BbbColors.divider),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(BbbRadius.ctrl),
-                          ),
-                          textStyle: BbbText.cardTitle(),
-                        ),
-                        child: Text(l10n.onboardingLogin),
-                      ),
-                    ],
+                  actions: LoginForm(
+                    key: const ValueKey('onboarding-login-form'),
+                    onSuccess: _onLoginSuccess,
                   ),
                 ),
               ],

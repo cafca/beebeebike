@@ -99,6 +99,9 @@
   "navEnableVoice": "Stimme an",
   "navEndNavigation": "Navigation beenden",
   "navRerouting": "Route wird neu berechnet…",
+  "navTtsDeparting": "Auf geht's Bienchen",
+  "navTtsRerouted": "Falsch abgebogen, Route neu berechnet",
+  "navTtsArrived": "Du bist am Ziel",
 
   "arrivedTitle": "Angekommen",
   "arrivedDone": "Fertig",

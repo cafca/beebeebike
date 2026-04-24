@@ -56,7 +56,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   RatingOverlayController? _ratingOverlayNotifier;
   BrushOverlay? _brushOverlay;
   BrushController? _brushNotifier;
-  bool _ttsEnabled = true;
   bool _rerouting = false;
   bool _browseAutocentered = false;
   int _paintPointerCount = 0;
@@ -258,8 +257,18 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             WaypointInput(lat: destination.lat, lng: destination.lng),
         initialLocation: initial,
       );
+      if (mounted) _speakNav(AppLocalizations.of(context)!.navTtsDeparting);
     } catch (e, st) {
       debugPrint('nav: start failed: $e\n$st');
+    }
+  }
+
+  Future<void> _speakNav(String text) async {
+    if (!ref.read(ttsEnabledProvider)) return;
+    try {
+      await ref.read(flutterTtsProvider).speak(text);
+    } catch (e) {
+      debugPrint('nav: tts error: $e');
     }
   }
 
@@ -305,6 +314,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _handleArrival() async {
     debugPrint('nav: arrived');
     AppHaptics.arrived();
+    if (mounted) _speakNav(AppLocalizations.of(context)!.navTtsArrived);
     final cam = ref.read(navigationCameraControllerProvider);
     cam.onArrived();
     if (mounted) setState(() => _rerouting = false);
@@ -477,6 +487,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         navigationStateProvider, _onNavStateChange);
     ref.listen<AsyncValue<bool>>(
         rerouteInProgressProvider, _onRerouteInProgressChange);
+    ref.listen<AsyncValue<void>>(rerouteSucceededProvider, (_, next) {
+      if (next is AsyncData) {
+        _speakNav(AppLocalizations.of(context)!.navTtsRerouted);
+      }
+    });
     ref.listen<bool>(navigationSessionProvider, (prev, next) {
       if (prev == next) return;
       if (next) {
@@ -657,9 +672,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
           if (navActive)
             NavTopBar(
-              ttsEnabled: _ttsEnabled,
+              ttsEnabled: ref.watch(ttsEnabledProvider),
               rerouting: _rerouting,
-              onToggleTts: () => setState(() => _ttsEnabled = !_ttsEnabled),
+              onToggleTts: () => ref
+                  .read(ttsEnabledProvider.notifier)
+                  .update((v) => !v),
               onRecenter: _handleRecenterTap,
               onResetBearing: _resetBearingToNorth,
             ),

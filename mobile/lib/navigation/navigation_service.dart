@@ -40,6 +40,7 @@ class NavigationService {
 
   final _stateController = StreamController<NavigationState>.broadcast();
   final _rerouteController = StreamController<bool>.broadcast();
+  final _rerouteSucceededController = StreamController<void>.broadcast();
 
   Stream<NavigationState> get stateStream => _stateController.stream;
 
@@ -48,6 +49,11 @@ class NavigationService {
   /// the moment this flips back to `false`, without waiting on a fresh
   /// [NavigationState] (which only arrives on the next GPS update).
   Stream<bool> get rerouteInProgressStream => _rerouteController.stream;
+
+  /// Emits once when a reroute completed successfully. Use for positive
+  /// confirmation (haptic/voice cue) — failures stay silent here.
+  Stream<void> get rerouteSucceededStream =>
+      _rerouteSucceededController.stream;
 
   Future<void> start({
     required WaypointInput origin,
@@ -107,6 +113,7 @@ class NavigationService {
         );
         if (_controller == null) return;
         await controller.replaceRoute(rerouteJson);
+        _rerouteSucceededController.add(null);
       } catch (e, st) {
         debugPrint('nav: reroute error: $e\n$st');
       } finally {

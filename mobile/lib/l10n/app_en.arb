@@ -117,6 +117,9 @@
   "navEnableVoice": "Enable voice",
   "navEndNavigation": "End navigation",
   "navRerouting": "Rerouting…",
+  "navTtsDeparting": "Let's get buzzing",
+  "navTtsRerouted": "Wrong turn, route recalculated",
+  "navTtsArrived": "You have arrived",
 
   "arrivedTitle": "Arrived",
   "arrivedDone": "Done",

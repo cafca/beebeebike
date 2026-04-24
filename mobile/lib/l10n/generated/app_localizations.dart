@@ -431,7 +431,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding2Bullet1.
   ///
   /// In en, this message translates to:
-  /// **'Your ratings, saved places and — only with an account — your email plus a password hash live on a Hetzner server in Germany.'**
+  /// **'Your ratings, saved places and — if you register an account — your email plus a password hash live on a server in Germany.'**
   String get onboarding2Bullet1;
 
   /// No description provided for @onboarding2Bullet2.
@@ -461,7 +461,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding3Body.
   ///
   /// In en, this message translates to:
-  /// **'You can use beebeebike right away without an account. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.'**
+  /// **'You can use beebeebike right away anonymously. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.'**
   String get onboarding3Body;
 
   /// No description provided for @searchHint.
@@ -607,6 +607,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rerouting…'**
   String get navRerouting;
+
+  /// No description provided for @navTtsDeparting.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s get buzzing'**
+  String get navTtsDeparting;
+
+  /// No description provided for @navTtsRerouted.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong turn, route recalculated'**
+  String get navTtsRerouted;
+
+  /// No description provided for @navTtsArrived.
+  ///
+  /// In en, this message translates to:
+  /// **'You have arrived'**
+  String get navTtsArrived;
 
   /// No description provided for @arrivedTitle.
   ///

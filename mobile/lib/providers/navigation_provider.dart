@@ -32,6 +32,10 @@ Stream<UserLocation> _buildLocationStream() async* {
 
 final ttsFactoryProvider = Provider<FlutterTts Function()>((_) => FlutterTts.new);
 
+/// Whether turn-by-turn voice is currently enabled. Toggled by the voice FAB
+/// during navigation; gates every TTS `speak` call the nav layer makes.
+final ttsEnabledProvider = StateProvider<bool>((_) => true);
+
 final flutterTtsProvider = Provider<FlutterTts>((ref) {
   final tts = ref.watch(ttsFactoryProvider)();
   final pref = ref.watch(localeProvider);
@@ -56,6 +60,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
         routingApi.computeNavigationRoute(origin, destination),
     locationStreamFactory: _buildLocationStream,
     speakInstruction: (text) async {
+      if (!ref.read(ttsEnabledProvider)) return;
       try {
         await tts.speak(text);
       } catch (e) {
@@ -71,4 +76,8 @@ final navigationStateProvider = StreamProvider.autoDispose<NavigationState>((ref
 
 final rerouteInProgressProvider = StreamProvider.autoDispose<bool>((ref) {
   return ref.watch(navigationServiceProvider).rerouteInProgressStream;
+});
+
+final rerouteSucceededProvider = StreamProvider.autoDispose<void>((ref) {
+  return ref.watch(navigationServiceProvider).rerouteSucceededStream;
 });

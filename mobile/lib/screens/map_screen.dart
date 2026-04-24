@@ -37,7 +37,6 @@ import '../widgets/arrived_sheet.dart';
 import '../widgets/brush_fab.dart';
 import '../widgets/eta_sheet.dart';
 import '../widgets/home_sheet.dart';
-import '../widgets/paint_pan_recognizer.dart';
 import '../widgets/paint_sheet.dart';
 import '../widgets/recenter_fab.dart';
 import '../widgets/rerouting_toast.dart';
@@ -68,6 +67,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _ttsEnabled = true;
   bool _rerouting = false;
   bool _browseAutocentered = false;
+  int _paintPointerCount = 0;
+  bool _paintMultiTouch = false;
 
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
@@ -541,119 +542,152 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) =>
                 Center(child: Text(l10n.mapLoadError(e.toString()))),
-            data: (style) => _PaintGestureWrap(
-              enabled: paintMode,
-              onPanStart: (latLng) {
-                final b = _brushNotifier;
-                if (b == null) return;
-                b.startStroke(latLng);
+            data: (style) => Listener(
+              behavior: HitTestBehavior.translucent,
+              // Track physical pointer-down count across the whole map,
+              // independent of gesture-arena state. While the map is in
+              // paint mode, a second finger landing cancels any in-flight
+              // stroke and latches a "multi-touch dirty" flag so further
+              // onPan* callbacks no-op until every finger has lifted.
+              // Without this the stock PanGestureRecognizer keeps tracking
+              // pointer #1 through a pinch/pan attempt and paints a line
+              // the user didn't mean to draw.
+              onPointerDown: (_) {
+                _paintPointerCount++;
+                if (_paintPointerCount >= 2 && paintMode) {
+                  _paintMultiTouch = true;
+                  _brushNotifier?.cancelStroke();
+                }
               },
-              onPanUpdate: (latLng) {
-                final b = _brushNotifier;
-                final c = _mapController;
-                if (b == null || c == null) return;
-                final zoom = c.cameraPosition?.zoom ?? 14;
-                b.addPoint(latLng, zoom);
+              onPointerUp: (_) {
+                if (_paintPointerCount > 0) _paintPointerCount--;
+                if (_paintPointerCount == 0) _paintMultiTouch = false;
               },
-              onPanEnd: () async {
-                final b = _brushNotifier;
-                if (b == null) return;
-                await b.endStroke(tapFeatureLookup: _probeRatingFeature);
+              onPointerCancel: (_) {
+                if (_paintPointerCount > 0) _paintPointerCount--;
+                if (_paintPointerCount == 0) _paintMultiTouch = false;
               },
-              onPanCancel: () {
-                _brushNotifier?.cancelStroke();
-              },
-              onTap: (latLng) async {
-                final b = _brushNotifier;
-                if (b == null) return;
-                b.startStroke(latLng);
-                await b.endStroke(tapFeatureLookup: _probeRatingFeature);
-              },
-              toLatLng: (p) async {
-                final c = _mapController;
-                if (c == null) return const LatLng(0, 0);
-                return c.toLatLng(p);
-              },
-              child: MapLibreMap(
-                styleString: style,
-                initialCameraPosition: const CameraPosition(
-                  target: LatLng(52.5200, 13.4050),
-                  zoom: 13,
-                ),
-                cameraTargetBounds: CameraTargetBounds(_berlinBounds),
-                minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
-                myLocationEnabled: true,
-                myLocationTrackingMode: MyLocationTrackingMode.none,
-                trackCameraPosition: true,
-                scrollGesturesEnabled: !paintMode,
-                rotateGesturesEnabled: !paintMode,
-                tiltGesturesEnabled: !paintMode,
-                zoomGesturesEnabled: !paintMode,
-                // Hide built-in compass + attribution chrome. Compass is
-                // redrawn inline above each RecenterFab (_CompassFabInline);
-                // attribution is inlined under each sheet's CTA.
-                compassEnabled: false,
-                attributionButtonMargins: const math.Point(-1000, -1000),
-                // Non-paint mode: EagerGestureRecognizer so the map claims
-                // every pointer event (pan/pinch/rotate) when wrapped in a
-                // Scaffold that otherwise wins the gesture arena on iOS.
-                //
-                // Paint mode: empty set so pointers fall through to the
-                // outer RawGestureDetector (paint strokes). Map pans/zooms
-                // are already disabled via the *GesturesEnabled bools above,
-                // so the canvas stays static while painting.
-                gestureRecognizers: paintMode
-                    ? const <Factory<OneSequenceGestureRecognizer>>{}
-                    : <Factory<OneSequenceGestureRecognizer>>{
-                        Factory<OneSequenceGestureRecognizer>(
-                          () => EagerGestureRecognizer(),
-                        ),
-                      },
-                onMapCreated: (controller) {
-                  _mapController = controller;
+              child: _PaintGestureWrap(
+                enabled: paintMode,
+                onPanStart: (latLng) {
+                  if (_paintMultiTouch) return;
+                  final b = _brushNotifier;
+                  if (b == null) return;
+                  b.startStroke(latLng);
                 },
-                onUserLocationUpdated: (loc) => _handleBrowseLocationUpdate(
-                    loc.position.latitude, loc.position.longitude),
-                onStyleLoadedCallback: () async {
-                  // Attach rating overlay AFTER style is loaded — MapLibre
-                  // silently ignores addGeoJsonSource / addLayer calls made
-                  // before the style is ready. Route line and markers are
-                  // added later via the annotation APIs and sit above all
-                  // custom style layers by default, so the overlay stays
-                  // visually below them. `attachToMap` is idempotent in case
-                  // the style reloads.
+                onPanUpdate: (latLng) {
+                  if (_paintMultiTouch) return;
+                  final b = _brushNotifier;
                   final c = _mapController;
-                  if (c == null) return;
-                  await ref
-                      .read(ratingOverlayControllerProvider.notifier)
-                      .attachToMap(c);
-                  _brushOverlay?.detach();
-                  _brushOverlay = await BrushOverlay.attach(c);
-                  _brushNotifier?.attach(surface: _brushOverlay!);
-                  _updateHomeMarker(
-                      ref.read(homeLocationProvider).valueOrNull);
+                  if (b == null || c == null) return;
+                  final zoom = c.cameraPosition?.zoom ?? 14;
+                  b.addPoint(latLng, zoom);
                 },
-                onMapClick: _handleMapTap,
-                onCameraTrackingDismissed: () {
-                  ref
-                      .read(navigationCameraControllerProvider)
-                      .onTrackingDismissed();
+                onPanEnd: () async {
+                  if (_paintMultiTouch) {
+                    _brushNotifier?.cancelStroke();
+                    return;
+                  }
+                  final b = _brushNotifier;
+                  if (b == null) return;
+                  await b.endStroke(tapFeatureLookup: _probeRatingFeature);
                 },
-                onCameraIdle: () {
+                onPanCancel: () {
+                  _brushNotifier?.cancelStroke();
+                },
+                onTap: (latLng) async {
+                  if (_paintMultiTouch) return;
+                  final b = _brushNotifier;
+                  if (b == null) return;
+                  b.startStroke(latLng);
+                  await b.endStroke(tapFeatureLookup: _probeRatingFeature);
+                },
+                toLatLng: (p) async {
                   final c = _mapController;
-                  if (c == null) return;
-                  final zoom = c.cameraPosition?.zoom;
-                  if (zoom != null) {
+                  if (c == null) return const LatLng(0, 0);
+                  return c.toLatLng(p);
+                },
+                child: MapLibreMap(
+                  styleString: style,
+                  initialCameraPosition: const CameraPosition(
+                    target: LatLng(52.5200, 13.4050),
+                    zoom: 13,
+                  ),
+                  cameraTargetBounds: CameraTargetBounds(_berlinBounds),
+                  minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
+                  myLocationEnabled: true,
+                  myLocationTrackingMode: MyLocationTrackingMode.none,
+                  trackCameraPosition: true,
+                  scrollGesturesEnabled: !paintMode,
+                  rotateGesturesEnabled: !paintMode,
+                  tiltGesturesEnabled: !paintMode,
+                  zoomGesturesEnabled: !paintMode,
+                  // Hide built-in compass + attribution chrome. Compass is
+                  // redrawn inline above each RecenterFab (_CompassFabInline);
+                  // attribution is inlined under each sheet's CTA.
+                  compassEnabled: false,
+                  attributionButtonMargins: const math.Point(-1000, -1000),
+                  // Non-paint mode: EagerGestureRecognizer so the map claims
+                  // every pointer event (pan/pinch/rotate) when wrapped in a
+                  // Scaffold that otherwise wins the gesture arena on iOS.
+                  //
+                  // Paint mode: empty set so pointers fall through to the
+                  // outer RawGestureDetector (paint strokes). Map pans/zooms
+                  // are already disabled via the *GesturesEnabled bools
+                  // above, so the canvas stays static while painting.
+                  gestureRecognizers: paintMode
+                      ? const <Factory<OneSequenceGestureRecognizer>>{}
+                      : <Factory<OneSequenceGestureRecognizer>>{
+                          Factory<OneSequenceGestureRecognizer>(
+                            () => EagerGestureRecognizer(),
+                          ),
+                        },
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                  },
+                  onUserLocationUpdated: (loc) => _handleBrowseLocationUpdate(
+                      loc.position.latitude, loc.position.longitude),
+                  onStyleLoadedCallback: () async {
+                    // Attach rating overlay AFTER style is loaded — MapLibre
+                    // silently ignores addGeoJsonSource / addLayer calls
+                    // made before the style is ready. Route line and markers
+                    // are added later via the annotation APIs and sit above
+                    // all custom style layers by default, so the overlay
+                    // stays visually below them. `attachToMap` is idempotent
+                    // in case the style reloads.
+                    final c = _mapController;
+                    if (c == null) return;
+                    await ref
+                        .read(ratingOverlayControllerProvider.notifier)
+                        .attachToMap(c);
+                    _brushOverlay?.detach();
+                    _brushOverlay = await BrushOverlay.attach(c);
+                    _brushNotifier?.attach(surface: _brushOverlay!);
+                    _updateHomeMarker(
+                        ref.read(homeLocationProvider).valueOrNull);
+                  },
+                  onMapClick: _handleMapTap,
+                  onCameraTrackingDismissed: () {
                     ref
                         .read(navigationCameraControllerProvider)
-                        .onZoomChanged(zoom);
-                  }
-                  final bearing = c.cameraPosition?.bearing ?? 0;
-                  final current = ref.read(mapBearingProvider);
-                  if ((bearing - current).abs() > 0.1) {
-                    ref.read(mapBearingProvider.notifier).state = bearing;
-                  }
-                },
+                        .onTrackingDismissed();
+                  },
+                  onCameraIdle: () {
+                    final c = _mapController;
+                    if (c == null) return;
+                    final zoom = c.cameraPosition?.zoom;
+                    if (zoom != null) {
+                      ref
+                          .read(navigationCameraControllerProvider)
+                          .onZoomChanged(zoom);
+                    }
+                    final bearing = c.cameraPosition?.bearing ?? 0;
+                    final current = ref.read(mapBearingProvider);
+                    if ((bearing - current).abs() > 0.1) {
+                      ref.read(mapBearingProvider.notifier).state = bearing;
+                    }
+                  },
+                ),
               ),
             ),
           ),
@@ -1317,10 +1351,9 @@ class _PaintGestureWrap extends StatelessWidget {
     // zero recognizers and fall through to the child.
     final gestures = enabled
         ? <Type, GestureRecognizerFactory>{
-            PaintPanGestureRecognizer:
-                GestureRecognizerFactoryWithHandlers<
-                    PaintPanGestureRecognizer>(
-              PaintPanGestureRecognizer.new,
+            PanGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
+              PanGestureRecognizer.new,
               (r) {
                 r.onStart = (d) async {
                   final latLng = await toLatLng(_point(d.localPosition));
@@ -1331,8 +1364,6 @@ class _PaintGestureWrap extends StatelessWidget {
                   onPanUpdate(latLng);
                 };
                 r.onEnd = (_) => onPanEnd();
-                // Fires when a second pointer lands mid-stroke — recognizer
-                // rejects itself so the brush can drop the partial polygon.
                 r.onCancel = onPanCancel;
               },
             ),

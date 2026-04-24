@@ -183,7 +183,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboarding2Bullet1 =>
-      'Your ratings, saved places and — only with an account — your email plus a password hash live on a Hetzner server in Germany.';
+      'Your ratings, saved places and — if you register an account — your email plus a password hash live on a server in Germany.';
 
   @override
   String get onboarding2Bullet2 =>
@@ -203,7 +203,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboarding3Body =>
-      'You can use beebeebike right away without an account. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.';
+      'You can use beebeebike right away anonymously. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.';
 
   @override
   String get searchHint => 'Where to?';
@@ -286,6 +286,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navRerouting => 'Rerouting…';
+
+  @override
+  String get navTtsDeparting => 'Let\'s get buzzing';
+
+  @override
+  String get navTtsRerouted => 'Wrong turn, route recalculated';
+
+  @override
+  String get navTtsArrived => 'You have arrived';
 
   @override
   String get arrivedTitle => 'Arrived';

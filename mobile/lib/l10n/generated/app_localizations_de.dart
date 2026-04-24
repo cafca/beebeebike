@@ -178,14 +178,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboarding1Body =>
-      'Male mit dem Pinsel auf der Karte wo du gerne Rad fährst und wo du lieber fernbleiben möchtest. beebeebike plant daraus Radrouten nach deinen Wünschen.';
+      'Male mit dem Pinsel auf der Karte wo du gerne Rad fährst und wo es keinen Spaß macht. beebeebike plant dann Radrouten nach deinen Wünschen.';
 
   @override
   String get onboarding2Headline => 'Was wir speichern';
 
   @override
   String get onboarding2Bullet1 =>
-      'Deine Bewertungen, deine gespeicherten Standorte und — nur mit Konto — deine E-Mail plus Passwort-Hash liegen auf einem Hetzner-Server in Deutschland.';
+      'Deine Bewertungen, deine gespeicherten Standorte und — wenn du einen Account machst — deine E-Mail plus Passwort-Hash liegen auf einem Server in Deutschland.';
 
   @override
   String get onboarding2Bullet2 =>
@@ -193,7 +193,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboarding2Bullet3 =>
-      'Ohne Konto bleibst du anonym — wir setzen nur eine zufällige Sitzungs-ID.';
+      'Ohne Konto bleibst du anonym — wir speichern nur eine zufällige Session-ID.';
 
   @override
   String get onboarding2Bullet4 =>
@@ -204,7 +204,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboarding3Body =>
-      'Du kannst beebeebike sofort ohne Konto nutzen. Mit einem kostenlosen Konto kannst du auf beebeebike.com am Rechner schneller malen — deine Bewertungen landen automatisch auf dem Handy.';
+      'Du kannst beebeebike sofort anonym nutzen. Mit einem kostenlosen Konto kannst du auf beebeebike.com am Rechner schneller malen — deine Bewertungen landen automatisch auf dem Handy.';
 
   @override
   String get searchHint => 'Wohin?';
@@ -287,6 +287,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get navRerouting => 'Route wird neu berechnet…';
+
+  @override
+  String get navTtsDeparting => 'Auf geht\'s Bienchen';
+
+  @override
+  String get navTtsRerouted => 'Falsch abgebogen, Route neu berechnet';
+
+  @override
+  String get navTtsArrived => 'Du bist am Ziel';
 
   @override
   String get arrivedTitle => 'Angekommen';

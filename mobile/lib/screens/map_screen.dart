@@ -140,6 +140,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       }
     }
 
+    // Dim the existing overlay while a recompute is in flight (preview
+    // unchanged, isLoading toggling). Replacement below handles the
+    // un-dim path by redrawing from scratch at full opacity.
+    if (previous?.isLoading != next.isLoading && next.preview != null) {
+      final overlay = _routeOverlay;
+      if (overlay != null) {
+        await overlay.setDimmed(controller, next.isLoading);
+      }
+    }
+
     if (previous?.preview == next.preview) return;
 
     EdgeInsets? fitPadding;

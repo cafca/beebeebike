@@ -92,5 +92,28 @@ class RouteController extends Notifier<RouteState> {
     state = const RouteState();
   }
 
-  Future<void> recomputePreview() => _maybeLoadPreview();
+  /// Re-fetches the preview for the current origin/destination without
+  /// clearing the existing one. Used when something off-screen (e.g. a
+  /// rating change from the brush) should refresh the drawn route in
+  /// place. No fit-to-bounds, no success haptic — the old route stays
+  /// visible (dimmed by the map layer) until the new one arrives.
+  Future<void> recomputePreview() async {
+    final origin = state.origin;
+    final destination = state.destination;
+    if (origin == null || destination == null) return;
+    if (origin.lat == destination.lat && origin.lng == destination.lng) return;
+    final generation = ++_loadGeneration;
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final preview = await ref.read(routePreviewLoaderProvider)(
+        origin: origin,
+        destination: destination,
+      );
+      if (generation != _loadGeneration) return;
+      state = state.copyWith(preview: preview, isLoading: false);
+    } catch (error) {
+      if (generation != _loadGeneration) return;
+      state = state.copyWith(isLoading: false, error: error.toString());
+    }
+  }
 }

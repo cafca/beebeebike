@@ -1,3 +1,7 @@
+<p align="left">
+  <img src="design/logo/AppIcon-1024.png" alt="beebeebike app icon" width="160" />
+</p>
+
 # beebeebike
 
 beebeebike is a cycling-oriented Berlin routing app. I like thinking about map ux and this is an experiment where I wondered: what if you could just draw on the map where you love and hate to cycle? 

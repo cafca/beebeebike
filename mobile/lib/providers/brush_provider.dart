@@ -164,6 +164,7 @@ class BrushController extends Notifier<BrushState> {
           .read(ratingOverlayControllerProvider.notifier)
           .refreshAfterPaint();
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
+      _maybeRecomputeRoute();
     } catch (e) {
       _log('brush: undo failed: $e');
     } finally {
@@ -181,6 +182,7 @@ class BrushController extends Notifier<BrushState> {
           .read(ratingOverlayControllerProvider.notifier)
           .refreshAfterPaint();
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
+      _maybeRecomputeRoute();
     } catch (e) {
       _log('brush: redo failed: $e');
     } finally {

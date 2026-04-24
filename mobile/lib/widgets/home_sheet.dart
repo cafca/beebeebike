@@ -10,6 +10,7 @@ import '../providers/location_provider.dart';
 import '../providers/route_provider.dart';
 import '../providers/search_history_provider.dart';
 import '../screens/login_screen.dart';
+import '../screens/register_screen.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
 import 'saved_item.dart';
@@ -114,48 +115,96 @@ class _GoHomeRow extends ConsumerWidget {
             etaMinutes: eta,
             onTap: enabled ? onNavigateHome : null,
           )
-        : const _LogInButton();
+        : const _AuthRow();
   }
 }
 
-class _LogInButton extends StatelessWidget {
-  const _LogInButton();
+class _AuthRow extends StatelessWidget {
+  const _AuthRow();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    return Row(
+      children: [
+        Expanded(
+          child: _AuthButton(
+            key: const ValueKey('home-register'),
+            label: l10n.onboardingCreateAccount,
+            icon: Icons.person_add_alt_1_rounded,
+            bg: BbbColors.ink,
+            fg: Colors.white,
+            iconBg: const Color.fromRGBO(255, 255, 255, 0.14),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _AuthButton(
+            key: const ValueKey('home-login'),
+            label: l10n.settingsLogIn,
+            icon: Icons.login_rounded,
+            bg: BbbColors.bgAlt,
+            fg: BbbColors.ink,
+            iconBg: BbbColors.divider,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthButton extends StatelessWidget {
+  const _AuthButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.bg,
+    required this.fg,
+    required this.iconBg,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color bg;
+  final Color fg;
+  final Color iconBg;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return Material(
-      color: BbbColors.ink,
+      color: bg,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-          );
-        },
+        onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
             children: [
               Container(
                 width: 32,
                 height: 32,
-                decoration: const BoxDecoration(
-                  color: Color.fromRGBO(255, 255, 255, 0.14),
+                decoration: BoxDecoration(
+                  color: iconBg,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.login_rounded,
-                  size: 17,
-                  color: Colors.white,
-                ),
+                child: Icon(icon, size: 17, color: fg),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  l10n.settingsLogIn,
-                  style: BbbText.cardTitle().copyWith(color: Colors.white),
+                  label,
+                  style: BbbText.cardTitle().copyWith(color: fg),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

@@ -36,6 +36,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loginErrorInvalid => 'Invalid email or password';
 
   @override
+  String get registerTitle => 'Create account';
+
+  @override
+  String get registerSubmit => 'Create account';
+
+  @override
+  String get registerErrorPasswordTooShort =>
+      'Password must be at least 8 characters';
+
+  @override
+  String get registerErrorEmailTaken =>
+      'An account with this email already exists';
+
+  @override
+  String get registerErrorGeneric =>
+      'Could not create account. Please try again.';
+
+  @override
   String get settingsTitle => 'Settings';
 
   @override
@@ -136,6 +154,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingLogin => 'Sign in';
 
   @override
+  String get onboardingCreateAccount => 'Create account';
+
+  @override
+  String get onboardingSkip => 'Skip for now';
+
+  @override
   String get onboardingPrivacyLink => 'Full privacy policy';
 
   @override
@@ -159,11 +183,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboarding2Bullet1 =>
-      'Your ratings, saved places, email and password hash live on a Hetzner server in Germany.';
+      'Your ratings, saved places and — only with an account — your email plus a password hash live on a Hetzner server in Germany.';
 
   @override
   String get onboarding2Bullet2 =>
-      'Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). Your account data is not sent along.';
+      'Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). No account data is sent along.';
+
+  @override
+  String get onboarding2Bullet3 =>
+      'Without an account you stay anonymous — we only set a random session ID.';
 
   @override
   String get onboarding2Bullet4 =>
@@ -175,7 +203,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboarding3Body =>
-      'Paint your ratings on beebeebike.com in the browser — they sync to your phone automatically. Sign in to get started.';
+      'You can use beebeebike right away without an account. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.';
 
   @override
   String get searchHint => 'Where to?';

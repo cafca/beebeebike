@@ -12,6 +12,7 @@ import '../theme/typography.dart';
 import '../widgets/language_picker.dart';
 import 'legal_document_screen.dart';
 import 'login_screen.dart';
+import 'register_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -135,25 +136,64 @@ class _AuthButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (loggedIn) {
+      return _SettingsAuthTile(
+        label: AppLocalizations.of(context)!.settingsLogOut,
+        bg: BbbColors.bgAlt,
+        fg: BbbColors.ink,
+        onTap: () => ref.read(authControllerProvider.notifier).logout(),
+      );
+    }
     final l10n = AppLocalizations.of(context)!;
-    final label = loggedIn ? l10n.settingsLogOut : l10n.settingsLogIn;
-    final bg = loggedIn ? BbbColors.bgAlt : BbbColors.ink;
-    final fg = loggedIn ? BbbColors.ink : Colors.white;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SettingsAuthTile(
+          key: const ValueKey('settings-register'),
+          label: l10n.onboardingCreateAccount,
+          bg: BbbColors.ink,
+          fg: Colors.white,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _SettingsAuthTile(
+          key: const ValueKey('settings-login'),
+          label: l10n.settingsLogIn,
+          bg: BbbColors.bgAlt,
+          fg: BbbColors.ink,
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
+class _SettingsAuthTile extends StatelessWidget {
+  const _SettingsAuthTile({
+    super.key,
+    required this.label,
+    required this.bg,
+    required this.fg,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color bg;
+  final Color fg;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return Material(
       color: bg,
       borderRadius: BorderRadius.circular(BbbRadius.ctrl),
       child: InkWell(
         borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-        onTap: () {
-          if (loggedIn) {
-            ref.read(authControllerProvider.notifier).logout();
-          } else {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-            );
-          }
-        },
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Center(

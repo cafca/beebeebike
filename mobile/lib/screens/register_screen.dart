@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/generated/app_localizations.dart';
-import '../widgets/login_form.dart';
+import '../widgets/register_form.dart';
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key, this.onSuccess});
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key, this.onSuccess});
 
   final VoidCallback? onSuccess;
 
@@ -12,10 +12,10 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.loginTitle)),
+      appBar: AppBar(title: Text(l10n.registerTitle)),
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: LoginForm(
+        child: RegisterForm(
           onSuccess: () {
             Navigator.of(context).pop();
             onSuccess?.call();

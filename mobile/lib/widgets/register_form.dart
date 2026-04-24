@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,23 +6,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../providers/auth_provider.dart';
 
-enum _LoginErrorKind { invalidCredentials }
+enum _RegisterErrorKind { emailTaken, generic }
 
-class LoginForm extends ConsumerStatefulWidget {
-  const LoginForm({super.key, this.onSuccess});
+class RegisterForm extends ConsumerStatefulWidget {
+  const RegisterForm({super.key, this.onSuccess});
 
   final VoidCallback? onSuccess;
 
   @override
-  ConsumerState<LoginForm> createState() => _LoginFormState();
+  ConsumerState<RegisterForm> createState() => _RegisterFormState();
 }
 
-class _LoginFormState extends ConsumerState<LoginForm> {
+class _RegisterFormState extends ConsumerState<RegisterForm> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
-  _LoginErrorKind? _errorKind;
+  _RegisterErrorKind? _errorKind;
 
   @override
   void dispose() {
@@ -39,17 +40,23 @@ class _LoginFormState extends ConsumerState<LoginForm> {
 
     TextInput.finishAutofillContext();
 
-    await ref.read(authControllerProvider.notifier).login(
+    await ref.read(authControllerProvider.notifier).register(
           _emailController.text.trim(),
           _passwordController.text,
+          null,
         );
 
     if (!mounted) return;
 
     final result = ref.read(authControllerProvider);
     if (result is AsyncError) {
+      final error = result.error;
+      final taken = error is DioException &&
+          error.response?.statusCode == 409;
       setState(() {
-        _errorKind = _LoginErrorKind.invalidCredentials;
+        _errorKind = taken
+            ? _RegisterErrorKind.emailTaken
+            : _RegisterErrorKind.generic;
         _loading = false;
       });
     } else {
@@ -57,9 +64,21 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     }
   }
 
+  String? _errorText(AppLocalizations l10n) {
+    switch (_errorKind) {
+      case _RegisterErrorKind.emailTaken:
+        return l10n.registerErrorEmailTaken;
+      case _RegisterErrorKind.generic:
+        return l10n.registerErrorGeneric;
+      case null:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final errorText = _errorText(l10n);
     return Form(
       key: _formKey,
       child: AutofillGroup(
@@ -67,7 +86,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextFormField(
-              key: const Key('login_email'),
+              key: const Key('register_email'),
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [
@@ -86,10 +105,10 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              key: const Key('login_password'),
+              key: const Key('register_password'),
               controller: _passwordController,
               obscureText: true,
-              autofillHints: const [AutofillHints.password],
+              autofillHints: const [AutofillHints.newPassword],
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _submit(),
               decoration: InputDecoration(
@@ -97,23 +116,29 @@ class _LoginFormState extends ConsumerState<LoginForm> {
                 filled: true,
                 fillColor: Colors.white,
               ),
-              validator: (v) => (v == null || v.isEmpty)
-                  ? l10n.loginErrorEmptyPassword
-                  : null,
+              validator: (v) {
+                if (v == null || v.isEmpty) {
+                  return l10n.loginErrorEmptyPassword;
+                }
+                if (v.length < 8) {
+                  return l10n.registerErrorPasswordTooShort;
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 8),
-            if (_errorKind != null)
+            if (errorText != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
-                  l10n.loginErrorInvalid,
+                  errorText,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.error),
                 ),
               ),
             const SizedBox(height: 16),
             FilledButton(
-              key: const Key('login_submit'),
+              key: const Key('register_submit'),
               onPressed: _loading ? null : _submit,
               child: _loading
                   ? const SizedBox(
@@ -121,7 +146,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(l10n.loginSubmit),
+                  : Text(l10n.registerSubmit),
             ),
           ],
         ),

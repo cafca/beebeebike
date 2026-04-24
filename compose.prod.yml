@@ -60,6 +60,7 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       GRAPHHOPPER_URL: http://graphhopper:8989
+      BEEBEEBIKE_MAX_UNDO_HISTORY: ${BEEBEEBIKE_MAX_UNDO_HISTORY:-15}
     depends_on:
       - db
       - graphhopper

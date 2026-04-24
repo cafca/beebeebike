@@ -13,7 +13,7 @@ class BrushGeometry {
   BrushGeometry._();
 
   static const double minMovePx = 4.0;
-  static const double brushPx = 30.0;
+  static const double brushPx = 27.0;
   static const double minRadiusKm = 0.005;
 
   static double metersPerPixel({required double lat, required double zoom}) {

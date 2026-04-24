@@ -582,10 +582,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 c.moveCamera(
                   CameraUpdate.zoomBy(delta, details.localFocalPoint),
                 );
-                final pan = details.focalPointDelta;
-                if (pan != Offset.zero) {
-                  c.moveCamera(CameraUpdate.scrollBy(-pan.dx, -pan.dy));
-                }
               },
               toLatLng: (p) async {
                 final c = _mapController;

@@ -10,24 +10,26 @@ abstract class BrushOverlaySurface {
   Future<void> detach();
 }
 
-/// Semi-transparent fill of the in-progress brush stroke. Mirrors the
-/// `brush-preview` source + fill layer in web/src/lib/brush.svelte.js.
+/// Semi-transparent fill of the in-progress brush stroke. Geometry comes
+/// from `BrushGeometry.buildPolygon` (clipper2-inflated), so even a
+/// self-crossing stroke arrives here as a valid Polygon/MultiPolygon.
 class BrushOverlay implements BrushOverlaySurface {
   BrushOverlay._(this._controller);
 
   static const String sourceId = 'brush-preview';
   static const String fillLayerId = 'brush-preview-fill';
+  static const double _fillOpacity = 0.4;
 
   static const Map<int, String> _colors = {
-    -7: '#c0392b',
-    -3: '#e74c3c',
-    -1: '#f1948a',
-    0: '#6b7280',
-    1: '#76d7c4',
-    3: '#1abc9c',
-    7: '#0e6655',
+    -7: '#B8342E',
+    -3: '#D94A4A',
+    -1: '#EF8379',
+    0: '#8A95A1',
+    1: '#7FD9C9',
+    3: '#2EB8A8',
+    7: '#0E7E72',
   };
-  static const String _fallbackColor = '#6b7280';
+  static const String _fallbackColor = '#8A95A1';
 
   /// Get the hex color for a given rating value, or the fallback gray if not found.
   static String colorFor(int value) => _colors[value] ?? _fallbackColor;
@@ -59,7 +61,7 @@ class BrushOverlay implements BrushOverlaySurface {
       fillLayerId,
       const FillLayerProperties(
         fillColor: _fallbackColor,
-        fillOpacity: 0.3,
+        fillOpacity: _fillOpacity,
       ),
       belowLayerId: belowLayerId,
       enableInteraction: false,
@@ -88,7 +90,7 @@ class BrushOverlay implements BrushOverlaySurface {
     if (colorHex != _lastColorHex) {
       await _controller.setLayerProperties(
         fillLayerId,
-        FillLayerProperties(fillColor: colorHex, fillOpacity: 0.3),
+        FillLayerProperties(fillColor: colorHex, fillOpacity: _fillOpacity),
       );
       _lastColorHex = colorHex;
     }

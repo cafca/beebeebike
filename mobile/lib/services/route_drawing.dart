@@ -6,6 +6,10 @@ import '../models/route_preview.dart';
 const _routeLineColor = '#19A4C2';
 const _markerFillColor = '#14272F';
 const _markerStrokeColor = '#ffffff';
+const _lineOpacityFull = 0.9;
+const _lineOpacityDimmed = 0.3;
+const _markerOpacityFull = 1.0;
+const _markerOpacityDimmed = 0.4;
 
 List<LatLng> _decodeLineString(Map<String, dynamic> geometry) {
   final coords = geometry['coordinates'] as List<dynamic>;
@@ -48,7 +52,7 @@ class RouteOverlay {
       geometry: coords,
       lineColor: _routeLineColor,
       lineWidth: 8.0,
-      lineOpacity: 0.9,
+      lineOpacity: _lineOpacityFull,
     ));
     final origin = await controller.addCircle(CircleOptions(
       geometry: coords.first,
@@ -82,5 +86,26 @@ class RouteOverlay {
     await controller.removeLine(_line);
     await controller.removeCircle(_origin);
     await controller.removeCircle(_destination);
+  }
+
+  Future<void> setDimmed(
+    MapLibreMapController controller,
+    bool dimmed,
+  ) async {
+    await controller.updateLine(
+      _line,
+      LineOptions(
+        lineOpacity: dimmed ? _lineOpacityDimmed : _lineOpacityFull,
+      ),
+    );
+    final markerOpacity = dimmed ? _markerOpacityDimmed : _markerOpacityFull;
+    await controller.updateCircle(
+      _origin,
+      CircleOptions(circleOpacity: markerOpacity),
+    );
+    await controller.updateCircle(
+      _destination,
+      CircleOptions(circleOpacity: markerOpacity),
+    );
   }
 }

@@ -6,6 +6,7 @@ import '../../models/route_preview.dart';
 import '../../models/route_state.dart';
 import '../../providers/route_provider.dart';
 import '../../theme/tokens.dart';
+import '../brush_fab.dart';
 import '../route_summary.dart';
 import 'compass_fab_inline.dart';
 import 'recenter_circle_fab.dart';
@@ -45,6 +46,8 @@ class RouteSheet extends ConsumerWidget {
               children: [
                 CompassFabInline(onResetBearing: onResetBearing),
                 RecenterCircleFab(onTap: onFlyToMyLocation),
+                const SizedBox(height: 12),
+                const BrushFab(),
               ],
             ),
           ),

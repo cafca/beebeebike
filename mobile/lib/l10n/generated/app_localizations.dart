@@ -63,7 +63,7 @@ import 'app_localizations_en.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,16 +86,16 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
-    Locale('en')
+    Locale('en'),
   ];
 
   /// No description provided for @appTitle.
@@ -151,6 +151,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invalid email or password'**
   String get loginErrorInvalid;
+
+  /// No description provided for @registerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get registerTitle;
+
+  /// No description provided for @registerSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get registerSubmit;
+
+  /// No description provided for @registerErrorPasswordTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters'**
+  String get registerErrorPasswordTooShort;
+
+  /// No description provided for @registerErrorEmailTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'An account with this email already exists'**
+  String get registerErrorEmailTaken;
+
+  /// No description provided for @registerErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not create account. Please try again.'**
+  String get registerErrorGeneric;
 
   /// No description provided for @settingsTitle.
   ///
@@ -344,6 +374,18 @@ abstract class AppLocalizations {
   /// **'Sign in'**
   String get onboardingLogin;
 
+  /// No description provided for @onboardingCreateAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get onboardingCreateAccount;
+
+  /// No description provided for @onboardingSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for now'**
+  String get onboardingSkip;
+
   /// No description provided for @onboardingPrivacyLink.
   ///
   /// In en, this message translates to:
@@ -389,14 +431,20 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding2Bullet1.
   ///
   /// In en, this message translates to:
-  /// **'Your ratings, saved places, email and password hash live on a Hetzner server in Germany.'**
+  /// **'Your ratings, saved places and — only with an account — your email plus a password hash live on a Hetzner server in Germany.'**
   String get onboarding2Bullet1;
 
   /// No description provided for @onboarding2Bullet2.
   ///
   /// In en, this message translates to:
-  /// **'Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). Your account data is not sent along.'**
+  /// **'Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). No account data is sent along.'**
   String get onboarding2Bullet2;
+
+  /// No description provided for @onboarding2Bullet3.
+  ///
+  /// In en, this message translates to:
+  /// **'Without an account you stay anonymous — we only set a random session ID.'**
+  String get onboarding2Bullet3;
 
   /// No description provided for @onboarding2Bullet4.
   ///
@@ -413,7 +461,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboarding3Body.
   ///
   /// In en, this message translates to:
-  /// **'Paint your ratings on beebeebike.com in the browser — they sync to your phone automatically. Sign in to get started.'**
+  /// **'You can use beebeebike right away without an account. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.'**
   String get onboarding3Body;
 
   /// No description provided for @searchHint.
@@ -577,6 +625,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset to north'**
   String get mapResetNorth;
+
+  /// No description provided for @paintEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint mode'**
+  String get paintEnter;
+
+  /// No description provided for @paintExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit paint mode'**
+  String get paintExit;
+
+  /// No description provided for @paintDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Paint mode (coming soon)'**
+  String get paintDisabled;
+
+  /// No description provided for @paintEraser.
+  ///
+  /// In en, this message translates to:
+  /// **'Eraser'**
+  String get paintEraser;
+
+  /// No description provided for @paintRatingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating {value}'**
+  String paintRatingLabel(int value);
+
+  /// No description provided for @paintUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get paintUndo;
+
+  /// No description provided for @paintRedo.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo'**
+  String get paintRedo;
 }
 
 class _AppLocalizationsDelegate
@@ -606,8 +696,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

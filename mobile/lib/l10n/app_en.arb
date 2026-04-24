@@ -13,6 +13,12 @@
   "loginErrorEmptyPassword": "Enter your password",
   "loginErrorInvalid": "Invalid email or password",
 
+  "registerTitle": "Create account",
+  "registerSubmit": "Create account",
+  "registerErrorPasswordTooShort": "Password must be at least 8 characters",
+  "registerErrorEmailTaken": "An account with this email already exists",
+  "registerErrorGeneric": "Could not create account. Please try again.",
+
   "settingsTitle": "Settings",
   "settingsGuest": "Guest",
   "settingsHome": "Home",
@@ -49,6 +55,8 @@
   "onboardingNext": "Next",
   "onboardingFinish": "Let's go",
   "onboardingLogin": "Sign in",
+  "onboardingCreateAccount": "Create account",
+  "onboardingSkip": "Skip for now",
   "onboardingPrivacyLink": "Full privacy policy",
   "onboardingPrivacyTitle": "Privacy",
   "onboardingPrivacyOpenBrowser": "Open in browser",
@@ -56,11 +64,12 @@
   "onboarding1Headline": "Paint your favourite routes",
   "onboarding1Body": "Paint on the map where you like to ride and where you'd rather avoid. beebeebike turns that into bike routes that match your taste.",
   "onboarding2Headline": "What we store",
-  "onboarding2Bullet1": "Your ratings, saved places, email and password hash live on a Hetzner server in Germany.",
-  "onboarding2Bullet2": "Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). Your account data is not sent along.",
+  "onboarding2Bullet1": "Your ratings, saved places and — if you register an account — your email plus a password hash live on a server in Germany.",
+  "onboarding2Bullet2": "Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). No account data is sent along.",
+  "onboarding2Bullet3": "Without an account you stay anonymous — we only set a random session ID.",
   "onboarding2Bullet4": "You can delete your account anytime in Settings. All server-side data is removed with it.",
   "onboarding3Headline": "Paint on the desktop, ride with your phone",
-  "onboarding3Body": "Paint your ratings on beebeebike.com in the browser — they sync to your phone automatically. Sign in to get started.",
+  "onboarding3Body": "You can use beebeebike right away anonymously. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.",
 
   "searchHint": "Where to?",
   "searchSavedPlaces": "Saved places",
@@ -112,5 +121,16 @@
   "arrivedTitle": "Arrived",
   "arrivedDone": "Done",
 
-  "mapResetNorth": "Reset to north"
+  "mapResetNorth": "Reset to north",
+
+  "paintEnter": "Paint mode",
+  "paintExit": "Exit paint mode",
+  "paintDisabled": "Paint mode (coming soon)",
+  "paintEraser": "Eraser",
+  "paintRatingLabel": "Rating {value}",
+  "@paintRatingLabel": {
+    "placeholders": { "value": { "type": "int" } }
+  },
+  "paintUndo": "Undo",
+  "paintRedo": "Redo"
 }

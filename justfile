@@ -1,7 +1,9 @@
 set shell := ["bash", "-uc"]
+set dotenv-load := true
 
 IOS_DEVICE_API := env_var_or_default('BEEBEEBIKE_API_BASE_URL', 'https://beebeebike.com')
 IOS_DEVICE_TILES := env_var_or_default('BEEBEEBIKE_TILE_SERVER_BASE_URL', 'https://beebeebike.com/tiles')
+GLITCHTIP_DSN := env_var_or_default('BEEBEEBIKE_GLITCHTIP_DSN', '')
 
 # Default: list all recipes grouped
 default:
@@ -175,7 +177,9 @@ release:
 release-ios-device DEVICE:
     cd mobile && flutter run --release -d {{DEVICE}} \
       --dart-define=BEEBEEBIKE_API_BASE_URL={{IOS_DEVICE_API}} \
-      --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL={{IOS_DEVICE_TILES}}
+      --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL={{IOS_DEVICE_TILES}} \
+      --dart-define=BEEBEEBIKE_GLITCHTIP_DSN={{GLITCHTIP_DSN}} \
+      --dart-define=BEEBEEBIKE_ENVIRONMENT=production
 
 # Build a release archive for TestFlight. When done, open Xcode → Window → Organizer,
 # select the archive, and click Distribute App → TestFlight & App Store → Upload.
@@ -183,7 +187,9 @@ release-ios-device DEVICE:
 ios-archive:
     cd mobile && flutter build ipa --release \
       --dart-define=BEEBEEBIKE_API_BASE_URL=https://beebeebike.com \
-      --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL=https://beebeebike.com/tiles
+      --dart-define=BEEBEEBIKE_TILE_SERVER_BASE_URL=https://beebeebike.com/tiles \
+      --dart-define=BEEBEEBIKE_GLITCHTIP_DSN={{GLITCHTIP_DSN}} \
+      --dart-define=BEEBEEBIKE_ENVIRONMENT=production
 
 # ---------- clean ----------
 

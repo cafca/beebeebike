@@ -7,6 +7,7 @@ import '../app.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/location_provider.dart';
+import '../services/error_reporter.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
 import '../widgets/language_picker.dart';
@@ -383,7 +384,8 @@ class _DangerSection extends ConsumerWidget {
         SnackBar(content: Text(l10n.settingsDeleteSuccess)),
       );
       if (navigator.canPop()) navigator.pop();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      reportError(error, stackTrace, context: 'settings.deleteAccount');
       messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.settingsDeleteError(error.toString())),

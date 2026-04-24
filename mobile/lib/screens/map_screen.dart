@@ -23,6 +23,7 @@ import '../providers/map_bearing_provider.dart';
 import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
 import '../services/brush_overlay.dart';
+import '../services/error_reporter.dart';
 import '../services/haptics.dart';
 import '../services/home_marker_service.dart';
 import '../services/map_style_loader.dart';
@@ -259,7 +260,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
       if (mounted) _speakNav(AppLocalizations.of(context)!.navTtsDeparting);
     } catch (e, st) {
-      debugPrint('nav: start failed: $e\n$st');
+      reportError(e, st, context: 'nav.start');
     }
   }
 

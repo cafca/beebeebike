@@ -10,6 +10,7 @@ import '../api/client.dart';
 import '../api/routing_api.dart';
 import '../navigation/location_converter.dart';
 import '../navigation/navigation_service.dart';
+import '../services/error_reporter.dart';
 import 'locale_provider.dart';
 
 Stream<UserLocation> _buildLocationStream() async* {
@@ -105,7 +106,11 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
       try {
         await tts.speak(text);
       } catch (e) {
-        debugPrint('nav: tts error: $e');
+        // TTS speak fails routinely on audio-session interruptions, silent
+        // mode switches, and mid-utterance cancellations. Drop a breadcrumb
+        // for context around nearby issues but don't surface as its own
+        // GlitchTip event — the noise swamps anything actionable.
+        addBreadcrumb('nav.tts speak failed: $e', category: 'tts');
       }
     },
   );

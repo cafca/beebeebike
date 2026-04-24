@@ -9,6 +9,7 @@ import '../api/ratings_api.dart';
 import '../app.dart';
 import '../config/berlin_bounds.dart';
 import '../models/user.dart';
+import '../services/error_reporter.dart';
 import '../services/rating_events_client.dart';
 import '../services/rating_overlay.dart';
 import 'auth_provider.dart';
@@ -88,6 +89,7 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
       _log('rating-overlay: attach ok');
     } catch (e, st) {
       _log('rating-overlay: attach FAILED: $e\n$st');
+      reportError(e, st, context: 'rating-overlay.attach');
       return;
     }
     if (_authListenerWired) {
@@ -246,8 +248,9 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
       if (CancelToken.isCancel(e)) return;
       _log('rating-overlay: sync failed status=${e.response?.statusCode} '
           'type=${e.type} msg=${e.message}');
-    } catch (e) {
+    } catch (e, st) {
       _log('rating-overlay: sync failed: $e');
+      reportError(e, st, context: 'rating-overlay.sync');
     } finally {
       if (identical(_inFlight, token)) {
         _inFlight = null;

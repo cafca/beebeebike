@@ -4,6 +4,8 @@ class AppConfig {
     required this.tileServerBaseUrl,
     required this.tileStyleUrl,
     required this.ratingsSseEnabled,
+    this.glitchtipDsn = '',
+    this.environment = 'development',
     this.privacyPolicyUrl = 'https://beebeebike.com/datenschutz/',
     this.imprintUrl = 'https://beebeebike.com/impressum/',
   });
@@ -12,6 +14,13 @@ class AppConfig {
   final String tileServerBaseUrl;
   final String privacyPolicyUrl;
   final String imprintUrl;
+
+  /// GlitchTip (Sentry-compatible) DSN. Empty string disables error reporting —
+  /// pass `--dart-define=BEEBEEBIKE_GLITCHTIP_DSN=...` in release builds.
+  final String glitchtipDsn;
+
+  /// Environment tag sent to GlitchTip (e.g. `production`, `development`).
+  final String environment;
 
   /// Test-only: a remote style URL passed straight to `MapLibreMap.styleString`.
   /// Production uses `mapStyleProvider`, which loads the bundled style and
@@ -50,6 +59,14 @@ class AppConfig {
       imprintUrl: String.fromEnvironment(
         'BEEBEEBIKE_IMPRINT_URL',
         defaultValue: 'https://beebeebike.com/impressum/',
+      ),
+      glitchtipDsn: String.fromEnvironment(
+        'BEEBEEBIKE_GLITCHTIP_DSN',
+        defaultValue: '',
+      ),
+      environment: String.fromEnvironment(
+        'BEEBEEBIKE_ENVIRONMENT',
+        defaultValue: 'development',
       ),
     );
   }

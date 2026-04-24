@@ -41,6 +41,8 @@ class SettingsScreen extends ConsumerWidget {
           _LegalSection(),
           _SectionDivider(),
           _DangerSection(),
+          _SectionDivider(),
+          _GlitchTipSmokeTestSection(),
           _CreditsSection(),
         ],
       ),
@@ -392,6 +394,41 @@ class _DangerSection extends ConsumerWidget {
         ),
       );
     }
+  }
+}
+
+// TODO(glitchtip): remove once GlitchTip integration verified in release.
+class _GlitchTipSmokeTestSection extends StatelessWidget {
+  const _GlitchTipSmokeTestSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SectionHeader('Debug'),
+          FilledButton.tonal(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Throwing test error — check GlitchTip in a few seconds.',
+                  ),
+                ),
+              );
+              reportError(
+                StateError('GlitchTip smoke test — manual trigger'),
+                StackTrace.current,
+                context: 'debug.glitchtipSmokeTest',
+              );
+            },
+            child: const Text('Throw test error'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

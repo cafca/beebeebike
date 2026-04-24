@@ -24,23 +24,28 @@ class BrushFab extends ConsumerWidget {
         button: true,
         toggled: active,
         label: label,
-        child: SizedBox(
-          width: 52,
-          height: 52,
-          child: Material(
-            key: const ValueKey('paint-fab'),
-            color: active ? BbbColors.ink : BbbColors.panel,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                color: active ? BbbColors.ink : BbbColors.divider,
-                width: 1,
-              ),
-              borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+        child: Material(
+          key: const ValueKey('paint-fab'),
+          color: active ? BbbColors.ink : BbbColors.panel,
+          shape: CircleBorder(
+            side: BorderSide(
+              color: active ? BbbColors.ink : BbbColors.divider,
+              width: 1,
             ),
-            child: InkWell(
-              onTap: () =>
-                  ref.read(brushControllerProvider.notifier).togglePaintMode(),
-              borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+          ),
+          elevation: 0,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () =>
+                ref.read(brushControllerProvider.notifier).togglePaintMode(),
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: active ? BbbColors.ink : BbbColors.panel,
+                shape: BoxShape.circle,
+                boxShadow: BbbShadow.sm,
+              ),
               child: Center(
                 child: PaintRollerIcon(
                   size: 24,

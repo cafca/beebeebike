@@ -34,7 +34,6 @@ import '../widgets/map/compass_fab_inline.dart';
 import '../widgets/map/home_sheet_container.dart';
 import '../widgets/map/nav_top_bar.dart';
 import '../widgets/map/navigation_sheet.dart';
-import '../widgets/map/recenter_circle_fab.dart';
 import '../widgets/map/route_sheet.dart';
 import '../widgets/paint_sheet.dart';
 import '../widgets/route_card.dart';
@@ -680,7 +679,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 : paintMode
                     ? _PaintSheetWrapper(
                         key: const ValueKey('paint'),
-                        onFlyToMyLocation: _flyToCurrentLocation,
                         onResetBearing: _resetBearingToNorth,
                       )
                     : routeActive
@@ -711,18 +709,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Paint-mode FAB column: undo + redo on top, then compass, recenter, brush.
-// Used by the paint sheet wrapper only; home/route sheets render their own
-// column without undo/redo via HomeSheetContainer / RouteSheet.
+// Paint-mode FAB column: undo + redo on top, then compass, brush. Used by
+// the paint sheet wrapper only; home/route sheets render their own column
+// without undo/redo via HomeSheetContainer / RouteSheet.
 // ---------------------------------------------------------------------------
 
 class _PaintFabColumn extends ConsumerWidget {
-  const _PaintFabColumn({
-    required this.onFlyToMyLocation,
-    required this.onResetBearing,
-  });
+  const _PaintFabColumn({required this.onResetBearing});
 
-  final VoidCallback onFlyToMyLocation;
   final VoidCallback onResetBearing;
 
   @override
@@ -753,7 +747,6 @@ class _PaintFabColumn extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         CompassFabInline(onResetBearing: onResetBearing),
-        RecenterCircleFab(onTap: onFlyToMyLocation),
         const SizedBox(height: 12),
         const BrushFab(),
       ],
@@ -822,18 +815,16 @@ class _UndoRedoFab extends StatelessWidget {
 
 // ---------------------------------------------------------------------------
 // Paint sheet wrapper — stacks the paint FAB column above the PaintSheet
-// body so the brush FAB, undo/redo, and recenter controls stay visible while
-// color chips are open.
+// body so undo/redo, compass, and the brush toggle stay visible while color
+// chips are open.
 // ---------------------------------------------------------------------------
 
 class _PaintSheetWrapper extends StatelessWidget {
   const _PaintSheetWrapper({
     super.key,
-    required this.onFlyToMyLocation,
     required this.onResetBearing,
   });
 
-  final VoidCallback onFlyToMyLocation;
   final VoidCallback onResetBearing;
 
   @override
@@ -846,10 +837,7 @@ class _PaintSheetWrapper extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(0, 0, 16, 8),
-            child: _PaintFabColumn(
-              onFlyToMyLocation: onFlyToMyLocation,
-              onResetBearing: onResetBearing,
-            ),
+            child: _PaintFabColumn(onResetBearing: onResetBearing),
           ),
           const PaintSheet(),
         ],

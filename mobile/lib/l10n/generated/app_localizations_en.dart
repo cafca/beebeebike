@@ -159,15 +159,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboarding2Bullet1 =>
-      'Your ratings, saved places and — only with an account — your email plus a password hash live on a Hetzner server in Germany.';
+      'Your ratings, saved places, email and password hash live on a Hetzner server in Germany.';
 
   @override
   String get onboarding2Bullet2 =>
-      'Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). No account data is sent along.';
-
-  @override
-  String get onboarding2Bullet3 =>
-      'Without an account you stay anonymous — we only set a random session ID.';
+      'Place search: your query is forwarded through our server to the Photon geocoder (run by Komoot GmbH, Germany). Your account data is not sent along.';
 
   @override
   String get onboarding2Bullet4 =>
@@ -179,7 +175,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboarding3Body =>
-      'You can use beebeebike right away without an account. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.';
+      'Paint your ratings on beebeebike.com in the browser — they sync to your phone automatically. Sign in to get started.';
 
   @override
   String get searchHint => 'Where to?';

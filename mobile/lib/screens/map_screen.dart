@@ -60,7 +60,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _ttsEnabled = true;
   bool _rerouting = false;
   bool _browseAutocentered = false;
-  double? _lastLoggedZoom;
 
   Future<void> _handleMapTap(math.Point<double> point, LatLng coords) async {
     if (ref.read(navigationSessionProvider)) return;
@@ -550,11 +549,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 if (c == null) return;
                 final zoom = c.cameraPosition?.zoom;
                 if (zoom != null) {
-                  if (_lastLoggedZoom == null ||
-                      (zoom - _lastLoggedZoom!).abs() >= 0.01) {
-                    debugPrint('zoom: ${zoom.toStringAsFixed(2)}');
-                    _lastLoggedZoom = zoom;
-                  }
                   ref
                       .read(navigationCameraControllerProvider)
                       .onZoomChanged(zoom);

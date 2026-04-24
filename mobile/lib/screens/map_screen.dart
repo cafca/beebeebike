@@ -737,7 +737,6 @@ class _PaintFabColumn extends ConsumerWidget {
         _UndoRedoFab(
           tooltip: l10n.paintUndo,
           keyValue: 'undo-fab',
-          heroTag: 'brush-undo-fab',
           icon: Icons.undo,
           enabled: brush.canUndo && !brush.busy,
           loading: brush.activeOp == BrushOp.undo,
@@ -747,7 +746,6 @@ class _PaintFabColumn extends ConsumerWidget {
         _UndoRedoFab(
           tooltip: l10n.paintRedo,
           keyValue: 'redo-fab',
-          heroTag: 'brush-redo-fab',
           icon: Icons.redo,
           enabled: brush.canRedo && !brush.busy,
           loading: brush.activeOp == BrushOp.redo,
@@ -767,7 +765,6 @@ class _UndoRedoFab extends StatelessWidget {
   const _UndoRedoFab({
     required this.tooltip,
     required this.keyValue,
-    required this.heroTag,
     required this.icon,
     required this.enabled,
     required this.loading,
@@ -776,7 +773,6 @@ class _UndoRedoFab extends StatelessWidget {
 
   final String tooltip;
   final String keyValue;
-  final String heroTag;
   final IconData icon;
   final bool enabled;
   final bool loading;
@@ -785,24 +781,40 @@ class _UndoRedoFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final active = enabled || loading;
+    final bg = active ? BbbColors.panel : BbbColors.bgAlt;
+    final fg = active ? BbbColors.ink : BbbColors.inkFaint;
     return Tooltip(
       message: tooltip,
-      child: FloatingActionButton.small(
+      child: Material(
         key: ValueKey(keyValue),
-        heroTag: heroTag,
-        onPressed: enabled ? onPressed : null,
-        backgroundColor: active ? BbbColors.panel : BbbColors.bgAlt,
-        foregroundColor: active ? BbbColors.ink : BbbColors.inkFaint,
-        child: loading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(BbbColors.ink),
-                ),
-              )
-            : Icon(icon),
+        shape: const CircleBorder(),
+        elevation: 0,
+        color: bg,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: enabled ? onPressed : null,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: bg,
+              shape: BoxShape.circle,
+              boxShadow: BbbShadow.sm,
+            ),
+            child: Center(
+              child: loading
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(fg),
+                      ),
+                    )
+                  : Icon(icon, color: fg, size: 22),
+            ),
+          ),
+        ),
       ),
     );
   }

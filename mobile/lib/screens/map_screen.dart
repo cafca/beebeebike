@@ -888,6 +888,10 @@ class _PaintGestureWrap extends StatelessWidget {
                 GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
               PanGestureRecognizer.new,
               (r) {
+                // Report positions from the initial pointer-down event, not
+                // from where slop was resolved. Without this the brush stroke
+                // jumps ~18px away from the finger on touch-down.
+                r.dragStartBehavior = DragStartBehavior.down;
                 r.onStart = (d) async {
                   final latLng = await toLatLng(_point(d.localPosition));
                   onPanStart(latLng);

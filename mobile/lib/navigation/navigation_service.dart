@@ -16,6 +16,7 @@ typedef LoadNavigationRoute = Future<Map<String, dynamic>> Function({
 });
 typedef SpeakInstruction = Future<void> Function(String text);
 typedef LocationStreamFactory = Stream<UserLocation> Function();
+typedef SetWakelock = Future<void> Function(bool enabled);
 
 class NavigationService {
   NavigationService({
@@ -23,12 +24,16 @@ class NavigationService {
     required this.loadNavigationRoute,
     required this.locationStreamFactory,
     required this.speakInstruction,
-  });
+    SetWakelock? setWakelock,
+  }) : setWakelock = setWakelock ?? _noopWakelock;
+
+  static Future<void> _noopWakelock(bool _) async {}
 
   final CreateController createController;
   final LoadNavigationRoute loadNavigationRoute;
   final LocationStreamFactory locationStreamFactory;
   final SpeakInstruction speakInstruction;
+  final SetWakelock setWakelock;
 
   FerrostarController? _controller;
   StreamSubscription<UserLocation>? _locationSub;
@@ -37,6 +42,7 @@ class NavigationService {
   StreamSubscription<NavigationState>? _stateSub;
   WaypointInput? _destination;
   bool _rerouteInProgress = false;
+  bool _wakelockActive = false;
   String? _lastSpokenUuid;
 
   final _stateController = StreamController<NavigationState>.broadcast();
@@ -126,9 +132,24 @@ class NavigationService {
     _locationSub = locationStreamFactory().listen(
       (location) => _controller?.updateLocation(location),
     );
+
+    try {
+      await setWakelock(true);
+      _wakelockActive = true;
+    } catch (e, st) {
+      reportError(e, st, context: 'nav.wakelock.enable');
+    }
   }
 
   Future<void> dispose() async {
+    if (_wakelockActive) {
+      try {
+        await setWakelock(false);
+      } catch (e, st) {
+        reportError(e, st, context: 'nav.wakelock.disable');
+      }
+      _wakelockActive = false;
+    }
     await _locationSub?.cancel();
     await _spokenSub?.cancel();
     await _deviationSub?.cancel();

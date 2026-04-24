@@ -33,6 +33,7 @@ dependencies:
   google_fonts: ^6.2.1
   haptic_feedback: ^0.6.4
   sentry_flutter: ^9.19.0
+  wakelock_plus: ^1.2.8
   ferrostar_flutter:
     path: ../packages/ferrostar_flutter
 

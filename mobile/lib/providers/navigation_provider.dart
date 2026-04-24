@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'dart:ui' as ui;
 
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../api/client.dart';
 import '../api/routing_api.dart';
@@ -23,12 +25,34 @@ Stream<UserLocation> _buildLocationStream() async* {
     debugPrint('nav: location permission denied');
     return;
   }
-  yield* Geolocator.getPositionStream(
-    locationSettings: const LocationSettings(
-      accuracy: LocationAccuracy.bestForNavigation,
-      distanceFilter: 0,
-    ),
-  ).map(positionToUserLocation);
+  // Escalate whileInUse → always so GPS keeps flowing when the phone is
+  // locked or the app is backgrounded. iOS requires a second
+  // requestPermission() call after the initial whileInUse grant.
+  if (permission == LocationPermission.whileInUse) {
+    final escalated = await Geolocator.requestPermission();
+    if (escalated == LocationPermission.always) {
+      permission = escalated;
+    } else {
+      debugPrint('nav: always-permission not granted, foreground-only nav');
+    }
+  }
+
+  final settings = Platform.isIOS
+      ? AppleSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          activityType: ActivityType.otherNavigation,
+          distanceFilter: 0,
+          pauseLocationUpdatesAutomatically: false,
+          allowBackgroundLocationUpdates:
+              permission == LocationPermission.always,
+          showBackgroundLocationIndicator: true,
+        )
+      : const LocationSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+          distanceFilter: 0,
+        );
+  yield* Geolocator.getPositionStream(locationSettings: settings)
+      .map(positionToUserLocation);
 }
 
 final ttsFactoryProvider = Provider<FlutterTts Function()>((_) => FlutterTts.new);
@@ -44,6 +68,21 @@ final flutterTtsProvider = Provider<FlutterTts>((ref) {
   final tag = effectiveLanguageTag(pref, deviceLocale);
   final ttsTag = tag == 'de' ? 'de-DE' : 'en-US';
   tts.setLanguage(ttsTag);
+  // Configure the iOS audio session so voice cues keep playing when the
+  // screen is locked and duck (rather than stop) any music the rider has
+  // running. Requires `UIBackgroundModes: audio` in Info.plist.
+  if (!kIsWeb && Platform.isIOS) {
+    tts.setSharedInstance(true);
+    tts.setIosAudioCategory(
+      IosTextToSpeechAudioCategory.playback,
+      [
+        IosTextToSpeechAudioCategoryOptions.duckOthers,
+        IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+        IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+      ],
+      IosTextToSpeechAudioMode.voicePrompt,
+    );
+  }
   // Fire-and-forget: upgrade to the best locally installed voice. iOS ships
   // a "default" voice per language; users who downloaded Enhanced/Premium
   // voices get a much better sounding cue without any extra UI.
@@ -101,6 +140,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
     loadNavigationRoute: ({required origin, required destination}) =>
         routingApi.computeNavigationRoute(origin, destination),
     locationStreamFactory: _buildLocationStream,
+    setWakelock: (enabled) => WakelockPlus.toggle(enable: enabled),
     speakInstruction: (text) async {
       if (!ref.read(ttsEnabledProvider)) return;
       try {

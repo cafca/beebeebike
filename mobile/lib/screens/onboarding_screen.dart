@@ -5,10 +5,11 @@ import '../l10n/generated/app_localizations.dart';
 import '../providers/onboarding_provider.dart';
 import '../theme/tokens.dart';
 import '../theme/typography.dart';
-import '../widgets/login_form.dart';
 import '../widgets/onboarding_dots.dart';
 import '../widgets/onboarding_page.dart';
+import 'login_screen.dart';
 import 'privacy_policy_screen.dart';
+import 'register_screen.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -43,9 +44,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  Future<void> _onLoginSuccess() async {
-    if (!mounted) return;
+  Future<void> _complete() async {
     await ref.read(onboardingCompletedProvider.notifier).complete();
+  }
+
+  void _openRegister() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RegisterScreen(onSuccess: _complete),
+      ),
+    );
+  }
+
+  void _openLogin() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LoginScreen(onSuccess: _complete),
+      ),
+    );
   }
 
   void _openPrivacyPolicy() {
@@ -82,6 +98,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   bullets: [
                     l10n.onboarding2Bullet1,
                     l10n.onboarding2Bullet2,
+                    l10n.onboarding2Bullet3,
                     l10n.onboarding2Bullet4,
                   ],
                   footer: Align(
@@ -104,9 +121,49 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   eyebrow: _eyebrow(2),
                   headline: l10n.onboarding3Headline,
                   body: l10n.onboarding3Body,
-                  actions: LoginForm(
-                    key: const ValueKey('onboarding-login-form'),
-                    onSuccess: _onLoginSuccess,
+                  actions: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton(
+                        key: const ValueKey('onboarding-register'),
+                        onPressed: _openRegister,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(BbbRadius.ctrl),
+                          ),
+                        ),
+                        child: Text(l10n.onboardingCreateAccount),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton(
+                        key: const ValueKey('onboarding-login'),
+                        onPressed: _openLogin,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: BbbColors.ink,
+                          side: const BorderSide(color: BbbColors.divider),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(BbbRadius.ctrl),
+                          ),
+                          textStyle: BbbText.cardTitle(),
+                        ),
+                        child: Text(l10n.onboardingLogin),
+                      ),
+                      const SizedBox(height: 4),
+                      TextButton(
+                        key: const ValueKey('onboarding-skip'),
+                        onPressed: _complete,
+                        style: TextButton.styleFrom(
+                          foregroundColor: BbbColors.inkMuted,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          textStyle: BbbText.label(),
+                        ),
+                        child: Text(l10n.onboardingSkip),
+                      ),
+                    ],
                   ),
                 ),
               ],

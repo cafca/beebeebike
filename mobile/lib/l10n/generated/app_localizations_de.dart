@@ -36,6 +36,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get loginErrorInvalid => 'Ungültige Email oder ungültiges Passwort';
 
   @override
+  String get registerTitle => 'Konto erstellen';
+
+  @override
+  String get registerSubmit => 'Registrieren';
+
+  @override
+  String get registerErrorPasswordTooShort =>
+      'Passwort muss mindestens 8 Zeichen lang sein';
+
+  @override
+  String get registerErrorEmailTaken =>
+      'Mit dieser Email existiert bereits ein Konto';
+
+  @override
+  String get registerErrorGeneric =>
+      'Konto konnte nicht erstellt werden. Bitte versuch es erneut.';
+
+  @override
   String get settingsTitle => 'Einstellungen';
 
   @override
@@ -137,6 +155,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboardingLogin => 'Jetzt einloggen';
 
   @override
+  String get onboardingCreateAccount => 'Registrieren';
+
+  @override
+  String get onboardingSkip => 'Später erst';
+
+  @override
   String get onboardingPrivacyLink => 'Vollständige Datenschutzerklärung';
 
   @override
@@ -161,11 +185,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboarding2Bullet1 =>
-      'Deine Bewertungen, gespeicherten Standorte, E-Mail und Passwort-Hash liegen auf einem Hetzner-Server in Deutschland.';
+      'Deine Bewertungen, deine gespeicherten Standorte und — nur mit Konto — deine E-Mail plus Passwort-Hash liegen auf einem Hetzner-Server in Deutschland.';
 
   @override
   String get onboarding2Bullet2 =>
-      'Ortssuche: Deine Eingabe wird über unseren Server an den Geocoding-Dienst Photon (betrieben von der Komoot GmbH, Deutschland) weitergeleitet. Deine Konto-Daten werden dabei nicht übertragen.';
+      'Ortssuche: Deine Eingabe wird über unseren Server an den Geocoding-Dienst Photon (betrieben von der Komoot GmbH, Deutschland) weitergeleitet. Konto-Daten werden dabei nicht übertragen.';
+
+  @override
+  String get onboarding2Bullet3 =>
+      'Ohne Konto bleibst du anonym — wir setzen nur eine zufällige Sitzungs-ID.';
 
   @override
   String get onboarding2Bullet4 =>
@@ -176,7 +204,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboarding3Body =>
-      'Male deine Bewertungen am Rechner auf beebeebike.com — sie landen automatisch auf dem Handy. Zum Loslegen einloggen.';
+      'Du kannst beebeebike sofort ohne Konto nutzen. Mit einem kostenlosen Konto kannst du auf beebeebike.com am Rechner schneller malen — deine Bewertungen landen automatisch auf dem Handy.';
 
   @override
   String get searchHint => 'Wohin?';

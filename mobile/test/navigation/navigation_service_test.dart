@@ -177,4 +177,33 @@ void main() {
 
     expect(received, [state]);
   });
+
+  test('toggles wakelock on start and dispose', () async {
+    final fakePlatform = FakeFerrostarFlutterPlatform();
+    final fakeController = FerrostarController('test', fakePlatform);
+
+    final toggles = <bool>[];
+    final service = NavigationService(
+      createController: (osrmJson, waypoints) async => fakeController,
+      loadNavigationRoute: ({required origin, required destination}) async => {
+        'routes': [
+          {'distance': 1234}
+        ]
+      },
+      locationStreamFactory: () => const Stream.empty(),
+      speakInstruction: (_) async {},
+      setWakelock: (enabled) async {
+        toggles.add(enabled);
+      },
+    );
+
+    await service.start(
+      origin: const WaypointInput(lat: 52.52, lng: 13.405),
+      destination: const WaypointInput(lat: 52.51, lng: 13.45),
+    );
+    expect(toggles, [true]);
+
+    await service.dispose();
+    expect(toggles, [true, false]);
+  });
 }

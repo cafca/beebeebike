@@ -25,6 +25,10 @@ async fn setup() -> Option<TestServer> {
 }
 
 async fn setup_with_db() -> Option<(TestServer, sqlx::PgPool)> {
+    setup_with_db_and_cap(15).await
+}
+
+async fn setup_with_db_and_cap(max_undo_history: usize) -> Option<(TestServer, sqlx::PgPool)> {
     let db_url = match std::env::var("TEST_DATABASE_URL") {
         Ok(url) => url,
         Err(_) => return None,
@@ -47,6 +51,7 @@ async fn setup_with_db() -> Option<(TestServer, sqlx::PgPool)> {
         rating_weight: 1.0,
         distance_influence: 70.0,
         max_areas_per_request: 200,
+        max_undo_history,
         // SSE pipeline not exercised by these tests — keeping it off
         // avoids spawning a listener task per test run.
         ratings_events_enabled: false,
@@ -86,6 +91,7 @@ async fn setup_with_graphhopper_url(graphhopper_url: String) -> Option<TestServe
         rating_weight: 1.0,
         distance_influence: 70.0,
         max_areas_per_request: 200,
+        max_undo_history: 15,
         ratings_events_enabled: false,
     };
 
@@ -1628,6 +1634,239 @@ async fn undo_after_migration_backfill_preserves_existing_areas() {
         .map(|f| f["properties"]["value"].as_i64().unwrap())
         .collect();
     assert!(values.contains(&3) && values.contains(&1));
+}
+
+#[tokio::test]
+async fn undo_history_cap_squashes_oldest_events() {
+    let Some((server, db)) = setup_with_db_and_cap(3).await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+    let user_id: uuid::Uuid = {
+        let (hname, hval) = with_session(&session);
+        let me: Value = server
+            .get("/api/auth/me")
+            .add_header(hname, hval)
+            .await
+            .json();
+        me["id"].as_str().unwrap().parse().unwrap()
+    };
+
+    // Paint 5 non-overlapping squares. cap = 3 → oldest 2 squashed into baseline.
+    let values = [-7, -3, 1, 3, 7];
+    for (i, v) in values.iter().enumerate() {
+        let x0 = 13.40 + (i as f64) * 0.01;
+        let polygon = json!({
+            "type": "Polygon",
+            "coordinates": [[[x0, 52.50], [x0 + 0.005, 52.50], [x0 + 0.005, 52.505], [x0, 52.505], [x0, 52.50]]]
+        });
+        let (hname, hval) = with_session(&session);
+        server
+            .put("/api/ratings/paint")
+            .add_header(hname, hval)
+            .json(&json!({ "geometry": polygon, "value": v }))
+            .await
+            .assert_status_ok();
+    }
+
+    let active: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM paint_events WHERE user_id = $1 AND status = 0")
+            .bind(user_id)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+    assert_eq!(active, 3, "active paint_events should be capped at 3");
+
+    let baseline: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM rated_areas_baseline WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+    assert!(
+        baseline > 0,
+        "baseline should have received squashed events"
+    );
+
+    // Overlay still shows all 5 painted areas — squash is transparent.
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.6,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    let features = overlay["features"].as_array().unwrap();
+    assert_eq!(
+        features.len(),
+        5,
+        "all painted areas must survive the squash"
+    );
+}
+
+#[tokio::test]
+async fn undo_stops_at_cap_and_preserves_baseline() {
+    let Some((server, _db)) = setup_with_db_and_cap(3).await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    // Paint 5 strokes; cap is 3, so 2 are squashed into baseline (immutable).
+    for i in 0..5 {
+        let x0 = 13.40 + (i as f64) * 0.01;
+        let polygon = json!({
+            "type": "Polygon",
+            "coordinates": [[[x0, 52.50], [x0 + 0.005, 52.50], [x0 + 0.005, 52.505], [x0, 52.505], [x0, 52.50]]]
+        });
+        let (hname, hval) = with_session(&session);
+        server
+            .put("/api/ratings/paint")
+            .add_header(hname, hval)
+            .json(&json!({ "geometry": polygon, "value": 3 }))
+            .await;
+    }
+
+    // Undo 3 times — should succeed each time.
+    for _ in 0..3 {
+        let (hname, hval) = with_session(&session);
+        let resp: Value = server
+            .post("/api/ratings/undo")
+            .add_header(hname, hval)
+            .await
+            .json();
+        assert_eq!(resp["can_redo"], true);
+    }
+
+    // 4th undo is a no-op: can_undo=false, baseline (first 2 strokes) remains.
+    let (hname, hval) = with_session(&session);
+    let resp: Value = server
+        .post("/api/ratings/undo")
+        .add_header(hname, hval)
+        .await
+        .json();
+    assert_eq!(resp["can_undo"], false, "cannot undo past the cap");
+
+    // The two squashed (baseline) areas are still painted.
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.6,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    let features = overlay["features"].as_array().unwrap();
+    assert_eq!(
+        features.len(),
+        2,
+        "pre-cap events should be permanently baked into baseline"
+    );
+}
+
+#[tokio::test]
+async fn redo_after_squash_still_restores_latest_state() {
+    let Some((server, _db)) = setup_with_db_and_cap(3).await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+
+    for i in 0..5 {
+        let x0 = 13.40 + (i as f64) * 0.01;
+        let polygon = json!({
+            "type": "Polygon",
+            "coordinates": [[[x0, 52.50], [x0 + 0.005, 52.50], [x0 + 0.005, 52.505], [x0, 52.505], [x0, 52.50]]]
+        });
+        let (hname, hval) = with_session(&session);
+        server
+            .put("/api/ratings/paint")
+            .add_header(hname, hval)
+            .json(&json!({ "geometry": polygon, "value": 3 }))
+            .await;
+    }
+
+    // Undo 3, then redo 3 — state should match post-stroke-5.
+    for _ in 0..3 {
+        let (hname, hval) = with_session(&session);
+        server
+            .post("/api/ratings/undo")
+            .add_header(hname, hval)
+            .await;
+    }
+    for _ in 0..3 {
+        let (hname, hval) = with_session(&session);
+        server
+            .post("/api/ratings/redo")
+            .add_header(hname, hval)
+            .await;
+    }
+
+    let (hname, hval) = with_session(&session);
+    let overlay: Value = server
+        .get("/api/ratings?bbox=13.3,52.4,13.6,52.6")
+        .add_header(hname, hval)
+        .await
+        .json();
+    let features = overlay["features"].as_array().unwrap();
+    assert_eq!(features.len(), 5, "redo should restore all 5 strokes");
+}
+
+#[tokio::test]
+async fn backfill_trims_legacy_users_over_cap() {
+    let Some((server, db)) = setup_with_db_and_cap(3).await else {
+        return;
+    };
+    let session = create_anonymous(&server).await;
+    let user_id: uuid::Uuid = {
+        let (hname, hval) = with_session(&session);
+        let me: Value = server
+            .get("/api/auth/me")
+            .add_header(hname, hval)
+            .await
+            .json();
+        me["id"].as_str().unwrap().parse().unwrap()
+    };
+
+    // Hand-seed 6 paint_events rows directly to simulate a legacy user.
+    for seq in 1..=6i64 {
+        let x0 = 13.40 + (seq as f64) * 0.01;
+        let polygon = format!(
+            r#"{{"type":"Polygon","coordinates":[[[{x0},52.50],[{},52.50],[{},52.505],[{x0},52.505],[{x0},52.50]]]}}"#,
+            x0 + 0.005,
+            x0 + 0.005
+        );
+        sqlx::query(
+            r#"
+            INSERT INTO paint_events (user_id, seq, geometry, value, status)
+            SELECT $1, $2, ST_GeomFromGeoJSON($3), 3, 0
+            "#,
+        )
+        .bind(user_id)
+        .bind(seq)
+        .bind(&polygon)
+        .execute(&db)
+        .await
+        .unwrap();
+    }
+
+    // Run the backfill helper and verify the cap is enforced.
+    beebeebike_backend::ratings::backfill_baseline_once(&db, 3)
+        .await
+        .unwrap();
+
+    let active: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM paint_events WHERE user_id = $1 AND status = 0")
+            .bind(user_id)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+    assert_eq!(active, 3);
+    let baseline: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM rated_areas_baseline WHERE user_id = $1")
+            .bind(user_id)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+    assert!(
+        baseline >= 3,
+        "squashed events should populate the baseline"
+    );
 }
 
 // ---------------------------------------------------------------------------

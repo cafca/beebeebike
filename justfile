@@ -68,6 +68,13 @@ test: test-backend test-web test-mobile test-ferrostar-flutter-plugin
 test-backend:
     cd backend && cargo test
 
+# Measure undo replay latency at various stack depths against DATABASE_URL.
+# Prints a table + recommended BEEBEEBIKE_MAX_UNDO_HISTORY. Pass extra args
+# after the recipe name (e.g. `just bench-undo --depths 1,5,10,20 --geometry-size large`).
+[group('test')]
+bench-undo *ARGS:
+    cd backend && cargo run --release --bin undo_bench -- --confirm {{ARGS}}
+
 # vitest unit tests + mobile-style parity; run `just build-web` first if the build matters
 [group('test')]
 test-web:

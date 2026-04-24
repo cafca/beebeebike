@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/foundation.dart';
 
+import '../services/error_reporter.dart';
 import '../services/haptics.dart';
 
 typedef CreateController = Future<FerrostarController> Function(
@@ -115,7 +116,7 @@ class NavigationService {
         await controller.replaceRoute(rerouteJson);
         _rerouteSucceededController.add(null);
       } catch (e, st) {
-        debugPrint('nav: reroute error: $e\n$st');
+        reportError(e, st, context: 'nav.reroute');
       } finally {
         _rerouteInProgress = false;
         _rerouteController.add(false);

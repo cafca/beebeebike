@@ -9,6 +9,7 @@ import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
 import '../services/brush_geometry.dart';
 import '../services/brush_overlay.dart';
+import '../services/error_reporter.dart';
 
 class TapFeature {
   const TapFeature({required this.areaId, required this.geometry});
@@ -165,8 +166,9 @@ class BrushController extends Notifier<BrushState> {
           .refreshAfterPaint();
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
       _maybeRecomputeRoute();
-    } catch (e) {
+    } catch (e, st) {
       _log('brush: undo failed: $e');
+      reportError(e, st, context: 'brush.undo');
     } finally {
       state = state.withOp(null);
     }
@@ -183,8 +185,9 @@ class BrushController extends Notifier<BrushState> {
           .refreshAfterPaint();
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
       _maybeRecomputeRoute();
-    } catch (e) {
+    } catch (e, st) {
       _log('brush: redo failed: $e');
+      reportError(e, st, context: 'brush.redo');
     } finally {
       state = state.withOp(null);
     }
@@ -226,8 +229,9 @@ class BrushController extends Notifier<BrushState> {
       }
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
       _maybeRecomputeRoute();
-    } catch (e) {
+    } catch (e, st) {
       _log('brush: paint failed: $e');
+      reportError(e, st, context: 'brush.paint');
     } finally {
       state = state.withOp(null);
     }

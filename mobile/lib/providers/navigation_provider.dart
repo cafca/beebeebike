@@ -10,6 +10,7 @@ import '../api/client.dart';
 import '../api/routing_api.dart';
 import '../navigation/location_converter.dart';
 import '../navigation/navigation_service.dart';
+import '../services/error_reporter.dart';
 import 'locale_provider.dart';
 
 Stream<UserLocation> _buildLocationStream() async* {
@@ -104,8 +105,8 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
       if (!ref.read(ttsEnabledProvider)) return;
       try {
         await tts.speak(text);
-      } catch (e) {
-        debugPrint('nav: tts error: $e');
+      } catch (e, st) {
+        reportError(e, st, context: 'nav.tts');
       }
     },
   );

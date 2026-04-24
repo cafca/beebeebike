@@ -32,6 +32,7 @@ dependencies:
   json_annotation: ^4.9.0
   google_fonts: ^6.2.1
   haptic_feedback: ^0.6.4
+  sentry_flutter: ^8.14.0
   ferrostar_flutter:
     path: ../packages/ferrostar_flutter
 

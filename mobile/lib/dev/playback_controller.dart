@@ -102,6 +102,23 @@ class PlaybackController extends Notifier<PlaybackState> {
     _engine.clearOverride();
     state = _engine.state;
   }
+
+  /// Returns the puck's current map latlng — interpolated from the polyline
+  /// at `state.cumulativeM`, or the current override if set. Returns
+  /// `LatLng(0, 0)` if no route is loaded; callers should check
+  /// `state.routeLengthM > 0` first.
+  LatLng currentLatLng() {
+    final preview =
+        ref.read(routeControllerProvider.select((s) => s.preview));
+    if (preview == null) return const LatLng(0, 0);
+    final override = state.overrideLatLng;
+    if (override != null) return override;
+    final coords = (preview.geometry['coordinates'] as List)
+        .map((c) => LatLng((c as List)[1] as double, c[0] as double))
+        .toList();
+    if (coords.length < 2) return const LatLng(0, 0);
+    return PolylineWalker(coords).positionAt(state.cumulativeM).latLng;
+  }
 }
 
 final playbackControllerProvider =

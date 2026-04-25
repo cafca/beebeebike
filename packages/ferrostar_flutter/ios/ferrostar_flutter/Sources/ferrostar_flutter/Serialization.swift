@@ -13,8 +13,13 @@ enum Serialization {
           let tsMs = dict["timestamp_ms"] as? Int else {
       throw SerializationError.missingField("lat/lng/horizontal_accuracy_m/timestamp_ms")
     }
-    let course: CourseOverGround? = (dict["course_deg"] as? Double).map {
-      CourseOverGround(degrees: UInt16($0), accuracy: nil)
+    // CLLocation course is -1 when heading is unknown; clamp negatives to nil
+    // and finite >360 values into wrap range. UInt16 init traps on negative or
+    // out-of-range Double, so this guard is load-bearing.
+    let course: CourseOverGround? = (dict["course_deg"] as? Double).flatMap {
+      guard $0.isFinite, $0 >= 0 else { return nil }
+      let deg = UInt16(min($0.truncatingRemainder(dividingBy: 360), 359))
+      return CourseOverGround(degrees: deg, accuracy: nil)
     }
     let speed: Speed? = (dict["speed_mps"] as? Double).map {
       Speed(value: $0, accuracy: nil)
@@ -74,10 +79,21 @@ enum Serialization {
   }
 
   static func encodeTripProgress(_ p: TripProgress) -> [String: Any?] {
+    // Int(Double) traps on NaN/Inf/overflow with EXC_BREAKPOINT — observed in
+    // prod when ferrostar emits a degenerate first progress tick at session
+    // start. Coerce to 0 so the Dart side falls back to "—" / loading state.
+    // Bound at ~31 years of seconds before multiplying — covers any sane
+    // routing duration and stays well within Int64 after *1000.
+    let durMs: Int
+    if p.durationRemaining.isFinite, abs(p.durationRemaining) < 1e9 {
+      durMs = Int(p.durationRemaining * 1000)
+    } else {
+      durMs = 0
+    }
     return [
-      "distance_to_next_maneuver_m": p.distanceToNextManeuver,
-      "distance_remaining_m": p.distanceRemaining,
-      "duration_remaining_ms": Int(p.durationRemaining * 1000),
+      "distance_to_next_maneuver_m": p.distanceToNextManeuver.isFinite ? p.distanceToNextManeuver : 0,
+      "distance_remaining_m": p.distanceRemaining.isFinite ? p.distanceRemaining : 0,
+      "duration_remaining_ms": durMs,
     ]
   }
 

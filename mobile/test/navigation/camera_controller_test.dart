@@ -9,20 +9,20 @@ void main() {
       expect(c.followZoom, 17.0);
     });
 
-    test('onFirstFix transitions awaitingFirstFix -> following', () {
+    test('onNavStart transitions awaitingFirstFix -> following', () {
       final c = NavigationCameraController();
-      c.onFirstFix();
+      c.onNavStart();
       expect(c.mode, CameraMode.following);
     });
 
-    test('onFirstFix is a no-op if already following', () {
-      final c = NavigationCameraController()..onFirstFix();
-      c.onFirstFix();
+    test('onNavStart is a no-op if already following', () {
+      final c = NavigationCameraController()..onNavStart();
+      c.onNavStart();
       expect(c.mode, CameraMode.following);
     });
 
     test('onTrackingDismissed transitions following -> free', () {
-      final c = NavigationCameraController()..onFirstFix();
+      final c = NavigationCameraController()..onNavStart();
       c.onTrackingDismissed();
       expect(c.mode, CameraMode.free);
     });
@@ -45,7 +45,7 @@ void main() {
       final c = NavigationCameraController();
       c.onZoomChanged(14.0);
       expect(c.followZoom, 17.0); // awaitingFirstFix: ignored
-      c.onFirstFix();
+      c.onNavStart();
       c.onZoomChanged(15.5);
       expect(c.followZoom, 17.0); // following: ignored
       c.onTrackingDismissed();
@@ -55,14 +55,14 @@ void main() {
 
     test('onRecenterTapped transitions free -> following', () {
       final c = NavigationCameraController()
-        ..onFirstFix()
+        ..onNavStart()
         ..onTrackingDismissed();
       c.onRecenterTapped();
       expect(c.mode, CameraMode.following);
     });
 
     test('onRecenterTapped is a no-op in following', () {
-      final c = NavigationCameraController()..onFirstFix();
+      final c = NavigationCameraController()..onNavStart();
       c.onRecenterTapped();
       expect(c.mode, CameraMode.following);
     });
@@ -70,9 +70,9 @@ void main() {
     test('onArrived transitions any state to arrived', () {
       for (final setup in [
         () => NavigationCameraController(),
-        () => NavigationCameraController()..onFirstFix(),
+        () => NavigationCameraController()..onNavStart(),
         () => NavigationCameraController()
-          ..onFirstFix()
+          ..onNavStart()
           ..onTrackingDismissed(),
       ]) {
         final c = setup();
@@ -85,7 +85,7 @@ void main() {
       final c = NavigationCameraController();
       var notifications = 0;
       c.addListener(() => notifications++);
-      c.onFirstFix();
+      c.onNavStart();
       c.onTrackingDismissed();
       c.onZoomChanged(14.0);
       c.onRecenterTapped();
@@ -105,11 +105,11 @@ void main() {
       expect(notifications, 0);
 
       // Real transition: -> following
-      c.onFirstFix();
+      c.onNavStart();
       notifications = 0;
 
       // No-ops from following
-      c.onFirstFix();
+      c.onNavStart();
       c.onZoomChanged(14.0);
       expect(notifications, 0);
 

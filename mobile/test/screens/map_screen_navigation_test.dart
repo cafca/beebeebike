@@ -114,15 +114,24 @@ Future<void> _triggerRebuild(
 }
 
 void main() {
-  testWidgets('recenter FAB hidden initially', (tester) async {
+  testWidgets('recenter FAB hidden in awaitingFirstFix (pre-first-fix)',
+      (tester) async {
     await _pumpNavActive(tester);
+    expect(find.byType(RecenterFab), findsNothing);
+  });
+
+  testWidgets('recenter FAB hidden when camera enters following mode',
+      (tester) async {
+    final h = await _pumpNavActive(tester);
+    h.cam.onNavStart();
+    await _triggerRebuild(tester, h.navStream);
     expect(find.byType(RecenterFab), findsNothing);
   });
 
   testWidgets('recenter FAB visible when camera enters free mode',
       (tester) async {
     final h = await _pumpNavActive(tester);
-    h.cam.onFirstFix();
+    h.cam.onNavStart();
     h.cam.onTrackingDismissed();
     await _triggerRebuild(tester, h.navStream);
     expect(find.byType(RecenterFab), findsOneWidget);

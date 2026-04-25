@@ -7,7 +7,14 @@ import '../models/route_preview.dart';
 import '../models/route_state.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
+import '../providers/supported_bbox_provider.dart';
 import '../services/haptics.dart';
+
+/// Sentinel error string set on [RouteState.error] when the route origin
+/// (typically the user's GPS fix) lies outside the supported coverage bbox.
+/// Consumers (e.g. RouteSheet) map this to a localized message instead of
+/// the generic "could not load route" text.
+const kRouteErrorOriginOutsideBbox = '__beebeebike_origin_outside_bbox__';
 
 typedef RoutePreviewLoader = Future<RoutePreview> Function({
   required Location origin,
@@ -69,6 +76,16 @@ class RouteController extends Notifier<RouteState> {
       AppHaptics.routeError();
       return;
     }
+    final bbox = ref.read(supportedBboxProvider);
+    if (bbox != null && !bbox.contains(origin.lat, origin.lng)) {
+      state = state.copyWith(
+        isLoading: false,
+        error: kRouteErrorOriginOutsideBbox,
+        preview: null,
+      );
+      AppHaptics.routeError();
+      return;
+    }
 
     final generation = ++_loadGeneration;
     state = state.copyWith(isLoading: true, error: null, preview: null);
@@ -102,6 +119,14 @@ class RouteController extends Notifier<RouteState> {
     final destination = state.destination;
     if (origin == null || destination == null) return;
     if (origin.lat == destination.lat && origin.lng == destination.lng) return;
+    final bbox = ref.read(supportedBboxProvider);
+    if (bbox != null && !bbox.contains(origin.lat, origin.lng)) {
+      state = state.copyWith(
+        isLoading: false,
+        error: kRouteErrorOriginOutsideBbox,
+      );
+      return;
+    }
     final generation = ++_loadGeneration;
     state = state.copyWith(isLoading: true, error: null);
     try {

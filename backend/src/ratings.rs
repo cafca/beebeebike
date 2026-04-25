@@ -97,25 +97,8 @@ fn validate_rating_value(value: i32) -> Result<(), AppError> {
 }
 
 fn parse_bbox(bbox: &str) -> Result<(f64, f64, f64, f64), AppError> {
-    let parts: Vec<&str> = bbox.split(',').collect();
-    if parts.len() != 4 {
-        return Err(AppError::BadRequest(
-            "bbox must be in the format: west,south,east,north".into(),
-        ));
-    }
-
-    let parse_coord = |s: &str| {
-        s.trim()
-            .parse::<f64>()
-            .map_err(|_| AppError::BadRequest(format!("invalid bbox coordinate: {s}")))
-    };
-
-    Ok((
-        parse_coord(parts[0])?,
-        parse_coord(parts[1])?,
-        parse_coord(parts[2])?,
-        parse_coord(parts[3])?,
-    ))
+    let b = crate::bbox::Bbox::parse(bbox).map_err(AppError::BadRequest)?;
+    Ok((b.west, b.south, b.east, b.north))
 }
 
 // ---------------------------------------------------------------------------

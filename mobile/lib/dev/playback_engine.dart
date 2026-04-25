@@ -49,6 +49,7 @@ class PlaybackEngine {
 
   void pause() {
     _state = _state.copyWith(isPlaying: false);
+    _emitCurrent();
     _stopTimer();
   }
 
@@ -65,6 +66,7 @@ class PlaybackEngine {
   }
 
   void setOverridePosition(LatLng latLng) {
+    if (_walker == null) return;
     _state = _state.copyWith(overrideLatLng: latLng);
     if (_timer == null) _startTimer();
     _emitCurrent();
@@ -97,7 +99,11 @@ class PlaybackEngine {
       _emitCurrent();
       return;
     }
-    if (!_state.isPlaying) return;
+    if (!_state.isPlaying) {
+      _emitCurrent();
+      _stopTimer();
+      return;
+    }
     final dt = 1.0 / kPlaybackTickHz;
     final advance = _state.routeBaseSpeedMps * _state.speedMultiplier * dt;
     final next = (_state.cumulativeM + advance).clamp(0.0, _state.routeLengthM);

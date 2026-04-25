@@ -59,6 +59,24 @@ void main() {
       });
     });
 
+    test('pause emits last position once with speed=0', () {
+      fakeAsync((async) {
+        final e = PlaybackEngine()
+          ..setRoute(walker: walker(), routeBaseSpeedMps: 10.0);
+        final got = <UserLocation>[];
+        final sub = e.stream.listen(got.add);
+        e.play();
+        async.elapse(const Duration(seconds: 1));
+        final beforePause = got.length;
+        e.pause();
+        async.flushMicrotasks();
+        expect(got.length, greaterThan(beforePause));
+        expect(got.last.speedMps, 0.0);
+        sub.cancel();
+        e.dispose();
+      });
+    });
+
     test('override emits override latlng with speed=0; advance halts', () {
       fakeAsync((async) {
         final e = PlaybackEngine()
@@ -90,6 +108,10 @@ void main() {
         e.clearOverride();
         async.elapse(const Duration(milliseconds: 250));
         expect(e.state.overrideLatLng, isNull);
+        // Cumulative should now be advancing again.
+        final afterClearCum = e.state.cumulativeM;
+        async.elapse(const Duration(milliseconds: 250));
+        expect(e.state.cumulativeM, greaterThan(afterClearCum));
         e.dispose();
       });
     });

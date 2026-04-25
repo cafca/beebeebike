@@ -179,7 +179,8 @@ extension Serialization {
     let snap = (dict["snap_user_location_to_route"] as? Bool) ?? true
     return NavigationControllerConfig(
       waypointAdvance: .waypointWithinRange(35.0),
-      stepAdvanceCondition: stepAdvanceDistanceToEndOfStep(distance: 10, minimumHorizontalAccuracy: 32),
+      stepAdvanceCondition: stepAdvanceDistanceEntryAndExit(
+        minimumHorizontalAccuracy: 32, distanceToEndOfStep: 30, distanceAfterEndStep: 5),
       arrivalStepAdvanceCondition: stepAdvanceManual(),
       routeDeviationTracking: .staticThreshold(minimumHorizontalAccuracy: 25, maxAcceptableDeviation: devM),
       snappedLocationCourseFiltering: snap ? .snapToRoute : .raw

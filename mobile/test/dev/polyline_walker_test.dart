@@ -49,5 +49,21 @@ void main() {
     test('throws on polyline with fewer than 2 points', () {
       expect(() => PolylineWalker(const [LatLng(0, 0)]), throwsArgumentError);
     });
+
+    test('handles zero-length segment without NaN', () {
+      final points = [
+        const LatLng(0.0, 0.0),
+        const LatLng(0.0, 0.0), // duplicate of previous
+        const LatLng(0.0, 0.001),
+      ];
+      final w = PolylineWalker(points);
+      // Asking for position right at the zero-length boundary must return finite coords.
+      final p = w.positionAt(0.0);
+      expect(p.latLng.latitude.isFinite, isTrue);
+      expect(p.latLng.longitude.isFinite, isTrue);
+      // And mid-route still works.
+      final mid = w.positionAt(w.totalLengthM / 2);
+      expect(mid.latLng.longitude.isFinite, isTrue);
+    });
   });
 }

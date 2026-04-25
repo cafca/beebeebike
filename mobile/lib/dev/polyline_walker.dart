@@ -43,6 +43,10 @@ class PolylineWalker {
     final segIdx = lo - 1;
     final segStart = _cumulative[segIdx];
     final segEnd = _cumulative[segIdx + 1];
+    // Guard against zero-length segments: duplicate points produce div-by-zero in t.
+    if (segEnd - segStart < 1e-9) {
+      return WalkerPoint(_points[segIdx + 1], _bearings[segIdx]);
+    }
     final t = (cumulativeM - segStart) / (segEnd - segStart);
     final a = _points[segIdx];
     final b = _points[segIdx + 1];

@@ -598,17 +598,19 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   }
                   final b = _brushNotifier;
                   if (b == null) return;
-                  await b.endStroke(tapFeatureLookup: _probeRatingFeature);
+                  await b.endStroke();
                 },
                 onPanCancel: () {
                   _brushNotifier?.cancelStroke();
                 },
-                onTap: (latLng) async {
+                onLongPress: (latLng) async {
                   if (_paintMultiTouch) return;
                   final b = _brushNotifier;
                   if (b == null) return;
-                  b.startStroke(latLng);
-                  await b.endStroke(tapFeatureLookup: _probeRatingFeature);
+                  final feature = await _probeRatingFeature(latLng);
+                  if (feature == null) return;
+                  unawaited(AppHaptics.recolor());
+                  await b.recolorFromLongPress(feature);
                 },
                 toLatLng: (p) async {
                   final c = _mapController;
@@ -908,7 +910,7 @@ class _PaintGestureWrap extends StatelessWidget {
     required this.onPanUpdate,
     required this.onPanEnd,
     required this.onPanCancel,
-    required this.onTap,
+    required this.onLongPress,
     required this.toLatLng,
     required this.child,
   });
@@ -918,7 +920,7 @@ class _PaintGestureWrap extends StatelessWidget {
   final ValueChanged<LatLng> onPanUpdate;
   final VoidCallback onPanEnd;
   final VoidCallback onPanCancel;
-  final ValueChanged<LatLng> onTap;
+  final ValueChanged<LatLng> onLongPress;
   final Future<LatLng> Function(math.Point<double>) toLatLng;
   final Widget child;
 
@@ -953,13 +955,15 @@ class _PaintGestureWrap extends StatelessWidget {
                 r.onCancel = onPanCancel;
               },
             ),
-            TapGestureRecognizer:
-                GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
-              TapGestureRecognizer.new,
+            LongPressGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+              () => LongPressGestureRecognizer(
+                duration: const Duration(milliseconds: 500),
+              ),
               (r) {
-                r.onTapUp = (d) async {
+                r.onLongPressStart = (d) async {
                   final latLng = await toLatLng(_point(d.localPosition));
-                  onTap(latLng);
+                  onLongPress(latLng);
                 };
               },
             ),

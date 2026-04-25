@@ -83,10 +83,10 @@ void main() {
     expect(surface.clearCount, greaterThanOrEqualTo(1));
   });
 
-  test('endStroke with < 2 points and no hit feature is a no-op', () async {
+  test('endStroke with < 2 points is a no-op', () async {
     notifier().setValue(1);
     notifier().startStroke(const LatLng(52.5, 13.4));
-    await notifier().endStroke(tapFeatureLookup: (_) async => null);
+    await notifier().endStroke();
     verifyNever(() => api.paint(
           geometry: any(named: 'geometry'),
           value: any(named: 'value'),
@@ -94,7 +94,7 @@ void main() {
         ));
   });
 
-  test('endStroke with single-tap hit calls paint with target_id', () async {
+  test('recolorFromLongPress calls paint with target_id', () async {
     const hitGeom = {
       'type': 'Polygon',
       'coordinates': [[[13.4, 52.5], [13.41, 52.5], [13.41, 52.51], [13.4, 52.51], [13.4, 52.5]]],
@@ -106,10 +106,8 @@ void main() {
         )).thenAnswer((_) async => _ok());
 
     notifier().setValue(3);
-    notifier().startStroke(const LatLng(52.5, 13.4));
-    await notifier().endStroke(
-      tapFeatureLookup: (_) async =>
-          const TapFeature(areaId: 99, geometry: hitGeom),
+    await notifier().recolorFromLongPress(
+      const TapFeature(areaId: 99, geometry: hitGeom),
     );
 
     verify(() => api.paint(
@@ -131,7 +129,7 @@ void main() {
     notifier().startStroke(const LatLng(52.5, 13.400));
     notifier().addPoint(const LatLng(52.5, 13.401), 14);
     notifier().addPoint(const LatLng(52.5, 13.402), 14);
-    await notifier().endStroke(tapFeatureLookup: (_) async => null);
+    await notifier().endStroke();
 
     final captured = verify(() => api.paint(
           geometry: captureAny(named: 'geometry'),
@@ -161,7 +159,7 @@ void main() {
     notifier().startStroke(const LatLng(52.5, 13.400));
     notifier().addPoint(const LatLng(52.5, 13.401), 14);
     notifier().addPoint(const LatLng(52.5, 13.402), 14);
-    await notifier().endStroke(tapFeatureLookup: (_) async => null);
+    await notifier().endStroke();
 
     expect(state().paintMode, isTrue);
     expect(surface.clearCount, greaterThanOrEqualTo(1));

@@ -1,8 +1,9 @@
 import 'dart:convert';
+
+import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -26,8 +27,8 @@ void main() {
     await ctrl.updateLocation(UserLocation(
       lat: 59.4429,
       lng: 24.7653,
-      horizontalAccuracyM: 5.0,
-      courseDeg: 315.0,
+      horizontalAccuracyM: 5,
+      courseDeg: 315,
       timestampMs: DateTime.now().millisecondsSinceEpoch,
     ));
 

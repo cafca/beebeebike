@@ -1,9 +1,8 @@
+import 'package:beebeebike/api/auth_api.dart';
+import 'package:beebeebike/api/client.dart';
+import 'package:beebeebike/models/user.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../api/auth_api.dart';
-import '../api/client.dart';
-import '../models/user.dart';
 
 final authApiProvider = Provider<AuthApi>((ref) => AuthApi(ref.watch(dioProvider)));
 

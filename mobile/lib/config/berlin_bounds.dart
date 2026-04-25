@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
+
 /// Axis-aligned bounding box in EPSG:4326 degrees. Flattened (not
 /// `LatLngBounds`) so it can be used in pure-Dart tests without pulling a
 /// MapLibre controller.
+@immutable
 class Bbox {
   const Bbox({
     required this.west,

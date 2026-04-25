@@ -182,7 +182,7 @@ Dio buildMockDio({
           statusCode: 200,
           data: geocodeReturnsResults
               ? TestFixtures.geocodeResponse
-              : {'features': []},
+              : {'features': <dynamic>[]},
         ));
         return;
       }
@@ -225,9 +225,9 @@ Dio buildMockDio({
         handler.resolve(Response(
           requestOptions: options,
           statusCode: 200,
-          data: const {
+          data: const <String, dynamic>{
             'type': 'FeatureCollection',
-            'features': [],
+            'features': <dynamic>[],
             'can_undo': false,
             'can_redo': false,
           },
@@ -245,11 +245,11 @@ Dio buildMockDio({
           handler.resolve(Response(
             requestOptions: options,
             statusCode: 200,
-            data: {
+            data: <String, dynamic>{
               'id': 'home',
-              'label': options.data?['label'] ?? 'Home',
-              'lng': options.data?['lng'] ?? 13.4050,
-              'lat': options.data?['lat'] ?? 52.5200,
+              'label': (options.data as Map?)?['label'] ?? 'Home',
+              'lng': (options.data as Map?)?['lng'] ?? 13.4050,
+              'lat': (options.data as Map?)?['lat'] ?? 52.5200,
             },
           ));
         } else if (options.method == 'DELETE') {

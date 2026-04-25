@@ -4,7 +4,7 @@ enum CameraMode { awaitingFirstFix, following, free, arrived }
 
 class NavigationCameraController extends ChangeNotifier {
   CameraMode _mode = CameraMode.awaitingFirstFix;
-  double _followZoom = 17.0;
+  double _followZoom = 17;
 
   CameraMode get mode => _mode;
   double get followZoom => _followZoom;

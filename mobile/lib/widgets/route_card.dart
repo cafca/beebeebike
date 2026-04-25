@@ -1,15 +1,16 @@
+import 'dart:async';
+
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/models/location.dart';
+import 'package:beebeebike/providers/route_provider.dart';
+import 'package:beebeebike/providers/search_history_provider.dart';
+import 'package:beebeebike/screens/search_screen.dart';
+import 'package:beebeebike/screens/settings_screen.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../models/location.dart';
-import '../providers/route_provider.dart';
-import '../providers/search_history_provider.dart';
-import '../screens/search_screen.dart';
-import '../screens/settings_screen.dart';
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
 
 class RouteCard extends ConsumerWidget {
   const RouteCard({super.key});
@@ -25,7 +26,7 @@ class RouteCard extends ConsumerWidget {
         lng: pos.longitude,
         lat: pos.latitude,
       );
-    } catch (_) {
+    } on Object catch (_) {
       return Location(
         id: 'gps',
         name: label,
@@ -39,36 +40,38 @@ class RouteCard extends ConsumerWidget {
   Future<void> _openOriginSearch(BuildContext context, WidgetRef ref) async {
     final gpsLabel = AppLocalizations.of(context)!.locationCurrent;
     final result = await Navigator.of(context).push<Location>(
-      MaterialPageRoute(builder: (_) => const SearchScreen()),
+      MaterialPageRoute<Location>(builder: (_) => const SearchScreen()),
     );
     if (result == null || !context.mounted) return;
     final origin = result.id == 'gps' ? await _resolveGps(gpsLabel) : result;
     if (!context.mounted) return;
     if (result.id != 'gps') {
-      ref.read(searchHistoryProvider.notifier).remember(result);
+      unawaited(ref.read(searchHistoryProvider.notifier).remember(result));
     }
-    ref.read(routeControllerProvider.notifier).setOrigin(origin);
+    unawaited(ref.read(routeControllerProvider.notifier).setOrigin(origin));
   }
 
   Future<void> _openDestinationSearch(
       BuildContext context, WidgetRef ref) async {
     final gpsLabel = AppLocalizations.of(context)!.locationCurrent;
     final result = await Navigator.of(context).push<Location>(
-      MaterialPageRoute(builder: (_) => const SearchScreen()),
+      MaterialPageRoute<Location>(builder: (_) => const SearchScreen()),
     );
     if (result == null || !context.mounted) return;
     final destination =
         result.id == 'gps' ? await _resolveGps(gpsLabel) : result;
     if (!context.mounted) return;
     if (result.id != 'gps') {
-      ref.read(searchHistoryProvider.notifier).remember(result);
+      unawaited(ref.read(searchHistoryProvider.notifier).remember(result));
     }
     if (ref.read(routeControllerProvider).origin == null) {
       final gpsOrigin = await _resolveGps(gpsLabel);
       if (!context.mounted) return;
-      ref.read(routeControllerProvider.notifier).setOrigin(gpsOrigin);
+      unawaited(ref.read(routeControllerProvider.notifier).setOrigin(gpsOrigin));
     }
-    ref.read(routeControllerProvider.notifier).setDestination(destination);
+    unawaited(
+      ref.read(routeControllerProvider.notifier).setDestination(destination),
+    );
   }
 
   Future<void> _swap(BuildContext context, WidgetRef ref) async {
@@ -86,8 +89,10 @@ class RouteCard extends ConsumerWidget {
       newDestination = origin;
     }
     if (!context.mounted) return;
-    ref.read(routeControllerProvider.notifier).setOrigin(newOrigin);
-    ref.read(routeControllerProvider.notifier).setDestination(newDestination);
+    unawaited(ref.read(routeControllerProvider.notifier).setOrigin(newOrigin));
+    unawaited(
+      ref.read(routeControllerProvider.notifier).setDestination(newDestination),
+    );
   }
 
   @override
@@ -127,8 +132,8 @@ class RouteCard extends ConsumerWidget {
             valueWeight: FontWeight.w600,
             trailing: _GhostIconButton(
               icon: Icons.person_outline,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
               ),
             ),
             onTap: () => _openOriginSearch(context, ref),

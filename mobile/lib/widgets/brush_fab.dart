@@ -1,13 +1,12 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/providers/brush_provider.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/widgets/paint_roller_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../l10n/generated/app_localizations.dart';
-import '../providers/brush_provider.dart';
-import '../theme/tokens.dart';
-import 'paint_roller_icon.dart';
-
 /// Always-visible paint-mode toggle. Sits at the bottom of the right-side
-/// FAB column on every non-navigation view. Flips [BrushController.paintMode].
+/// FAB column on every non-navigation view. Flips `BrushController.paintMode`.
 class BrushFab extends ConsumerWidget {
   const BrushFab({super.key});
 
@@ -30,10 +29,8 @@ class BrushFab extends ConsumerWidget {
           shape: CircleBorder(
             side: BorderSide(
               color: active ? BbbColors.ink : BbbColors.divider,
-              width: 1,
             ),
           ),
-          elevation: 0,
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: () =>
@@ -48,7 +45,6 @@ class BrushFab extends ConsumerWidget {
               ),
               child: Center(
                 child: PaintRollerIcon(
-                  size: 24,
                   color: active ? BbbColors.panel : BbbColors.ink,
                 ),
               ),

@@ -1,7 +1,6 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/widgets/login_form.dart';
 import 'package:flutter/material.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../widgets/login_form.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key, this.onSuccess});

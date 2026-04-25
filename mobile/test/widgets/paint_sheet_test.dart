@@ -1,11 +1,10 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/providers/brush_provider.dart';
+import 'package:beebeebike/widgets/paint_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:beebeebike/l10n/generated/app_localizations.dart';
-import 'package:beebeebike/providers/brush_provider.dart';
-import 'package:beebeebike/widgets/paint_sheet.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(

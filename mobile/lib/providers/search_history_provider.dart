@@ -1,9 +1,8 @@
 import 'dart:convert';
 
+import 'package:beebeebike/models/location.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../models/location.dart';
 
 const _recentSearchesKey = 'beebeebike.recentSearches';
 

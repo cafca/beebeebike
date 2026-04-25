@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:beebeebike/l10n/generated/app_localizations.dart';
@@ -111,7 +112,7 @@ void main() {
 
     // Pre-seed origin so the tap handler skips the Geolocator GPS branch,
     // which has no platform channel in the test env.
-    container.read(routeControllerProvider.notifier).setOrigin(fakeOrigin());
+    unawaited(container.read(routeControllerProvider.notifier).setOrigin(fakeOrigin()));
 
     expect(container.read(routeControllerProvider).destination, isNull);
 

@@ -19,7 +19,6 @@ void main() {
         buildTestWidget(
           const SettingsScreen(),
           prefs: prefs,
-          authenticated: false,
         ),
       );
       await tester.pumpAndSettle();
@@ -35,7 +34,6 @@ void main() {
         buildTestWidget(
           const SettingsScreen(),
           prefs: prefs,
-          authenticated: false,
         ),
       );
       await tester.pumpAndSettle();
@@ -55,7 +53,6 @@ void main() {
         buildTestWidget(
           const SettingsScreen(),
           prefs: prefs,
-          authenticated: false,
         ),
       );
       await tester.pumpAndSettle();
@@ -131,14 +128,13 @@ void main() {
         buildTestWidget(
           Builder(
             builder: (context) => ElevatedButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
               ),
               child: const Text('Open Login'),
             ),
           ),
           prefs: prefs,
-          loginSucceeds: true,
         ),
       );
       await tester.pumpAndSettle();

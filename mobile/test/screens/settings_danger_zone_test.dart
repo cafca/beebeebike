@@ -25,7 +25,6 @@ void main() {
       buildTestWidget(
         const SettingsScreen(),
         prefs: prefs,
-        authenticated: false,
       ),
     );
     await tester.pumpAndSettle();
@@ -52,7 +51,7 @@ void main() {
   testWidgets('confirm dialog cancels do not call delete', (tester) async {
     final prefs = await SharedPreferences.getInstance();
     await pumpTall(tester);
-    int deleteCalls = 0;
+    var deleteCalls = 0;
     final dio = _mockDioForDelete(onDelete: () => deleteCalls++);
 
     await tester.pumpWidget(
@@ -89,7 +88,7 @@ void main() {
       (tester) async {
     final prefs = await SharedPreferences.getInstance();
     await pumpTall(tester);
-    int deleteCalls = 0;
+    var deleteCalls = 0;
     final dio = _mockDioForDelete(onDelete: () => deleteCalls++);
 
     await tester.pumpWidget(

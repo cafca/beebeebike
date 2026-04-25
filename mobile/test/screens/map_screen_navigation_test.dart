@@ -61,7 +61,7 @@ Future<_NavHarness> _pumpNavActive(WidgetTester tester) async {
   final cam = NavigationCameraController();
 
   final fakeService = NavigationService(
-    createController: (_, __) => throw UnimplementedError(),
+    createController: (_, _) => throw UnimplementedError(),
     loadNavigationRoute: ({required origin, required destination}) =>
         throw UnimplementedError(),
     locationStreamFactory: () => const Stream.empty(),
@@ -88,11 +88,11 @@ Future<_NavHarness> _pumpNavActive(WidgetTester tester) async {
         navigationServiceProvider.overrideWithValue(fakeService),
         navigationCameraControllerProvider.overrideWith((ref) => cam),
       ],
-      child: MaterialApp(
-        locale: const Locale('en'),
+      child: const MaterialApp(
+        locale: Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const MapScreen(),
+        home: MapScreen(),
       ),
     ),
   );

@@ -1,10 +1,9 @@
 import 'dart:async';
 
+import 'package:beebeebike/navigation/navigation_service.dart';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:ferrostar_flutter/src/ferrostar_flutter_platform.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:beebeebike/navigation/navigation_service.dart';
 
 class FakeFerrostarFlutterPlatform extends FerrostarFlutterPlatform {
   final _deviationCtrl = StreamController<RouteDeviation>.broadcast();
@@ -70,7 +69,7 @@ void main() {
       locationStreamFactory: () => const Stream.empty(),
       speakInstruction: (_) async {},
     );
-    addTearDown(() => service.dispose());
+    addTearDown(service.dispose);
 
     await service.start(
       origin: const WaypointInput(lat: 52.52, lng: 13.405),
@@ -78,10 +77,10 @@ void main() {
     );
 
     fakePlatform.emitDeviation(
-      RouteDeviation(
+      const RouteDeviation(
         deviationM: 87,
         durationOffRouteMs: 12000,
-        userLocation: const UserLocation(
+        userLocation: UserLocation(
           lat: 52.521,
           lng: 13.406,
           horizontalAccuracyM: 5,
@@ -113,7 +112,7 @@ void main() {
         spoken.add(text);
       },
     );
-    addTearDown(() => service.dispose());
+    addTearDown(service.dispose);
 
     await service.start(
       origin: const WaypointInput(lat: 52.52, lng: 13.405),
@@ -134,14 +133,16 @@ void main() {
     );
 
     // Same uuid emitted many times (one per GPS tick in real usage).
-    fakePlatform.emitSpoken(first);
-    fakePlatform.emitSpoken(first);
-    fakePlatform.emitSpoken(first);
+    fakePlatform
+      ..emitSpoken(first)
+      ..emitSpoken(first)
+      ..emitSpoken(first);
     await pumpEventQueue();
 
     // Next instruction with a different uuid.
-    fakePlatform.emitSpoken(second);
-    fakePlatform.emitSpoken(second);
+    fakePlatform
+      ..emitSpoken(second)
+      ..emitSpoken(second);
     await pumpEventQueue();
 
     expect(spoken, [first.text, second.text]);
@@ -161,7 +162,7 @@ void main() {
       locationStreamFactory: () => const Stream.empty(),
       speakInstruction: (_) async {},
     );
-    addTearDown(() => service.dispose());
+    addTearDown(service.dispose);
 
     final received = <NavigationState>[];
     service.stateStream.listen(received.add);
@@ -192,7 +193,7 @@ void main() {
       },
       locationStreamFactory: () => const Stream.empty(),
       speakInstruction: (_) async {},
-      setWakelock: (enabled) async {
+      setWakelock: ({required enabled}) async {
         toggles.add(enabled);
       },
     );

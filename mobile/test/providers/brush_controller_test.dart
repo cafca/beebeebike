@@ -1,12 +1,11 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
-import 'package:mocktail/mocktail.dart';
-
 import 'package:beebeebike/api/ratings_paint_api.dart';
 import 'package:beebeebike/models/paint_response.dart';
 import 'package:beebeebike/providers/brush_provider.dart';
 import 'package:beebeebike/services/brush_overlay.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:mocktail/mocktail.dart';
 
 class _MockApi extends Mock implements RatingsPaintApi {}
 
@@ -32,8 +31,6 @@ class _FakeSurface implements BrushOverlaySurface {
 
 PaintResponse _ok({bool undo = true, bool redo = false}) => PaintResponse(
       createdId: 1,
-      clippedCount: 0,
-      deletedCount: 0,
       canUndo: undo,
       canRedo: redo,
     );
@@ -53,8 +50,7 @@ void main() {
     container = ProviderContainer(overrides: [
       ratingsPaintApiProvider.overrideWithValue(api),
     ]);
-    final notifier = container.read(brushControllerProvider.notifier);
-    notifier.attach(surface: surface);
+    container.read(brushControllerProvider.notifier).attach(surface);
   });
 
   tearDown(() => container.dispose());
@@ -134,7 +130,6 @@ void main() {
     final captured = verify(() => api.paint(
           geometry: captureAny(named: 'geometry'),
           value: 3,
-          targetId: null,
         )).captured.single as Map<String, dynamic>;
     expect(captured['type'], 'Polygon');
   });

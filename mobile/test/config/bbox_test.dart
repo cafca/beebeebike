@@ -2,7 +2,7 @@ import 'package:beebeebike/config/berlin_bounds.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const berlin = Bbox(west: 13.0, south: 52.3, east: 13.8, north: 52.7);
+  const berlin = Bbox(west: 13, south: 52.3, east: 13.8, north: 52.7);
 
   group('Bbox.contains', () {
     test('inside returns true', () {
@@ -10,20 +10,20 @@ void main() {
     });
 
     test('on edge returns true', () {
-      expect(berlin.contains(52.3, 13.0), isTrue);
+      expect(berlin.contains(52.3, 13), isTrue);
       expect(berlin.contains(52.7, 13.8), isTrue);
     });
 
     test('north of bbox returns false', () {
-      expect(berlin.contains(53.0, 13.4), isFalse);
+      expect(berlin.contains(53, 13.4), isFalse);
     });
 
     test('south of bbox returns false', () {
-      expect(berlin.contains(52.0, 13.4), isFalse);
+      expect(berlin.contains(52, 13.4), isFalse);
     });
 
     test('east of bbox returns false', () {
-      expect(berlin.contains(52.5, 14.0), isFalse);
+      expect(berlin.contains(52.5, 14), isFalse);
     });
 
     test('west of bbox returns false', () {
@@ -42,7 +42,7 @@ void main() {
     });
 
     test('parses integer-typed JSON values', () {
-      final b = Bbox.fromJson(<String, dynamic>{
+      final b = Bbox.fromJson(const <String, dynamic>{
         'west': 13,
         'south': 52,
         'east': 14,

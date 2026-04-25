@@ -1,8 +1,7 @@
+import 'package:beebeebike/config/berlin_bounds.dart';
+import 'package:beebeebike/providers/auth_provider.dart';
+import 'package:beebeebike/providers/user_location_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../config/berlin_bounds.dart';
-import 'auth_provider.dart';
-import 'user_location_provider.dart';
 
 /// Coverage rectangle the backend reports via `/api/auth/me`. Null until the
 /// auth controller has loaded the user (or if the server omits the field).

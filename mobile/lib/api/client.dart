@@ -1,12 +1,11 @@
 import 'dart:ui' as ui;
 
+import 'package:beebeebike/app.dart';
+import 'package:beebeebike/providers/locale_provider.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../app.dart';
-import '../providers/locale_provider.dart';
 
 /// Override this in main() with getApplicationSupportDirectory().path.
 final cookieStoragePathProvider = Provider<String>(

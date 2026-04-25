@@ -1,17 +1,13 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
 import 'package:flutter/material.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
 
 /// Route Sheet (variant B) body — mono data strip + Start ride / heart row.
 /// The heart is visually present but disabled in this build.
 class RouteSummary extends StatelessWidget {
   const RouteSummary({
-    super.key,
-    required this.durationMinutes,
-    required this.distanceKm,
-    required this.onStart,
+    required this.durationMinutes, required this.distanceKm, required this.onStart, super.key,
     this.onClose,
     this.startEnabled = true,
     this.onStartDisabledTap,
@@ -178,7 +174,7 @@ class _SaveButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: BbbColors.panel,
           borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-          border: Border.all(color: BbbColors.divider, width: 1),
+          border: Border.all(color: BbbColors.divider),
         ),
         child: const Icon(
           Icons.favorite_border,

@@ -54,7 +54,7 @@ class BrushOverlay implements BrushOverlaySurface {
 
     await controller.addGeoJsonSource(
       sourceId,
-      const {'type': 'FeatureCollection', 'features': []},
+      const <String, dynamic>{'type': 'FeatureCollection', 'features': <dynamic>[]},
     );
     await controller.addFillLayer(
       sourceId,
@@ -74,17 +74,17 @@ class BrushOverlay implements BrushOverlaySurface {
   ///
   /// Since [setPreview] is called on every pointer-move event, the geometry always
   /// changes but the color usually stays the same within a stroke. This method skips
-  /// [setLayerProperties] calls when the color hex hasn't changed.
+  /// `setLayerProperties` calls when the color hex hasn't changed.
   @override
   Future<void> setPreview(
     Map<String, dynamic> geometry,
     String colorHex,
   ) async {
     if (!_attached) return;
-    await _controller.setGeoJsonSource(sourceId, {
+    await _controller.setGeoJsonSource(sourceId, <String, dynamic>{
       'type': 'FeatureCollection',
-      'features': [
-        {'type': 'Feature', 'properties': {}, 'geometry': geometry},
+      'features': <Map<String, dynamic>>[
+        {'type': 'Feature', 'properties': <String, dynamic>{}, 'geometry': geometry},
       ],
     });
     if (colorHex != _lastColorHex) {
@@ -102,9 +102,9 @@ class BrushOverlay implements BrushOverlaySurface {
   @override
   Future<void> clear() async {
     if (!_attached) return;
-    await _controller.setGeoJsonSource(sourceId, const {
+    await _controller.setGeoJsonSource(sourceId, const <String, dynamic>{
       'type': 'FeatureCollection',
-      'features': [],
+      'features': <dynamic>[],
     });
   }
 
@@ -117,9 +117,9 @@ class BrushOverlay implements BrushOverlaySurface {
     _attached = false;
     try {
       await _controller.removeLayer(fillLayerId);
-    } catch (_) {}
+    } on Object catch (_) {}
     try {
       await _controller.removeSource(sourceId);
-    } catch (_) {}
+    } on Object catch (_) {}
   }
 }

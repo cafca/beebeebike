@@ -54,9 +54,7 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     final tts = MockFlutterTts();
     when(() => tts.setLanguage(any())).thenAnswer((_) async => 1);
-    final container = _container(prefs: prefs, tts: tts);
-
-    container.read(flutterTtsProvider);
+    _container(prefs: prefs, tts: tts).read(flutterTtsProvider);
 
     verify(() => tts.setLanguage('de-DE')).called(1);
   });
@@ -66,9 +64,7 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     final tts = MockFlutterTts();
     when(() => tts.setLanguage(any())).thenAnswer((_) async => 1);
-    final container = _container(prefs: prefs, tts: tts);
-
-    container.read(flutterTtsProvider);
+    _container(prefs: prefs, tts: tts).read(flutterTtsProvider);
 
     verify(() => tts.setLanguage('en-US')).called(1);
   });

@@ -12,8 +12,8 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 class BrushGeometry {
   BrushGeometry._();
 
-  static const double minMovePx = 4.0;
-  static const double brushPx = 27.0;
+  static const double minMovePx = 4;
+  static const double brushPx = 27;
   static const double minRadiusKm = 0.005;
 
   static double metersPerPixel({required double lat, required double zoom}) {
@@ -46,7 +46,8 @@ class BrushGeometry {
     final mPerDegLon = 111320.0 * math.cos(avgLat * math.pi / 180);
 
     final path = <PointD>[];
-    double? lastX, lastY;
+    double? lastX;
+    double? lastY;
     for (final p in points) {
       final x = (p.longitude - p0.longitude) * mPerDegLon;
       final y = (p.latitude - p0.latitude) * mPerDegLat;

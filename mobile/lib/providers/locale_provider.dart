@@ -1,7 +1,6 @@
+import 'package:beebeebike/providers/search_history_provider.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'search_history_provider.dart';
 
 /// User language preference. `system` defers to the device locale; `en` and
 /// `de` pin the app.

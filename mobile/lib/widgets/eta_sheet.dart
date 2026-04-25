@@ -1,12 +1,11 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/navigation/maneuver_icons.dart';
+import 'package:beebeebike/providers/route_provider.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../navigation/maneuver_icons.dart';
-import '../providers/route_provider.dart';
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
 
 /// Distance (m) within which, if the destination has a house number,
 /// the ETA hero swaps from "$mins min" to the street + house number so
@@ -18,9 +17,7 @@ const double _arrivalAddressThresholdM = 200;
 /// mono data strip with remaining distance + arrival clock.
 class EtaSheet extends ConsumerWidget {
   const EtaSheet({
-    super.key,
-    required this.navState,
-    required this.onClose,
+    required this.navState, required this.onClose, super.key,
   });
 
   final AsyncValue<NavigationState> navState;
@@ -53,12 +50,12 @@ class EtaSheet extends ConsumerWidget {
               Expanded(
                 child: navState.when(
                   loading: () => Text(l10n.commonLoading, style: BbbText.body()),
-                  error: (_, __) => Text('—', style: BbbText.body()),
+                  error: (_, _) => Text('—', style: BbbText.body()),
                   data: (state) {
                     final p = state.progress;
                     if (p == null) return Text('—', style: BbbText.body());
                     final heroStyle =
-                        BbbText.navHero(color: BbbColors.inkMuted);
+                        BbbText.navHero();
                     if (addressLabel != null &&
                         p.distanceRemainingM < _arrivalAddressThresholdM) {
                       return Text(
@@ -85,7 +82,7 @@ class EtaSheet extends ConsumerWidget {
           const SizedBox(height: 6),
           navState.when(
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
             data: (state) {
               final p = state.progress;
               if (p == null) return const SizedBox.shrink();
@@ -95,7 +92,7 @@ class EtaSheet extends ConsumerWidget {
                 children: [
                   Text(
                     distText,
-                    style: BbbText.monoTime(color: BbbColors.inkMuted).copyWith(
+                    style: BbbText.monoTime().copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -105,7 +102,7 @@ class EtaSheet extends ConsumerWidget {
                   ),
                   Text(
                     l10n.navArrives(arrival),
-                    style: BbbText.monoTime(color: BbbColors.inkMuted),
+                    style: BbbText.monoTime(),
                   ),
                 ],
               );

@@ -1,11 +1,10 @@
+import 'package:beebeebike/theme/tokens.dart';
 import 'package:flutter/material.dart';
-
-import '../theme/tokens.dart';
 
 /// Aqua-brand recenter FAB — 52×52 circle, white crosshair icon. Used when
 /// the navigation camera has been panned off the user.
 class RecenterFab extends StatelessWidget {
-  const RecenterFab({super.key, required this.onTap});
+  const RecenterFab({required this.onTap, super.key});
 
   final VoidCallback onTap;
 

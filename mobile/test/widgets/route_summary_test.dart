@@ -110,7 +110,7 @@ void main() {
       home: Scaffold(
         body: RouteSummary(
           durationMinutes: 20,
-          distanceKm: 5.0,
+          distanceKm: 5,
           onStart: () {},
         ),
       ),

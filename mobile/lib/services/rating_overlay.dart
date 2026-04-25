@@ -55,7 +55,7 @@ class RatingOverlay implements RatingOverlaySurface {
 
     await controller.addGeoJsonSource(
       sourceId,
-      const {'type': 'FeatureCollection', 'features': []},
+      const <String, dynamic>{'type': 'FeatureCollection', 'features': <dynamic>[]},
     );
 
     final colorExpr = _matchExpression();
@@ -96,9 +96,9 @@ class RatingOverlay implements RatingOverlaySurface {
 
   /// Clear all rendered polygons without detaching the layers.
   @override
-  Future<void> clear() => update(const {
+  Future<void> clear() => update(const <String, dynamic>{
         'type': 'FeatureCollection',
-        'features': [],
+        'features': <dynamic>[],
       });
 
   /// Remove layers + source. Safe to call multiple times.
@@ -108,13 +108,13 @@ class RatingOverlay implements RatingOverlaySurface {
     _attached = false;
     try {
       await _controller.removeLayer(lineLayerId);
-    } catch (_) {}
+    } on Object catch (_) {}
     try {
       await _controller.removeLayer(fillLayerId);
-    } catch (_) {}
+    } on Object catch (_) {}
     try {
       await _controller.removeSource(sourceId);
-    } catch (_) {}
+    } on Object catch (_) {}
   }
 
   /// Build a MapLibre `match` expression on the `value` property of each
@@ -127,8 +127,9 @@ class RatingOverlay implements RatingOverlaySurface {
       ['get', 'value'],
     ];
     for (final entry in _colors.entries) {
-      expr.add(entry.key);
-      expr.add(entry.value);
+      expr
+        ..add(entry.key)
+        ..add(entry.value);
     }
     expr.add(_fallbackColor);
     return expr;

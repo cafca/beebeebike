@@ -1,18 +1,18 @@
 import 'dart:async';
 
+import 'package:beebeebike/api/ratings_api.dart';
+import 'package:beebeebike/app.dart';
+import 'package:beebeebike/config/app_config.dart' show AppConfig;
+import 'package:beebeebike/config/berlin_bounds.dart';
+import 'package:beebeebike/models/user.dart';
+import 'package:beebeebike/providers/auth_provider.dart';
+import 'package:beebeebike/services/error_reporter.dart';
+import 'package:beebeebike/services/rating_events_client.dart';
+import 'package:beebeebike/services/rating_overlay.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-
-import '../api/ratings_api.dart';
-import '../app.dart';
-import '../config/berlin_bounds.dart';
-import '../models/user.dart';
-import '../services/error_reporter.dart';
-import '../services/rating_events_client.dart';
-import '../services/rating_overlay.dart';
-import 'auth_provider.dart';
 
 /// Async function that builds and attaches a [RatingOverlaySurface]. Called
 /// once from [RatingOverlayController.attach]; allowed to throw if the
@@ -81,13 +81,13 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
       _log('rating-overlay: reattaching (prior overlay discarded)');
       try {
         await prior.detach();
-      } catch (_) {}
+      } on Object catch (_) {}
     }
     _log('rating-overlay: attach start');
     try {
       _overlay = await attachOverlay();
       _log('rating-overlay: attach ok');
-    } catch (e, st) {
+    } on Object catch (e, st) {
       _log('rating-overlay: attach FAILED: $e\n$st');
       reportError(e, st, context: 'rating-overlay.attach');
       return;
@@ -97,7 +97,7 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
       // client keeps running across view recreation, so we only need the
       // one-shot sync here.
       if (ref.read(authControllerProvider).valueOrNull != null) {
-        _fullSync();
+        unawaited(_fullSync());
       }
       return;
     }
@@ -112,13 +112,14 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
       final nextId = next.valueOrNull?.id;
       _log('rating-overlay: auth change $prevId -> $nextId');
       if (prevId != nextId) {
-        _overlay?.clear();
+        final overlay = _overlay;
+        if (overlay != null) unawaited(overlay.clear());
         // Restart the SSE stream against the new session cookie so
         // invalidations are filtered for the right user. The client is
         // keyed to a Dio instance, not a user id, so stopping and starting
         // is cheap — it just drops the held socket.
         unawaited(_restartEventsClient());
-        if (nextId != null) _fullSync();
+        if (nextId != null) unawaited(_fullSync());
       }
     });
     // Kick off an initial fetch only if auth is already resolved. If it's
@@ -127,7 +128,7 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
     // `.value` rethrows on `AsyncError`, which happens in CI integration
     // tests where anonymous-auth gets "connection refused".
     if (ref.read(authControllerProvider).valueOrNull != null) {
-      _fullSync();
+      unawaited(_fullSync());
       _startEventsClient();
     }
   }
@@ -172,7 +173,7 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
   /// [RatingEventsClient]). Every invalidate triggers one full sync.
   void _onInvalidate() {
     _log('rating-overlay: invalidate from server');
-    _fullSync();
+    unawaited(_fullSync());
   }
 
   void _markLiveSyncDegraded() {
@@ -248,7 +249,7 @@ class RatingOverlayController extends Notifier<RatingOverlayState> {
       if (CancelToken.isCancel(e)) return;
       _log('rating-overlay: sync failed status=${e.response?.statusCode} '
           'type=${e.type} msg=${e.message}');
-    } catch (e, st) {
+    } on Object catch (e, st) {
       _log('rating-overlay: sync failed: $e');
       reportError(e, st, context: 'rating-overlay.sync');
     } finally {

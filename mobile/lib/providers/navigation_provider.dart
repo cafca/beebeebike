@@ -1,19 +1,19 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:ui' as ui;
 
+import 'package:beebeebike/api/client.dart';
+import 'package:beebeebike/api/routing_api.dart';
+import 'package:beebeebike/navigation/location_converter.dart';
+import 'package:beebeebike/navigation/navigation_service.dart';
+import 'package:beebeebike/providers/locale_provider.dart';
+import 'package:beebeebike/services/error_reporter.dart';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-
-import '../api/client.dart';
-import '../api/routing_api.dart';
-import '../navigation/location_converter.dart';
-import '../navigation/navigation_service.dart';
-import '../services/error_reporter.dart';
-import 'locale_provider.dart';
 
 Stream<UserLocation> _buildLocationStream() async* {
   var permission = await Geolocator.checkPermission();
@@ -41,15 +41,12 @@ Stream<UserLocation> _buildLocationStream() async* {
       ? AppleSettings(
           accuracy: LocationAccuracy.bestForNavigation,
           activityType: ActivityType.otherNavigation,
-          distanceFilter: 0,
-          pauseLocationUpdatesAutomatically: false,
           allowBackgroundLocationUpdates:
               permission == LocationPermission.always,
           showBackgroundLocationIndicator: true,
         )
       : const LocationSettings(
           accuracy: LocationAccuracy.bestForNavigation,
-          distanceFilter: 0,
         );
   yield* Geolocator.getPositionStream(locationSettings: settings)
       .map(positionToUserLocation);
@@ -67,26 +64,28 @@ final flutterTtsProvider = Provider<FlutterTts>((ref) {
   final deviceLocale = ui.PlatformDispatcher.instance.locale;
   final tag = effectiveLanguageTag(pref, deviceLocale);
   final ttsTag = tag == 'de' ? 'de-DE' : 'en-US';
-  tts.setLanguage(ttsTag);
+  unawaited(tts.setLanguage(ttsTag));
   // Configure the iOS audio session so voice cues keep playing when the
   // screen is locked and duck (rather than stop) any music the rider has
   // running. Requires `UIBackgroundModes: audio` in Info.plist.
   if (!kIsWeb && Platform.isIOS) {
-    tts.setSharedInstance(true);
-    tts.setIosAudioCategory(
-      IosTextToSpeechAudioCategory.playback,
-      [
-        IosTextToSpeechAudioCategoryOptions.duckOthers,
-        IosTextToSpeechAudioCategoryOptions.allowBluetooth,
-        IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
-      ],
-      IosTextToSpeechAudioMode.voicePrompt,
+    unawaited(tts.setSharedInstance(true));
+    unawaited(
+      tts.setIosAudioCategory(
+        IosTextToSpeechAudioCategory.playback,
+        [
+          IosTextToSpeechAudioCategoryOptions.duckOthers,
+          IosTextToSpeechAudioCategoryOptions.allowBluetooth,
+          IosTextToSpeechAudioCategoryOptions.allowBluetoothA2DP,
+        ],
+        IosTextToSpeechAudioMode.voicePrompt,
+      ),
     );
   }
   // Fire-and-forget: upgrade to the best locally installed voice. iOS ships
   // a "default" voice per language; users who downloaded Enhanced/Premium
   // voices get a much better sounding cue without any extra UI.
-  _applyBestVoice(tts, ttsTag);
+  unawaited(_applyBestVoice(tts, ttsTag));
   return tts;
 });
 
@@ -122,7 +121,7 @@ Future<void> _applyBestVoice(FlutterTts tts, String localeTag) async {
       'locale': best['locale']!,
       if (best['identifier']!.isNotEmpty) 'identifier': best['identifier']!,
     });
-  } catch (e) {
+  } on Object catch (e) {
     debugPrint('nav: tts voice pick failed: $e');
   }
 }
@@ -140,12 +139,12 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
     loadNavigationRoute: ({required origin, required destination}) =>
         routingApi.computeNavigationRoute(origin, destination),
     locationStreamFactory: _buildLocationStream,
-    setWakelock: (enabled) => WakelockPlus.toggle(enable: enabled),
+    setWakelock: ({required enabled}) => WakelockPlus.toggle(enable: enabled),
     speakInstruction: (text) async {
       if (!ref.read(ttsEnabledProvider)) return;
       try {
         await tts.speak(text);
-      } catch (e) {
+      } on Object catch (e) {
         // TTS speak fails routinely on audio-session interruptions, silent
         // mode switches, and mid-utterance cancellations. Drop a breadcrumb
         // for context around nearby issues but don't surface as its own
@@ -156,14 +155,14 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
   );
 });
 
-final navigationStateProvider = StreamProvider.autoDispose<NavigationState>((ref) {
+final AutoDisposeStreamProvider<NavigationState> navigationStateProvider = StreamProvider.autoDispose<NavigationState>((ref) {
   return ref.watch(navigationServiceProvider).stateStream;
 });
 
-final rerouteInProgressProvider = StreamProvider.autoDispose<bool>((ref) {
+final AutoDisposeStreamProvider<bool> rerouteInProgressProvider = StreamProvider.autoDispose<bool>((ref) {
   return ref.watch(navigationServiceProvider).rerouteInProgressStream;
 });
 
-final rerouteSucceededProvider = StreamProvider.autoDispose<void>((ref) {
+final AutoDisposeStreamProvider<void> rerouteSucceededProvider = StreamProvider.autoDispose<void>((ref) {
   return ref.watch(navigationServiceProvider).rerouteSucceededStream;
 });

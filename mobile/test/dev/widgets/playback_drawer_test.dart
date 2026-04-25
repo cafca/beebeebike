@@ -38,7 +38,7 @@ Widget _wrap(ProviderContainer container) => UncontrolledProviderScope(
     );
 
 void main() {
-  testWidgets('renders icon buttons for play/restart/back/forward/speed/drag',
+  testWidgets('renders icon buttons for play/restart/back/forward/speed',
       (tester) async {
     final c = ProviderContainer(overrides: [
       routeControllerProvider.overrideWith(
@@ -53,7 +53,6 @@ void main() {
     expect(find.byKey(const ValueKey('playback-back')), findsOneWidget);
     expect(find.byKey(const ValueKey('playback-forward')), findsOneWidget);
     expect(find.byKey(const ValueKey('playback-speed')), findsOneWidget);
-    expect(find.byKey(const ValueKey('playback-drag')), findsOneWidget);
     expect(find.byKey(const ValueKey('playback-progress')), findsOneWidget);
   });
 

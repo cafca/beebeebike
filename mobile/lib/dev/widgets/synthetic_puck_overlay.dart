@@ -52,7 +52,7 @@ class _SyntheticPuckOverlayState extends ConsumerState<SyntheticPuckOverlay> {
           height: 22,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            color: Color(0xFF1E88E5),
+            color: Color(0xFFE53935),
             border: Border.fromBorderSide(
               BorderSide(color: Colors.white, width: 2),
             ),

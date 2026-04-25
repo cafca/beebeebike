@@ -40,7 +40,6 @@ import '../widgets/route_card.dart';
 import '../dev/dev_mode.dart';
 import '../dev/playback_controller.dart';
 import '../dev/playback_state.dart';
-import '../dev/widgets/drag_puck_overlay.dart';
 import '../dev/widgets/playback_drawer.dart';
 import '../dev/widgets/synthetic_puck_overlay.dart';
 import '../navigation/camera_controller.dart';
@@ -688,7 +687,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     if ((bearing - current).abs() > 0.1) {
                       ref.read(mapBearingProvider.notifier).state = bearing;
                     }
-                    if (mounted) setState(() {}); // re-project drag puck
+                    if (mounted) setState(() {}); // re-project synthetic puck
                   },
                 ),
               ),
@@ -787,8 +786,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
           if ((ref.watch(playbackEnabledProvider).valueOrNull ?? false))
             SyntheticPuckOverlay(mapController: _mapController),
-          if ((ref.watch(playbackEnabledProvider).valueOrNull ?? false))
-            DragPuckOverlay(mapController: _mapController),
         ],
       ),
     );

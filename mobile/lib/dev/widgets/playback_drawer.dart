@@ -64,13 +64,13 @@ class _PlaybackDrawerState extends ConsumerState<PlaybackDrawer> {
             _IconBtn(
               btnKey: const ValueKey('playback-back'),
               icon: Icons.replay,
-              label: '-100m',
+              label: '-10m',
               onPressed: hasRoute ? notifier.stepBack : null,
             ),
             _IconBtn(
               btnKey: const ValueKey('playback-forward'),
               icon: Icons.forward_30,
-              label: '+100m',
+              label: '+10m',
               onPressed: hasRoute ? notifier.stepForward : null,
             ),
             _IconBtn(
@@ -78,22 +78,6 @@ class _PlaybackDrawerState extends ConsumerState<PlaybackDrawer> {
               icon: Icons.speed,
               label: '${state.speedMultiplier}x',
               onPressed: hasRoute ? notifier.cycleSpeed : null,
-            ),
-            _IconBtn(
-              btnKey: const ValueKey('playback-drag'),
-              icon: Icons.open_with,
-              label: state.overrideLatLng != null ? 'on' : 'off',
-              onPressed: !hasRoute
-                  ? null
-                  : () {
-                      if (state.overrideLatLng != null) {
-                        notifier.clearOverride();
-                      } else {
-                        // Seed override at current sim latlng so the puck is
-                        // grabbable immediately; the operator then drags it.
-                        notifier.setOverride(notifier.currentLatLng());
-                      }
-                    },
             ),
             const SizedBox(height: 8),
             Expanded(

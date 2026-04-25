@@ -1,9 +1,11 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app.dart';
+import '../dev/dev_mode.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/location_provider.dart';
@@ -42,6 +44,8 @@ class SettingsScreen extends ConsumerWidget {
           _SectionDivider(),
           _DangerSection(),
           _CreditsSection(),
+          _DevModeSection(),
+          _VersionRow(),
         ],
       ),
     );
@@ -484,6 +488,93 @@ class _CreditLinkState extends State<_CreditLink> {
         style: BbbText.body().copyWith(color: BbbColors.brand),
         recognizer: _recognizer,
       ),
+    );
+  }
+}
+
+class _DevModeSection extends ConsumerWidget {
+  const _DevModeSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unlocked = ref.watch(devModeProvider).valueOrNull ?? false;
+    if (!unlocked) return const SizedBox.shrink();
+    final playbackOn =
+        ref.watch(playbackEnabledProvider).valueOrNull ?? false;
+    return Column(
+      key: const ValueKey('settings-dev-section'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader('Developer mode'),
+        SwitchListTile(
+          key: const ValueKey('settings-playback-toggle'),
+          title: const Text('Playback drawer'),
+          subtitle: const Text('Simulate GPS along the active route'),
+          value: playbackOn,
+          onChanged: (v) =>
+              ref.read(playbackEnabledProvider.notifier).set(v),
+        ),
+      ],
+    );
+  }
+}
+
+class _VersionRow extends ConsumerStatefulWidget {
+  const _VersionRow();
+
+  @override
+  ConsumerState<_VersionRow> createState() => _VersionRowState();
+}
+
+class _VersionRowState extends ConsumerState<_VersionRow> {
+  String _label = '';
+  late final TapUnlockCounter _counter;
+
+  @override
+  void initState() {
+    super.initState();
+    _counter = TapUnlockCounter(
+      tapsRequired: kDevTapsRequired,
+      window: kDevTapWindow,
+      onUnlock: _handleUnlock,
+    );
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() => _label = 'Version ${info.version} (${info.buildNumber})');
+  }
+
+  Future<void> _handleUnlock() async {
+    await ref.read(devModeProvider.notifier).toggle();
+    if (!mounted) return;
+    final unlocked = ref.read(devModeProvider).valueOrNull ?? false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          unlocked ? 'Developer mode enabled' : 'Developer mode disabled',
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _counter.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final config = ref.watch(appConfigProvider);
+    final host = Uri.tryParse(config.apiBaseUrl)?.host ?? '';
+    return ListTile(
+      key: const ValueKey('settings-version-row'),
+      title: Text(_label.isEmpty ? ' ' : _label, style: BbbText.label()),
+      subtitle: Text(host, style: BbbText.monoSub()),
+      onTap: _counter.tap,
     );
   }
 }

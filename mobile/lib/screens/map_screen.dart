@@ -37,6 +37,9 @@ import '../widgets/map/navigation_sheet.dart';
 import '../widgets/map/route_sheet.dart';
 import '../widgets/paint_sheet.dart';
 import '../widgets/route_card.dart';
+import '../dev/dev_mode.dart';
+import '../dev/widgets/drag_puck_overlay.dart';
+import '../dev/widgets/playback_drawer.dart';
 
 final _berlinBounds = LatLngBounds(
   southwest: const LatLng(52.3, 13.0),
@@ -59,6 +62,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   BrushController? _brushNotifier;
   bool _rerouting = false;
   bool _browseAutocentered = false;
+  bool _playbackDrawerExpanded = false;
   int _paintPointerCount = 0;
   bool _paintMultiTouch = false;
 
@@ -654,6 +658,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     if ((bearing - current).abs() > 0.1) {
                       ref.read(mapBearingProvider.notifier).state = bearing;
                     }
+                    if (mounted) setState(() {}); // re-project drag puck
                   },
                 ),
               ),
@@ -721,6 +726,37 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             onNavigateHome: _navigateHome,
                           ),
           ),
+          if ((ref.watch(playbackEnabledProvider).valueOrNull ?? false))
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Row(
+                children: [
+                  if (_playbackDrawerExpanded) const PlaybackDrawer(),
+                  Material(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    child: InkWell(
+                      onTap: () => setState(() =>
+                          _playbackDrawerExpanded = !_playbackDrawerExpanded),
+                      child: SizedBox(
+                        width: 16,
+                        height: 64,
+                        child: Icon(
+                          _playbackDrawerExpanded
+                              ? Icons.chevron_left
+                              : Icons.chevron_right,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if ((ref.watch(playbackEnabledProvider).valueOrNull ?? false))
+            DragPuckOverlay(mapController: _mapController),
         ],
       ),
     );

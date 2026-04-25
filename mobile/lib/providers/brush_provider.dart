@@ -17,8 +17,6 @@ class TapFeature {
   final Map<String, dynamic> geometry;
 }
 
-typedef TapFeatureLookup = Future<TapFeature?> Function(LatLng point);
-
 enum BrushOp { paint, undo, redo }
 
 @immutable
@@ -129,20 +127,10 @@ class BrushController extends Notifier<BrushState> {
     }
   }
 
-  Future<void> endStroke({required TapFeatureLookup tapFeatureLookup}) async {
+  Future<void> endStroke() async {
     if (state.busy) return;
     try {
-      if (_stroke.length < 2) {
-        final tap = _stroke.isEmpty ? null : _stroke.first;
-        if (tap == null) return;
-        final hit = await tapFeatureLookup(tap);
-        if (hit == null) return;
-        await _submit(
-          geometry: hit.geometry,
-          targetId: hit.areaId,
-        );
-        return;
-      }
+      if (_stroke.length < 2) return;
       final geom = BrushGeometry.buildPolygon(
         points: List.unmodifiable(_stroke),
         zoom: _lastZoom,
@@ -153,6 +141,11 @@ class BrushController extends Notifier<BrushState> {
       _stroke.clear();
       unawaited(_overlay?.clear());
     }
+  }
+
+  Future<void> recolorFromLongPress(TapFeature feature) async {
+    if (state.busy) return;
+    await _submit(geometry: feature.geometry, targetId: feature.areaId);
   }
 
   Future<void> undo() async {

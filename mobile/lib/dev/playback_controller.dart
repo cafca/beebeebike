@@ -45,7 +45,10 @@ class PlaybackController extends Notifier<PlaybackState> {
       engine.clearRoute();
       return;
     }
-    final baseSpeed = preview.time > 0 ? preview.distance / preview.time : 1.0;
+    // preview.time is in milliseconds (see home_eta_provider.dart, route_sheet.dart).
+    final timeSeconds = preview.time / 1000.0;
+    final baseSpeed =
+        timeSeconds > 0 ? preview.distance / timeSeconds : 1.0;
     engine.setRoute(
       walker: PolylineWalker(coords),
       routeBaseSpeedMps: baseSpeed,

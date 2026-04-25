@@ -17,7 +17,7 @@ RoutePreview _preview() => const RoutePreview(
         ],
       },
       distance: 333.96,
-      time: 33.4,
+      time: 33400, // ms
     );
 
 class _FakeRouteController extends Notifier<RouteState>

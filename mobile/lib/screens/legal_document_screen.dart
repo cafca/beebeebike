@@ -42,7 +42,14 @@ class _LegalDocumentScreenState extends State<LegalDocumentScreen> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(widget.url));
+      ..loadRequest(_embedUri(widget.url));
+  }
+
+  Uri _embedUri(String url) {
+    final uri = Uri.parse(url);
+    final params = Map<String, String>.from(uri.queryParameters);
+    params['embed'] = '1';
+    return uri.replace(queryParameters: params);
   }
 
   Future<void> _openExternally() async {

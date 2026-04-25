@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Privacy — beebeebike</title>
+<link rel="icon" href="/favicon.svg" />
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; font-family: system-ui, -apple-system, Helvetica, Arial, sans-serif; color: #1b1b1b; background: #F7F3EC; line-height: 1.55; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { color: #2E6F66; margin-top: 0; }
+  h2 { color: #2E6F66; margin-top: 2em; }
+  a { color: #2E6F66; }
+  img.provider { display: block; max-width: 100%; height: auto; margin: 1em 0 2em; border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+  th, td { border: 1px solid #d8d2c2; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #ece6d6; }
+  nav.crumb { font-size: 13px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  nav.crumb .links a { margin-right: 12px; }
+  nav.crumb .lang a { margin-left: 8px; }
+  .meta { color: #5f5f5f; font-size: 14px; }
+  .legal-note { font-size: 13px; color: #5f5f5f; font-style: italic; margin-top: 2em; border-top: 1px solid #d8d2c2; padding-top: 1em; }
+  html.embed nav.crumb { display: none; }
+</style>
+<script>
+  (function () {
+    try {
+      var params = new URLSearchParams(location.search);
+      var embedParam = params.get('embed');
+      var embed = embedParam === '1';
+      try { if (embed) sessionStorage.setItem('beebeebike.embed', '1'); } catch (e) {}
+      try { if (!embed && sessionStorage.getItem('beebeebike.embed') === '1') embed = true; } catch (e) {}
+      if (embed) document.documentElement.classList.add('embed');
+      var forced = params.get('lang');
+      if (forced) { try { localStorage.setItem('beebeebike.lang', forced); } catch (e) {} return; }
+      var stored = null;
+      try { stored = localStorage.getItem('beebeebike.lang'); } catch (e) {}
+      if (stored === 'de') { location.replace('/datenschutz/' + (embed ? '?embed=1' : '')); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+<main>
+  <nav class="crumb">
+    <span class="links"><a href="/">← Back to app</a> <a href="/impressum-en/">Imprint</a></span>
+    <span class="lang"><strong>EN</strong> | <a href="/datenschutz/?lang=de">DE</a></span>
+  </nav>
+  <h1>Privacy Policy</h1>
+  <p class="meta">Last updated: 2026-04-23</p>
+
+  <h2>1. Controller</h2>
+  <p>Controller within the meaning of the GDPR:</p>
+  <img class="provider" src="/legal/provider.png" alt="Controller: name, address and email" />
+
+  <h2>2. Overview</h2>
+  <p>beebeebike is a bicycle-friendly route planner for Berlin. We process personal data solely to provide the service. There is <strong>no sale</strong> and <strong>no disclosure for advertising purposes</strong>.</p>
+  <p>Map tiles (MapLibre) and the routing engine (GraphHopper) are operated <strong>by us</strong> on a server rented from Hetzner Online GmbH (Gunzenhausen, Germany). There is <strong>no</strong> forwarding to external map providers (e.g. Google, Mapbox) or external routing services.</p>
+
+  <h2>3. Data processed</h2>
+  <table>
+    <thead><tr><th>Data category</th><th>Purpose</th><th>Legal basis</th><th>Storage location</th></tr></thead>
+    <tbody>
+      <tr><td>Email address and password hash (Argon2)</td><td>Account sign-in (optional)</td><td>Art. 6 (1) (b) GDPR</td><td>Hetzner server (PostGIS) in Germany</td></tr>
+      <tr><td>Rating polygons</td><td>Personalised routing</td><td>Art. 6 (1) (b) / (f) GDPR</td><td>Hetzner server (PostGIS) in Germany</td></tr>
+      <tr><td>Saved locations (e.g. home)</td><td>Convenience feature</td><td>Art. 6 (1) (b) GDPR</td><td>Hetzner server (PostGIS) in Germany</td></tr>
+      <tr><td>Route requests (start/end coordinates)</td><td>Route calculation</td><td>Art. 6 (1) (b) GDPR</td><td>Only transiently in memory — no persistent storage</td></tr>
+      <tr><td>Session cookie (random UUID)</td><td>Sign-in / guest mode</td><td>Art. 6 (1) (f) GDPR</td><td>Hetzner server; expires after 30 days</td></tr>
+      <tr><td>Search queries (location search)</td><td>Geocoding</td><td>Art. 6 (1) (b) / (f) GDPR</td><td>Forwarded to processor (see section 5)</td></tr>
+      <tr><td>Aggregated page views + session cookie (web app only)</td><td>Reach measurement (self-hosted, no cross-site trackers, no recognition across sessions)</td><td>Art. 6 (1) (f) GDPR</td><td>Hetzner server in Germany — no disclosure to third parties</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Guest mode</h2>
+  <p>You can use beebeebike anonymously without an account. In that case only a random session ID is set as a cookie. Ratings you create as a guest are stored server-side bound to this session ID so they remain available on later visits. No linkage to your person takes place.</p>
+
+  <h2>5. Recipients / processors</h2>
+  <p>The following external providers receive personal data on our behalf. A data processing agreement pursuant to Art. 28 GDPR is in place with each of them.</p>
+  <ul>
+    <li><strong>Server hosting:</strong> Hetzner Online GmbH, Industriestr. 25, 91710 Gunzenhausen, Germany. Our database, routing engine and map tiles run on a server rented from Hetzner in a German data centre.</li>
+    <li><strong>Geocoding (location search):</strong> Komoot GmbH, Berlin, Germany — operates the <em>Photon</em> service (<code>photon.komoot.io</code>). Your search input is forwarded via our server; account data is not transmitted.</li>
+  </ul>
+
+  <h2>6. Retention</h2>
+  <ul>
+    <li><strong>Account data:</strong> until deletion by you. An account can be removed at any time in the app under <em>Settings → Delete account</em>; this irreversibly deletes all associated ratings, locations and sessions.</li>
+    <li><strong>Anonymous sessions:</strong> 30 days.</li>
+    <li><strong>Route requests:</strong> not persisted.</li>
+    <li><strong>Server log files:</strong> a maximum of 14 days for security and stability purposes.</li>
+  </ul>
+
+  <h2>7. Your rights</h2>
+  <p>Under Art. 15–22 GDPR you have the right to:</p>
+  <ul>
+    <li><strong>Access</strong> (Art. 15)</li>
+    <li><strong>Rectification</strong> (Art. 16)</li>
+    <li><strong>Erasure / "right to be forgotten"</strong> (Art. 17) — fully via in-app function or on request</li>
+    <li><strong>Restriction of processing</strong> (Art. 18)</li>
+    <li><strong>Data portability</strong> (Art. 20) — on request by email</li>
+    <li><strong>Object</strong> (Art. 21)</li>
+  </ul>
+  <p>Please use the contact address in the <a href="/impressum-en/">imprint</a>.</p>
+
+  <h2>8. Right to lodge a complaint</h2>
+  <p>You have the right to lodge a complaint with a data protection supervisory authority. The competent authority is the one at the controller's location (see section 1 and imprint).</p>
+
+  <h2>9. No automated decision-making</h2>
+  <p>No automated decision-making, including profiling within the meaning of Art. 22 GDPR, takes place.</p>
+
+  <h2>10. Changes</h2>
+  <p>We adapt this statement when technical circumstances or the legal situation change. The version published at <code>beebeebike.com/datenschutz</code> is authoritative.</p>
+
+  <p class="legal-note">This English version is provided for convenience. The <a href="/datenschutz/?lang=de">German version</a> is legally binding.</p>
+</main>
+</body>
+</html>

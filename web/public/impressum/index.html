@@ -14,14 +14,43 @@
   h2 { color: #2E6F66; margin-top: 2em; }
   a { color: #2E6F66; }
   img.provider { display: block; max-width: 100%; height: auto; margin: 1em 0 2em; border-radius: 8px; }
-  nav.crumb { font-size: 13px; margin-bottom: 12px; }
-  nav.crumb a { margin-right: 12px; }
+  nav.crumb { font-size: 13px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  nav.crumb .links a { margin-right: 12px; }
+  nav.crumb .lang a { margin-left: 8px; }
   .meta { color: #5f5f5f; font-size: 14px; }
+  html.embed nav.crumb { display: none; }
 </style>
+<script>
+  (function () {
+    try {
+      var params = new URLSearchParams(location.search);
+      var embedParam = params.get('embed');
+      var embed = embedParam === '1';
+      try { if (embed) sessionStorage.setItem('beebeebike.embed', '1'); } catch (e) {}
+      try { if (!embed && sessionStorage.getItem('beebeebike.embed') === '1') embed = true; } catch (e) {}
+      if (embed) document.documentElement.classList.add('embed');
+      var suffix = embed ? (location.search && location.search.indexOf('embed=1') >= 0 ? '' : (location.search ? '&embed=1' : '?embed=1')) : '';
+      var forced = params.get('lang');
+      if (forced) { try { localStorage.setItem('beebeebike.lang', forced); } catch (e) {} return; }
+      var stored = null;
+      try { stored = localStorage.getItem('beebeebike.lang'); } catch (e) {}
+      if (stored === 'en') { location.replace('/impressum-en/' + (embed ? '?embed=1' : '')); return; }
+      if (stored === 'de') { return; }
+      var nav = (navigator.language || '').toLowerCase();
+      var langs = (navigator.languages || []).map(function (l) { return l.toLowerCase(); });
+      var all = [nav].concat(langs);
+      var prefersDe = all.some(function (l) { return l.indexOf('de') === 0; });
+      if (!prefersDe) { location.replace('/impressum-en/' + (embed ? '?embed=1' : '')); }
+    } catch (e) {}
+  })();
+</script>
 </head>
 <body>
 <main>
-  <nav class="crumb"><a href="/">← Zurück zur App</a> <a href="/datenschutz/">Datenschutz</a></nav>
+  <nav class="crumb">
+    <span class="links"><a href="/">← Zurück zur App</a> <a href="/datenschutz/">Datenschutz</a></span>
+    <span class="lang"><strong>DE</strong> | <a href="/impressum-en/?lang=en">EN</a></span>
+  </nav>
   <h1>Impressum</h1>
   <p class="meta">Angaben gemäß § 5 TMG und § 18 Abs. 2 MStV</p>
 

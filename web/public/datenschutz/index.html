@@ -17,14 +17,42 @@
   table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
   th, td { border: 1px solid #d8d2c2; padding: 8px 10px; text-align: left; vertical-align: top; }
   th { background: #ece6d6; }
-  nav.crumb { font-size: 13px; margin-bottom: 12px; }
-  nav.crumb a { margin-right: 12px; }
+  nav.crumb { font-size: 13px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  nav.crumb .links a { margin-right: 12px; }
+  nav.crumb .lang a { margin-left: 8px; }
   .meta { color: #5f5f5f; font-size: 14px; }
+  html.embed nav.crumb { display: none; }
 </style>
+<script>
+  (function () {
+    try {
+      var params = new URLSearchParams(location.search);
+      var embedParam = params.get('embed');
+      var embed = embedParam === '1';
+      try { if (embed) sessionStorage.setItem('beebeebike.embed', '1'); } catch (e) {}
+      try { if (!embed && sessionStorage.getItem('beebeebike.embed') === '1') embed = true; } catch (e) {}
+      if (embed) document.documentElement.classList.add('embed');
+      var forced = params.get('lang');
+      if (forced) { try { localStorage.setItem('beebeebike.lang', forced); } catch (e) {} return; }
+      var stored = null;
+      try { stored = localStorage.getItem('beebeebike.lang'); } catch (e) {}
+      if (stored === 'en') { location.replace('/datenschutz-en/' + (embed ? '?embed=1' : '')); return; }
+      if (stored === 'de') { return; }
+      var nav = (navigator.language || '').toLowerCase();
+      var langs = (navigator.languages || []).map(function (l) { return l.toLowerCase(); });
+      var all = [nav].concat(langs);
+      var prefersDe = all.some(function (l) { return l.indexOf('de') === 0; });
+      if (!prefersDe) { location.replace('/datenschutz-en/' + (embed ? '?embed=1' : '')); }
+    } catch (e) {}
+  })();
+</script>
 </head>
 <body>
 <main>
-  <nav class="crumb"><a href="/">← Zurück zur App</a> <a href="/impressum/">Impressum</a></nav>
+  <nav class="crumb">
+    <span class="links"><a href="/">← Zurück zur App</a> <a href="/impressum/">Impressum</a></span>
+    <span class="lang"><strong>DE</strong> | <a href="/datenschutz-en/?lang=en">EN</a></span>
+  </nav>
   <h1>Datenschutzerklärung</h1>
   <p class="meta">Stand: 2026-04-23</p>
 

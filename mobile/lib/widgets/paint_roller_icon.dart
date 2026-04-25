@@ -1,6 +1,5 @@
+import 'package:beebeebike/theme/tokens.dart';
 import 'package:flutter/material.dart';
-
-import '../theme/tokens.dart';
 
 /// Custom paint-roller glyph — yellow roller head with ink frame + handle.
 /// 24×24 canvas per style-guide Paint FAB spec.
@@ -52,15 +51,16 @@ class _PaintRollerPainter extends CustomPainter {
       Rect.fromLTWH(3 * scale, 4 * scale, 14 * scale, 5 * scale),
       Radius.circular(1.2 * scale),
     );
-    canvas.drawRRect(headRect, Paint()..color = yellow);
-    canvas.drawRRect(
-      headRect,
-      Paint()
-        ..color = ink
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeW
-        ..strokeJoin = StrokeJoin.round,
-    );
+    canvas
+      ..drawRRect(headRect, Paint()..color = yellow)
+      ..drawRRect(
+        headRect,
+        Paint()
+          ..color = ink
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeW
+          ..strokeJoin = StrokeJoin.round,
+      );
 
     // Frame — short bracket down from the head center to the handle bend.
     final framePaint = Paint()

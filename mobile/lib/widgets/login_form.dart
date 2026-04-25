@@ -1,9 +1,8 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../providers/auth_provider.dart';
 
 enum _LoginErrorKind { invalidCredentials }
 

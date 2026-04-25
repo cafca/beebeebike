@@ -15,7 +15,7 @@ class AppHaptics {
       if (await hf.Haptics.canVibrate()) {
         await hf.Haptics.vibrate(type);
       }
-    } catch (_) {
+    } on Object catch (_) {
       // Haptics are fire-and-forget; failure must never break app flow.
     }
   }

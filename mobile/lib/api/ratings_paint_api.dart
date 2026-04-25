@@ -1,8 +1,7 @@
+import 'package:beebeebike/api/client.dart';
+import 'package:beebeebike/models/paint_response.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../models/paint_response.dart';
-import 'client.dart';
 
 class RatingsPaintApi {
   RatingsPaintApi(this._dio);
@@ -14,9 +13,9 @@ class RatingsPaintApi {
     required int value,
     int? targetId,
   }) async {
-    final response = await _dio.put(
+    final response = await _dio.put<dynamic>(
       '/api/ratings/paint',
-      data: {
+      data: <String, dynamic>{
         'geometry': geometry,
         'value': value,
         'target_id': targetId,
@@ -28,14 +27,14 @@ class RatingsPaintApi {
   }
 
   Future<PaintResponse> undo() async {
-    final response = await _dio.post('/api/ratings/undo');
+    final response = await _dio.post<dynamic>('/api/ratings/undo');
     return PaintResponse.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );
   }
 
   Future<PaintResponse> redo() async {
-    final response = await _dio.post('/api/ratings/redo');
+    final response = await _dio.post<dynamic>('/api/ratings/redo');
     return PaintResponse.fromJson(
       Map<String, dynamic>.from(response.data as Map),
     );

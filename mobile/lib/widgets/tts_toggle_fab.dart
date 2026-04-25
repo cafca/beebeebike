@@ -1,16 +1,13 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/theme/tokens.dart';
 import 'package:flutter/material.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../theme/tokens.dart';
 
 /// 52×52 circular FAB for toggling turn-by-turn voice during navigation.
 /// Active (voice on): dark ground, bright icon. Inactive: white ground,
 /// muted icon — matches the recenter-idle treatment.
 class TtsToggleFab extends StatelessWidget {
   const TtsToggleFab({
-    super.key,
-    required this.enabled,
-    required this.onTap,
+    required this.enabled, required this.onTap, super.key,
   });
 
   final bool enabled;
@@ -25,7 +22,6 @@ class TtsToggleFab extends StatelessWidget {
       color: bg,
       surfaceTintColor: bg,
       shape: const CircleBorder(),
-      elevation: 0,
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,

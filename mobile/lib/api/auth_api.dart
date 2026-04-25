@@ -1,6 +1,5 @@
+import 'package:beebeebike/models/user.dart';
 import 'package:dio/dio.dart';
-
-import '../models/user.dart';
 
 class AuthApi {
   AuthApi(this._dio);
@@ -8,13 +7,13 @@ class AuthApi {
   final Dio _dio;
 
   Future<User> anonymous() async =>
-      User.fromJson((await _dio.post('/api/auth/anonymous')).data as Map<String, dynamic>);
+      User.fromJson((await _dio.post<dynamic>('/api/auth/anonymous')).data as Map<String, dynamic>);
 
   Future<User> me() async =>
-      User.fromJson((await _dio.get('/api/auth/me')).data as Map<String, dynamic>);
+      User.fromJson((await _dio.get<dynamic>('/api/auth/me')).data as Map<String, dynamic>);
 
   Future<User> login(String email, String password) async => User.fromJson(
-        (await _dio.post('/api/auth/login', data: {
+        (await _dio.post<dynamic>('/api/auth/login', data: <String, dynamic>{
           'email': email,
           'password': password,
         }))
@@ -23,7 +22,7 @@ class AuthApi {
 
   Future<User> register(String email, String password, String? displayName) async =>
       User.fromJson(
-        (await _dio.post('/api/auth/register', data: {
+        (await _dio.post<dynamic>('/api/auth/register', data: <String, dynamic>{
           'email': email,
           'password': password,
           'display_name': displayName,
@@ -32,10 +31,10 @@ class AuthApi {
       );
 
   Future<void> logout() async {
-    await _dio.post('/api/auth/logout');
+    await _dio.post<dynamic>('/api/auth/logout');
   }
 
   Future<void> deleteAccount() async {
-    await _dio.delete('/api/auth/account');
+    await _dio.delete<dynamic>('/api/auth/account');
   }
 }

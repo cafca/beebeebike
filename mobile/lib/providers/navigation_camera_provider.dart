@@ -1,8 +1,7 @@
+import 'package:beebeebike/navigation/camera_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../navigation/camera_controller.dart';
-
-final navigationCameraControllerProvider =
+final AutoDisposeChangeNotifierProvider<NavigationCameraController> navigationCameraControllerProvider =
     ChangeNotifierProvider.autoDispose<NavigationCameraController>((ref) {
   final controller = NavigationCameraController();
   return controller;

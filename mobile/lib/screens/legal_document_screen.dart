@@ -1,15 +1,14 @@
+import 'dart:async';
+
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/theme/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../l10n/generated/app_localizations.dart';
-import '../theme/tokens.dart';
-
 class LegalDocumentScreen extends StatefulWidget {
   const LegalDocumentScreen({
-    super.key,
-    required this.title,
-    required this.url,
+    required this.title, required this.url, super.key,
   });
 
   final String title;
@@ -27,22 +26,26 @@ class _LegalDocumentScreenState extends State<LegalDocumentScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(BbbColors.bg)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (_) => setState(() => _loading = false),
-          onWebResourceError: (error) {
-            if (!(error.isForMainFrame ?? true)) return;
-            setState(() {
-              _loading = false;
-              _error = error.description;
-            });
-          },
-        ),
-      )
-      ..loadRequest(_embedUri(widget.url));
+    _controller = WebViewController();
+    unawaited(_initController());
+  }
+
+  Future<void> _initController() async {
+    await _controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+    await _controller.setBackgroundColor(BbbColors.bg);
+    await _controller.setNavigationDelegate(
+      NavigationDelegate(
+        onPageFinished: (_) => setState(() => _loading = false),
+        onWebResourceError: (error) {
+          if (!(error.isForMainFrame ?? true)) return;
+          setState(() {
+            _loading = false;
+            _error = error.description;
+          });
+        },
+      ),
+    );
+    await _controller.loadRequest(_embedUri(widget.url));
   }
 
   Uri _embedUri(String url) {

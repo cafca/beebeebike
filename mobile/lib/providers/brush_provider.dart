@@ -1,15 +1,14 @@
 import 'dart:async';
 
+import 'package:beebeebike/api/ratings_paint_api.dart';
+import 'package:beebeebike/providers/rating_overlay_provider.dart';
+import 'package:beebeebike/providers/route_provider.dart';
+import 'package:beebeebike/services/brush_geometry.dart';
+import 'package:beebeebike/services/brush_overlay.dart';
+import 'package:beebeebike/services/error_reporter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-
-import '../api/ratings_paint_api.dart';
-import '../providers/rating_overlay_provider.dart';
-import '../providers/route_provider.dart';
-import '../services/brush_geometry.dart';
-import '../services/brush_overlay.dart';
-import '../services/error_reporter.dart';
 
 class TapFeature {
   const TapFeature({required this.areaId, required this.geometry});
@@ -72,7 +71,8 @@ class BrushController extends Notifier<BrushState> {
   @override
   BrushState build() => const BrushState();
 
-  void attach({required BrushOverlaySurface surface}) {
+  // ignore: use_setters_to_change_properties, paired with avoid_setters_without_getters; the rule conflicts here.
+  void attach(BrushOverlaySurface surface) {
     _overlay = surface;
   }
 
@@ -159,7 +159,7 @@ class BrushController extends Notifier<BrushState> {
           .refreshAfterPaint();
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
       _maybeRecomputeRoute();
-    } catch (e, st) {
+    } on Object catch (e, st) {
       _log('brush: undo failed: $e');
       reportError(e, st, context: 'brush.undo');
     } finally {
@@ -178,7 +178,7 @@ class BrushController extends Notifier<BrushState> {
           .refreshAfterPaint();
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
       _maybeRecomputeRoute();
-    } catch (e, st) {
+    } on Object catch (e, st) {
       _log('brush: redo failed: $e');
       reportError(e, st, context: 'brush.redo');
     } finally {
@@ -222,7 +222,7 @@ class BrushController extends Notifier<BrushState> {
       }
       state = state.copyWith(canUndo: r.canUndo, canRedo: r.canRedo);
       _maybeRecomputeRoute();
-    } catch (e, st) {
+    } on Object catch (e, st) {
       _log('brush: paint failed: $e');
       reportError(e, st, context: 'brush.paint');
     } finally {

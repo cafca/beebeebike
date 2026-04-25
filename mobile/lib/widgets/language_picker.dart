@@ -1,9 +1,10 @@
+import 'dart:async';
+
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/providers/locale_provider.dart';
+import 'package:beebeebike/theme/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../providers/locale_provider.dart';
-import '../theme/typography.dart';
 
 class LanguagePicker extends ConsumerWidget {
   const LanguagePicker({super.key});
@@ -17,7 +18,7 @@ class LanguagePicker extends ConsumerWidget {
     return RadioGroup<LocalePref>(
       groupValue: current,
       onChanged: (v) {
-        if (v != null) controller.setPref(v);
+        if (v != null) unawaited(controller.setPref(v));
       },
       child: Column(
         children: [

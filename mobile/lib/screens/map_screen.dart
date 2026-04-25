@@ -1,48 +1,47 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/models/location.dart';
+import 'package:beebeebike/models/route_state.dart';
+import 'package:beebeebike/navigation/camera_controller.dart';
+import 'package:beebeebike/navigation/location_converter.dart';
+import 'package:beebeebike/navigation/nav_constants.dart';
+import 'package:beebeebike/providers/brush_provider.dart';
+import 'package:beebeebike/providers/location_provider.dart';
+import 'package:beebeebike/providers/map_bearing_provider.dart';
+import 'package:beebeebike/providers/navigation_camera_provider.dart';
+import 'package:beebeebike/providers/navigation_provider.dart';
+import 'package:beebeebike/providers/navigation_session_provider.dart';
+import 'package:beebeebike/providers/rating_overlay_provider.dart';
+import 'package:beebeebike/providers/route_provider.dart';
+import 'package:beebeebike/providers/user_location_provider.dart';
+import 'package:beebeebike/services/brush_overlay.dart';
+import 'package:beebeebike/services/error_reporter.dart';
+import 'package:beebeebike/services/haptics.dart';
+import 'package:beebeebike/services/home_marker_service.dart';
+import 'package:beebeebike/services/map_style_loader.dart';
+import 'package:beebeebike/services/rating_overlay.dart';
+import 'package:beebeebike/services/route_drawing.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/widgets/brush_fab.dart';
+import 'package:beebeebike/widgets/map/home_sheet_container.dart';
+import 'package:beebeebike/widgets/map/nav_top_bar.dart';
+import 'package:beebeebike/widgets/map/navigation_sheet.dart';
+import 'package:beebeebike/widgets/map/route_sheet.dart';
+import 'package:beebeebike/widgets/paint_sheet.dart';
+import 'package:beebeebike/widgets/route_card.dart';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
 import 'package:maplibre_gl/maplibre_gl.dart' as ml show UserLocation;
-
-import '../l10n/generated/app_localizations.dart';
-import '../models/location.dart';
-import '../models/route_state.dart';
-import '../navigation/camera_controller.dart';
-import '../navigation/location_converter.dart';
-import '../navigation/nav_constants.dart';
-import '../providers/brush_provider.dart';
-import '../providers/navigation_camera_provider.dart';
-import '../providers/navigation_provider.dart';
-import '../providers/navigation_session_provider.dart';
-import '../providers/location_provider.dart';
-import '../providers/map_bearing_provider.dart';
-import '../providers/rating_overlay_provider.dart';
-import '../providers/route_provider.dart';
-import '../providers/user_location_provider.dart';
-import '../services/brush_overlay.dart';
-import '../services/error_reporter.dart';
-import '../services/haptics.dart';
-import '../services/home_marker_service.dart';
-import '../services/map_style_loader.dart';
-import '../services/rating_overlay.dart';
-import '../services/route_drawing.dart';
-import '../theme/tokens.dart';
-import '../widgets/brush_fab.dart';
-import '../widgets/map/home_sheet_container.dart';
-import '../widgets/map/nav_top_bar.dart';
-import '../widgets/map/navigation_sheet.dart';
-import '../widgets/map/route_sheet.dart';
-import '../widgets/paint_sheet.dart';
-import '../widgets/route_card.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
 
 final _berlinBounds = LatLngBounds(
-  southwest: const LatLng(52.3, 13.0),
+  southwest: const LatLng(52.3, 13),
   northeast: const LatLng(52.7, 13.8),
 );
 
@@ -74,9 +73,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (ref.read(routeControllerProvider).origin == null) {
       final origin = await _resolveCurrentOriginLocation(l10n);
       if (!mounted) return;
-      notifier.setOrigin(origin);
+      unawaited(notifier.setOrigin(origin));
     }
-    notifier.setDestination(
+    unawaited(notifier.setDestination(
       Location(
         id: 'geo:${coords.latitude},${coords.longitude}',
         name:
@@ -85,7 +84,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         lng: coords.longitude,
         lat: coords.latitude,
       ),
-    );
+    ));
   }
 
   Future<void> _onRouteStateChanged(
@@ -116,9 +115,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 math.max(origin.lng, dest.lng),
               ),
             ),
-            left: 40.0,
+            left: 40,
             top: mq.padding.top + 117.0,
-            right: 40.0,
+            right: 40,
             bottom: mq.padding.bottom + 224.0,
           ),
         );
@@ -131,7 +130,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (previous?.isLoading != next.isLoading && next.preview != null) {
       final overlay = _routeOverlay;
       if (overlay != null) {
-        await overlay.setDimmed(controller, next.isLoading);
+        await overlay.setDimmed(controller, dimmed: next.isLoading);
       }
     }
 
@@ -142,8 +141,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       fitPadding = EdgeInsets.only(
         top: mq.padding.top + 117.0,
         bottom: mq.padding.bottom + 224.0,
-        left: 40.0,
-        right: 40.0,
+        left: 40,
+        right: 40,
       );
     }
 
@@ -169,7 +168,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       await controller.animateCamera(
         CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 16),
       );
-    } catch (e) {
+    } on Object catch (e) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -187,15 +186,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (ref.read(routeControllerProvider).origin == null) {
       final origin = await _resolveCurrentOriginLocation(l10n);
       if (!mounted) return;
-      notifier.setOrigin(origin);
+      unawaited(notifier.setOrigin(origin));
     }
-    notifier.setDestination(Location(
+    unawaited(notifier.setDestination(Location(
       id: home.id,
       name: l10n.settingsHome,
       label: home.label,
       lng: home.lng,
       lat: home.lat,
-    ));
+    )));
   }
 
   Future<void> _updateHomeMarker(Location? home) async {
@@ -241,12 +240,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     // Prefer the live MapLibre fix (same source as the blue dot, written by
     // onUserLocationUpdated). Fall back to Geolocator's cache only if MapLibre
     // hasn't emitted yet — its cache can lag behind by 20-30m at cycling speed.
-    UserLocation? initial = ref.read(userLocationProvider);
+    var initial = ref.read(userLocationProvider);
     if (initial == null) {
       try {
         final pos = await Geolocator.getLastKnownPosition();
         if (pos != null) initial = positionToUserLocation(pos);
-      } catch (_) {}
+      } on Object catch (_) {}
     }
     try {
       await service.start(
@@ -255,14 +254,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             WaypointInput(lat: destination.lat, lng: destination.lng),
         initialLocation: initial,
       );
-      if (mounted) _speakNav(AppLocalizations.of(context)!.navTtsDeparting);
+      if (mounted) unawaited(_speakNav(AppLocalizations.of(context)!.navTtsDeparting));
       if (initial != null) {
         // We already have a fix — skip awaitingFirstFix entirely. Without this
         // the camera waits for ferrostar to emit a `.navigating` state with
         // snapped_location, which won't happen until a stream tick arrives.
         await _activateFollowingCamera(initial);
       }
-    } catch (e, st) {
+    } on Object catch (e, st) {
       reportError(e, st, context: 'nav.start');
     }
   }
@@ -271,7 +270,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     if (!ref.read(ttsEnabledProvider)) return;
     try {
       await ref.read(flutterTtsProvider).speak(text);
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('nav: tts error: $e');
     }
   }
@@ -306,7 +305,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final cam = ref.read(navigationCameraControllerProvider);
     if (cam.mode != CameraMode.awaitingFirstFix) return;
     debugPrint('nav: activating following camera');
-    AppHaptics.firstFix();
+    unawaited(AppHaptics.firstFix());
     cam.onNavStart();
     final controller = _mapController;
     if (controller == null) return;
@@ -321,16 +320,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   Future<void> _handleArrival() async {
     debugPrint('nav: arrived');
-    AppHaptics.arrived();
-    if (mounted) _speakNav(AppLocalizations.of(context)!.navTtsArrived);
-    final cam = ref.read(navigationCameraControllerProvider);
-    cam.onArrived();
+    unawaited(AppHaptics.arrived());
+    if (mounted) unawaited(_speakNav(AppLocalizations.of(context)!.navTtsArrived));
+    ref.read(navigationCameraControllerProvider).onArrived();
     if (mounted) setState(() => _rerouting = false);
     final controller = _mapController;
     if (controller == null) return;
     final destination = ref.read(routeControllerProvider).destination;
-    await controller
-        .updateMyLocationTrackingMode(MyLocationTrackingMode.none);
+    await controller.updateMyLocationTrackingMode(MyLocationTrackingMode.none);
     if (!mounted) return;
     if (destination != null) {
       await controller.animateCamera(CameraUpdate.newLatLngZoom(
@@ -353,8 +350,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final snapped = ref.read(navigationStateProvider).value?.snappedLocation;
     final loc = snapped ?? ref.read(userLocationProvider);
     if (loc == null) return;
-    final cam = ref.read(navigationCameraControllerProvider);
-    cam.onRecenterTapped();
+    final cam = ref.read(navigationCameraControllerProvider)
+      ..onRecenterTapped();
     await controller.animateCamera(CameraUpdate.newLatLngZoom(
         LatLng(loc.lat, loc.lng), cam.followZoom));
     if (!mounted) return;
@@ -372,7 +369,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     if (prevState?.status != TripStatus.complete &&
         nextState.status == TripStatus.complete) {
-      _handleArrival();
+      unawaited(_handleArrival());
     }
   }
 
@@ -391,27 +388,27 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     // isn't updated by ferrostar's replaceRoute. Re-hitting `/api/route`
     // with current GPS as origin produces a fresh GeoJSON preview.
     if (prevInProgress && !inProgress) {
-      _refreshPreviewFromGps();
+      unawaited(_refreshPreviewFromGps());
     }
   }
 
   Future<void> _refreshPreviewFromGps() async {
     final cached = ref.read(userLocationProvider);
-    double? lat = cached?.lat;
-    double? lng = cached?.lng;
+    var lat = cached?.lat;
+    var lng = cached?.lng;
     if (lat == null || lng == null) {
       try {
         final pos = await Geolocator.getLastKnownPosition() ??
             await Geolocator.getCurrentPosition();
         lat = pos.latitude;
         lng = pos.longitude;
-      } catch (e) {
+      } on Object catch (e) {
         debugPrint('nav: refresh-preview GPS error: $e');
       }
     }
     if (!mounted || lat == null || lng == null) return;
     final l10n = AppLocalizations.of(context)!;
-    ref.read(routeControllerProvider.notifier).setOrigin(
+    unawaited(ref.read(routeControllerProvider.notifier).setOrigin(
           Location(
             id: 'gps',
             name: l10n.locationCurrent,
@@ -419,7 +416,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             lat: lat,
             lng: lng,
           ),
-        );
+        ));
   }
 
   /// Resolves a "current location" Location for use as a route origin. Prefers
@@ -440,7 +437,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     try {
       pos = await Geolocator.getLastKnownPosition() ??
           await Geolocator.getCurrentPosition();
-    } catch (_) {}
+    } on Object catch (_) {}
     return Location(
       id: 'gps',
       name: l10n.locationCurrent,
@@ -469,7 +466,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       final id = props?['id'];
       if (id is! int || geom == null) return null;
       return TapFeature(areaId: id, geometry: geom);
-    } catch (_) {
+    } on Object catch (_) {
       return null;
     }
   }
@@ -506,42 +503,43 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         routeState.error != null ||
         preview != null;
 
-    ref.listen<AsyncValue<Location?>>(homeLocationProvider, (_, next) {
-      _updateHomeMarker(next.valueOrNull);
-    });
-    ref.listen<RatingOverlayState>(ratingOverlayControllerProvider,
-        (prev, next) {
-      // One-shot toast: fires exactly when liveSyncDegraded flips false→true.
-      // Happens once per app session (either the client flag is off, or the
-      // server 404s the SSE endpoint on first connect).
-      if (prev?.liveSyncDegraded != true && next.liveSyncDegraded) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Live sync unavailable. Painted areas update on next app start.'),
-          ),
-        );
-      }
-    });
-    ref.listen<RouteState>(routeControllerProvider, _onRouteStateChanged);
-    ref.listen<AsyncValue<NavigationState>>(
-        navigationStateProvider, _onNavStateChange);
-    ref.listen<AsyncValue<bool>>(
-        rerouteInProgressProvider, _onRerouteInProgressChange);
-    ref.listen<AsyncValue<void>>(rerouteSucceededProvider, (_, next) {
-      if (next is AsyncData) {
-        _speakNav(AppLocalizations.of(context)!.navTtsRerouted);
-      }
-    });
-    ref.listen<bool>(navigationSessionProvider, (prev, next) {
-      if (prev == next) return;
-      if (next) {
-        _brushNotifier?.forceOff();
-        _startNavigationSession();
-      } else if (prev == true) {
-        _endNavigationSession();
-      }
-    });
+    ref
+      ..listen<AsyncValue<Location?>>(homeLocationProvider, (_, next) {
+        unawaited(_updateHomeMarker(next.valueOrNull));
+      })
+      ..listen<RatingOverlayState>(ratingOverlayControllerProvider,
+          (prev, next) {
+        // One-shot toast: fires exactly when liveSyncDegraded flips false→true.
+        // Happens once per app session (either the client flag is off, or the
+        // server 404s the SSE endpoint on first connect).
+        if (prev?.liveSyncDegraded != true && next.liveSyncDegraded) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Live sync unavailable. Painted areas update on next app start.'),
+            ),
+          );
+        }
+      })
+      ..listen<RouteState>(routeControllerProvider, _onRouteStateChanged)
+      ..listen<AsyncValue<NavigationState>>(
+          navigationStateProvider, _onNavStateChange)
+      ..listen<AsyncValue<bool>>(
+          rerouteInProgressProvider, _onRerouteInProgressChange)
+      ..listen<AsyncValue<void>>(rerouteSucceededProvider, (_, next) {
+        if (next is AsyncData) {
+          unawaited(_speakNav(AppLocalizations.of(context)!.navTtsRerouted));
+        }
+      })
+      ..listen<bool>(navigationSessionProvider, (prev, next) {
+        if (prev == next) return;
+        if (next) {
+          _brushNotifier?.forceOff();
+          unawaited(_startNavigationSession());
+        } else if (prev == true) {
+          unawaited(_endNavigationSession());
+        }
+      });
 
     return Scaffold(
       body: Stack(
@@ -626,7 +624,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   cameraTargetBounds: CameraTargetBounds(_berlinBounds),
                   minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
                   myLocationEnabled: true,
-                  myLocationTrackingMode: MyLocationTrackingMode.none,
                   trackCameraPosition: true,
                   scrollGesturesEnabled: !paintMode,
                   rotateGesturesEnabled: !paintMode,
@@ -648,8 +645,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   gestureRecognizers: paintMode
                       ? const <Factory<OneSequenceGestureRecognizer>>{}
                       : <Factory<OneSequenceGestureRecognizer>>{
-                          Factory<OneSequenceGestureRecognizer>(
-                            () => EagerGestureRecognizer(),
+                          const Factory<OneSequenceGestureRecognizer>(
+                            EagerGestureRecognizer.new,
                           ),
                         },
                   onMapCreated: (controller) {
@@ -669,11 +666,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     await ref
                         .read(ratingOverlayControllerProvider.notifier)
                         .attachToMap(c);
-                    _brushOverlay?.detach();
+                    final priorBrush = _brushOverlay;
+                    if (priorBrush != null) unawaited(priorBrush.detach());
                     _brushOverlay = await BrushOverlay.attach(c);
-                    _brushNotifier?.attach(surface: _brushOverlay!);
-                    _updateHomeMarker(
-                        ref.read(homeLocationProvider).valueOrNull);
+                    _brushNotifier?.attach(_brushOverlay!);
+                    unawaited(_updateHomeMarker(
+                        ref.read(homeLocationProvider).valueOrNull));
                   },
                   onMapClick: _handleMapTap,
                   onCameraTrackingDismissed: () {
@@ -749,7 +747,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             onFlyToMyLocation: _flyToCurrentLocation,
                             onResetBearing: _resetBearingToNorth,
                             onStart: () {
-                              AppHaptics.startRide();
+                              unawaited(AppHaptics.startRide());
                               ref
                                   .read(navigationSessionProvider.notifier)
                                   .state = true;
@@ -837,7 +835,6 @@ class _UndoRedoFab extends StatelessWidget {
       child: Material(
         key: ValueKey(keyValue),
         shape: const CircleBorder(),
-        elevation: 0,
         color: bg,
         child: InkWell(
           customBorder: const CircleBorder(),
@@ -880,12 +877,12 @@ class _PaintSheetWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
+    return const Align(
       alignment: Alignment.bottomCenter,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
-        children: const [
+        children: [
           Padding(
             padding: EdgeInsets.fromLTRB(0, 0, 16, 8),
             child: _PaintFabColumn(),
@@ -942,17 +939,20 @@ class _PaintGestureWrap extends StatelessWidget {
                 // Report positions from the initial pointer-down event, not
                 // from where slop was resolved. Without this the brush stroke
                 // jumps ~18px away from the finger on touch-down.
-                r.dragStartBehavior = DragStartBehavior.down;
-                r.onStart = (d) async {
-                  final latLng = await toLatLng(_point(d.localPosition));
-                  onPanStart(latLng);
-                };
-                r.onUpdate = (d) async {
-                  final latLng = await toLatLng(_point(d.localPosition));
-                  onPanUpdate(latLng);
-                };
-                r.onEnd = (_) => onPanEnd();
-                r.onCancel = onPanCancel;
+                r
+                  ..dragStartBehavior = DragStartBehavior.down
+                  ..onStart = (d) async {
+                    final latLng = await toLatLng(_point(d.localPosition));
+                    onPanStart(latLng);
+                  }
+                  ..onUpdate = (d) async {
+                    final latLng = await toLatLng(_point(d.localPosition));
+                    onPanUpdate(latLng);
+                  }
+                  ..onEnd = (_) {
+                    onPanEnd();
+                  }
+                  ..onCancel = onPanCancel;
               },
             ),
             LongPressGestureRecognizer:

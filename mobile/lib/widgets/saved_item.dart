@@ -1,19 +1,12 @@
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
 import 'package:flutter/material.dart';
-
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
 
 /// Row in the Home Sheet SAVED list. Left icon badge, title + mono sub,
 /// right-aligned mono time. Bottom hairline divider unless [isLast].
 class SavedItem extends StatelessWidget {
   const SavedItem({
-    super.key,
-    required this.icon,
-    required this.iconBg,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.time,
+    required this.icon, required this.iconBg, required this.iconColor, required this.title, required this.subtitle, required this.time, super.key,
     this.onTap,
     this.isLast = false,
   });
@@ -36,7 +29,7 @@ class SavedItem extends StatelessWidget {
           border: isLast
               ? null
               : const Border(
-                  bottom: BorderSide(color: BbbColors.divider, width: 1),
+                  bottom: BorderSide(color: BbbColors.divider),
                 ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),

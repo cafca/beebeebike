@@ -1,19 +1,17 @@
+import 'package:beebeebike/navigation/camera_controller.dart';
+import 'package:beebeebike/providers/navigation_camera_provider.dart';
+import 'package:beebeebike/providers/navigation_provider.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/widgets/arrived_sheet.dart';
+import 'package:beebeebike/widgets/eta_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../navigation/camera_controller.dart';
-import '../../providers/navigation_camera_provider.dart';
-import '../../providers/navigation_provider.dart';
-import '../../theme/tokens.dart';
-import '../arrived_sheet.dart';
-import '../eta_sheet.dart';
 
 /// Slides up over the route sheet during active navigation. Fixed height;
 /// not draggable.
 class NavigationSheet extends ConsumerWidget {
   const NavigationSheet({
-    super.key,
-    required this.onClose,
+    required this.onClose, super.key,
   });
 
   final VoidCallback onClose;

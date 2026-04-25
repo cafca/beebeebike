@@ -1,18 +1,17 @@
 import 'dart:math' as math;
 
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/providers/map_bearing_provider.dart';
+import 'package:beebeebike/theme/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../l10n/generated/app_localizations.dart';
-import '../../providers/map_bearing_provider.dart';
-import '../../theme/tokens.dart';
 
 /// Inline compass that sits above a RecenterFab in each sheet. Reads
 /// the map bearing from [mapBearingProvider] and renders nothing when
 /// the map is ~north-up; otherwise shows a rotated glyph + spacer,
 /// tapping animates the map back to bearing 0.
 class CompassFabInline extends ConsumerWidget {
-  const CompassFabInline({super.key, required this.onResetBearing});
+  const CompassFabInline({required this.onResetBearing, super.key});
 
   final VoidCallback onResetBearing;
 
@@ -28,7 +27,6 @@ class CompassFabInline extends ConsumerWidget {
         child: Material(
           shape: const CircleBorder(),
           color: BbbColors.panel,
-          elevation: 0,
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: onResetBearing,

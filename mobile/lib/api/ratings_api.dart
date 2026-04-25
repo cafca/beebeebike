@@ -1,7 +1,6 @@
+import 'package:beebeebike/api/client.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'client.dart';
 
 class RatingsApi {
   RatingsApi(this._dio);
@@ -17,9 +16,9 @@ class RatingsApi {
     String bbox, {
     CancelToken? cancelToken,
   }) async {
-    final response = await _dio.get(
+    final response = await _dio.get<dynamic>(
       '/api/ratings',
-      queryParameters: {'bbox': bbox},
+      queryParameters: <String, dynamic>{'bbox': bbox},
       cancelToken: cancelToken,
     );
     return Map<String, dynamic>.from(response.data as Map);

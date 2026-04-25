@@ -1,7 +1,6 @@
+import 'package:beebeebike/models/location.dart';
+import 'package:beebeebike/models/route_preview.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'location.dart';
-import 'route_preview.dart';
 
 part 'route_state.freezed.dart';
 

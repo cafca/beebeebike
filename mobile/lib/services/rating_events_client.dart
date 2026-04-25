@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:beebeebike/api/client.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../api/client.dart';
 
 /// Opens a chunked-byte stream for the SSE endpoint. Split out so tests can
 /// inject a fake without touching Dio or real sockets. The client must be
@@ -65,11 +64,9 @@ Stream<SseEvent> parseSseStream(Stream<List<int>> bytes) async* {
     switch (field) {
       case 'event':
         eventType = value;
-        break;
       case 'data':
         if (dataBuf.isNotEmpty) dataBuf.write('\n');
         dataBuf.write(value);
-        break;
       default:
         break; // id / retry / unknown fields
     }
@@ -189,13 +186,13 @@ class RatingEventsClient {
           _serverDisabled = true;
           try {
             onServerDisabled?.call();
-          } catch (e) {
+          } on Object catch (e) {
             _log('rating-events: onServerDisabled threw: $e');
           }
           return;
         }
         _log('rating-events: connect failed: ${e.message}');
-      } catch (e) {
+      } on Object catch (e) {
         if (_stopped) return;
         _log('rating-events: connect failed: $e');
       }
@@ -210,7 +207,7 @@ class RatingEventsClient {
         // redundant refetch is cheap insurance.
         try {
           onInvalidate();
-        } catch (e) {
+        } on Object catch (e) {
           _log('rating-events: onInvalidate threw on connect: $e');
         }
         await _consume(bytes);
@@ -241,7 +238,7 @@ class RatingEventsClient {
         if (ev.event == 'invalidate') {
           try {
             onInvalidate();
-          } catch (e) {
+          } on Object catch (e) {
             _log('rating-events: onInvalidate threw: $e');
           }
         }

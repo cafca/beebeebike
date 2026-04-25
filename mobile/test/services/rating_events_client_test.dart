@@ -106,8 +106,7 @@ void main() {
         // Zero backoff — we shouldn't reach it here anyway.
         backoff: (_) => Duration.zero,
         sleep: (_) async {},
-      );
-      client.start();
+      )..start();
       await _pump();
       expect(calls, 1, reason: 'force-invalidate on first connect');
 
@@ -130,13 +129,13 @@ void main() {
         opener: ({required cancelToken}) async => controller.stream,
         onInvalidate: () => calls++,
         sleep: (_) async {},
-      );
-      client.start();
+      )..start();
       await _pump();
       final baseline = calls; // 1 (force-invalidate on connect)
 
-      controller.add(_bytes('event: keepalive\ndata: ok\n\n'));
-      controller.add(_bytes('data: plain message\n\n'));
+      controller
+        ..add(_bytes('event: keepalive\ndata: ok\n\n'))
+        ..add(_bytes('data: plain message\n\n'));
       await _pump();
       expect(calls, baseline, reason: 'only invalidate events count');
 
@@ -158,8 +157,7 @@ void main() {
         onInvalidate: () => calls++,
         backoff: (_) => Duration.zero,
         sleep: (_) async {},
-      );
-      client.start();
+      )..start();
       await _pump();
       expect(opens, 1);
       expect(calls, 1, reason: 'force-invalidate on first connect');
@@ -192,8 +190,7 @@ void main() {
         // Fast path to detect any accidental retry.
         backoff: (_) => Duration.zero,
         sleep: (_) async {},
-      );
-      client.start();
+      )..start();
       await _pump();
       expect(client.serverDisabled, isTrue);
       expect(opens, 1, reason: '404 must not retry');
@@ -231,8 +228,7 @@ void main() {
           sleepCompleter.add(c);
           return c.future;
         },
-      );
-      client.start();
+      )..start();
       await _pump();
       expect(opens, 1);
       expect(delays, [const Duration(seconds: 1)],
@@ -260,8 +256,7 @@ void main() {
         onInvalidate: () {},
         backoff: (_) => const Duration(hours: 1),
         sleep: (_) => sleepCompleter.future,
-      );
-      client.start();
+      )..start();
       await _pump();
       // Now in backoff sleep — stop() must unblock us.
       final stopFuture = client.stop();

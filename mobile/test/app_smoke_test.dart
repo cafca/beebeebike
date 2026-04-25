@@ -1,13 +1,13 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:beebeebike/app.dart';
 import 'package:beebeebike/api/client.dart';
+import 'package:beebeebike/app.dart';
 import 'package:beebeebike/config/app_config.dart';
 import 'package:beebeebike/providers/onboarding_provider.dart';
 import 'package:beebeebike/providers/search_history_provider.dart';
 import 'package:beebeebike/services/map_style_loader.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('boots to the map screen shell', (tester) async {
@@ -49,7 +49,7 @@ void main() {
           dioProvider.overrideWithValue(dio),
           sharedPreferencesProvider.overrideWithValue(prefs),
           onboardingCompletedProvider
-              .overrideWith(() => _AlwaysDoneOnboarding()),
+              .overrideWith(_AlwaysDoneOnboarding.new),
         ],
         child: const BeeBeeBikeApp(),
       ),
@@ -64,7 +64,7 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
 
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000'));
-    int authMeCallCount = 0;
+    var authMeCallCount = 0;
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
         if (options.path == '/api/auth/me') {
@@ -98,7 +98,7 @@ void main() {
           dioProvider.overrideWithValue(dio),
           sharedPreferencesProvider.overrideWithValue(prefs),
           onboardingCompletedProvider
-              .overrideWith(() => _AlwaysDoneOnboarding()),
+              .overrideWith(_AlwaysDoneOnboarding.new),
         ],
         child: const BeeBeeBikeApp(),
       ),
@@ -115,8 +115,8 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
 
     final dio = Dio(BaseOptions(baseUrl: 'http://localhost:3000'));
-    int authMeCallCount = 0;
-    int anonCallCount = 0;
+    var authMeCallCount = 0;
+    var anonCallCount = 0;
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
         if (options.path == '/api/auth/me') {

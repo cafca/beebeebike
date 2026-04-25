@@ -1,9 +1,8 @@
+import 'package:beebeebike/theme/tokens.dart';
 import 'package:flutter/material.dart';
 
-import '../theme/tokens.dart';
-
 class OnboardingDots extends StatelessWidget {
-  const OnboardingDots({super.key, required this.current, required this.total});
+  const OnboardingDots({required this.current, required this.total, super.key});
 
   final int current;
   final int total;

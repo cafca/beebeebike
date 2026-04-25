@@ -1,8 +1,7 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
 import 'package:flutter/material.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
 
 class ReroutingToast extends StatelessWidget {
   const ReroutingToast({super.key});

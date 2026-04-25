@@ -1,6 +1,5 @@
+import 'package:beebeebike/models/geocode_result.dart';
 import 'package:dio/dio.dart';
-
-import '../models/geocode_result.dart';
 
 class GeocodeApi {
   GeocodeApi(this._dio);
@@ -8,11 +7,13 @@ class GeocodeApi {
   final Dio _dio;
 
   Future<List<GeocodeResult>> search(String query) async {
-    final response = await _dio.get('/api/geocode', queryParameters: {'q': query});
-    final features = (response.data['features'] as List).cast<Map<String, dynamic>>();
+    final response = await _dio.get<dynamic>('/api/geocode', queryParameters: <String, dynamic>{'q': query});
+    final data = response.data as Map<String, dynamic>;
+    final features = (data['features'] as List).cast<Map<String, dynamic>>();
     return features.map((f) {
       final props = f['properties'] as Map<String, dynamic>;
-      final coords = (f['geometry']?['coordinates'] as List?) ?? [0.0, 0.0];
+      final geometry = f['geometry'] as Map<String, dynamic>?;
+      final coords = (geometry?['coordinates'] as List?) ?? const <num>[0, 0];
       final rawName = (props['name'] as String?) ?? '';
       final street = (props['street'] as String?) ?? '';
       final housenumber = (props['housenumber'] as String?) ?? '';

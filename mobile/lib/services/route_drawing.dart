@@ -1,7 +1,6 @@
+import 'package:beebeebike/models/route_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-
-import '../models/route_preview.dart';
 
 const _routeLineColor = '#19A4C2';
 const _markerFillColor = '#14272F';
@@ -51,22 +50,22 @@ class RouteOverlay {
     final line = await controller.addLine(LineOptions(
       geometry: coords,
       lineColor: _routeLineColor,
-      lineWidth: 8.0,
+      lineWidth: 8,
       lineOpacity: _lineOpacityFull,
     ));
     final origin = await controller.addCircle(CircleOptions(
       geometry: coords.first,
-      circleRadius: 8.0,
+      circleRadius: 8,
       circleColor: _markerFillColor,
       circleStrokeColor: _markerStrokeColor,
-      circleStrokeWidth: 2.0,
+      circleStrokeWidth: 2,
     ));
     final destination = await controller.addCircle(CircleOptions(
       geometry: coords.last,
-      circleRadius: 8.0,
+      circleRadius: 8,
       circleColor: _markerFillColor,
       circleStrokeColor: _markerStrokeColor,
-      circleStrokeWidth: 2.0,
+      circleStrokeWidth: 2,
     ));
     if (fitPadding != null) {
       await controller.animateCamera(
@@ -89,9 +88,9 @@ class RouteOverlay {
   }
 
   Future<void> setDimmed(
-    MapLibreMapController controller,
-    bool dimmed,
-  ) async {
+    MapLibreMapController controller, {
+    required bool dimmed,
+  }) async {
     await controller.updateLine(
       _line,
       LineOptions(

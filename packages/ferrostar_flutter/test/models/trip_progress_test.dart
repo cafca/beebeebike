@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:ferrostar_flutter/src/models/trip_progress.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('TripProgress round-trips', () {

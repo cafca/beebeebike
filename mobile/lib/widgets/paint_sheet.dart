@@ -1,9 +1,8 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/providers/brush_provider.dart';
+import 'package:beebeebike/theme/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../providers/brush_provider.dart';
-import '../theme/tokens.dart';
 
 class PaintSheet extends ConsumerWidget {
   const PaintSheet({super.key});
@@ -92,7 +91,7 @@ class _ColorChip extends StatelessWidget {
           ),
           transformAlignment: Alignment.center,
           transform: selected
-              ? Matrix4.diagonal3Values(1.15, 1.15, 1.0)
+              ? Matrix4.diagonal3Values(1.15, 1.15, 1)
               : Matrix4.identity(),
           child: isEraser
               ? Icon(Icons.cleaning_services_outlined, size: 20, color: color)

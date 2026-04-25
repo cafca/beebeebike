@@ -38,8 +38,12 @@ import '../widgets/map/route_sheet.dart';
 import '../widgets/paint_sheet.dart';
 import '../widgets/route_card.dart';
 import '../dev/dev_mode.dart';
+import '../dev/playback_controller.dart';
+import '../dev/playback_state.dart';
 import '../dev/widgets/drag_puck_overlay.dart';
 import '../dev/widgets/playback_drawer.dart';
+import '../dev/widgets/synthetic_puck_overlay.dart';
+import '../navigation/camera_controller.dart';
 
 final _berlinBounds = LatLngBounds(
   southwest: const LatLng(52.3, 13.0),
@@ -307,11 +311,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     cam.onFirstFix();
     final controller = _mapController;
     if (controller == null) return;
+    final playback = ref.read(playbackEnabledProvider).valueOrNull ?? false;
     // Enable tracking first so maplibre drives the camera target, then
     // apply zoom. newLatLngZoom before trackingCompass gets clobbered —
     // the tracking mode kicks in and resets zoom to whatever it was.
-    await controller
-        .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+    // Skip trackingCompass in playback mode — native GPS puck is hidden and
+    // camera follow is driven by the synthetic location listener instead.
+    if (!playback) {
+      await controller
+          .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+    }
     if (!mounted) return;
     await controller.animateCamera(CameraUpdate.zoomTo(cam.followZoom));
   }
@@ -351,8 +360,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     await controller.animateCamera(CameraUpdate.newLatLngZoom(
         LatLng(snapped.lat, snapped.lng), cam.followZoom));
     if (!mounted) return;
-    await controller
-        .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+    final playback = ref.read(playbackEnabledProvider).valueOrNull ?? false;
+    // Skip trackingCompass in playback mode — native GPS puck is hidden and
+    // camera follow is driven by the synthetic location listener instead.
+    if (!playback) {
+      await controller
+          .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+    }
   }
 
   void _onNavStateChange(
@@ -466,6 +480,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final paintMode = ref.watch(
       brushControllerProvider.select((s) => s.paintMode),
     );
+    final playback = ref.watch(playbackEnabledProvider).valueOrNull ?? false;
     final routeActive = routeState.isLoading ||
         routeState.error != null ||
         preview != null;
@@ -505,6 +520,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       } else if (prev == true) {
         _endNavigationSession();
       }
+    });
+    ref.listen<PlaybackState>(playbackControllerProvider, (prev, next) {
+      final on = ref.read(playbackEnabledProvider).valueOrNull ?? false;
+      if (!on) return;
+      if (next.routeLengthM <= 0) return;
+      final mode = ref.read(navigationCameraControllerProvider).mode;
+      if (mode != CameraMode.following) return;
+      final c = _mapController;
+      if (c == null) return;
+      final ll =
+          ref.read(playbackControllerProvider.notifier).currentLatLng();
+      c.animateCamera(
+        CameraUpdate.newLatLng(ll),
+        duration: const Duration(milliseconds: 240),
+      );
     });
 
     return Scaffold(
@@ -587,7 +617,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
                   cameraTargetBounds: CameraTargetBounds(_berlinBounds),
                   minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
-                  myLocationEnabled: true,
+                  myLocationEnabled: !playback,
                   myLocationTrackingMode: MyLocationTrackingMode.none,
                   trackCameraPosition: true,
                   scrollGesturesEnabled: !paintMode,
@@ -755,6 +785,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 ],
               ),
             ),
+          if ((ref.watch(playbackEnabledProvider).valueOrNull ?? false))
+            SyntheticPuckOverlay(mapController: _mapController),
           if ((ref.watch(playbackEnabledProvider).valueOrNull ?? false))
             DragPuckOverlay(mapController: _mapController),
         ],

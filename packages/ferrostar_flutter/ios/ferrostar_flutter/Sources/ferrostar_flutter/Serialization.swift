@@ -181,7 +181,8 @@ extension Serialization {
       waypointAdvance: .waypointWithinRange(35.0),
       stepAdvanceCondition: stepAdvanceDistanceEntryAndExit(
         minimumHorizontalAccuracy: 32, distanceToEndOfStep: 30, distanceAfterEndStep: 5),
-      arrivalStepAdvanceCondition: stepAdvanceManual(),
+      arrivalStepAdvanceCondition: stepAdvanceDistanceToEndOfStep(
+        distance: 30, minimumHorizontalAccuracy: 32),
       routeDeviationTracking: .staticThreshold(minimumHorizontalAccuracy: 25, maxAcceptableDeviation: devM),
       snappedLocationCourseFiltering: snap ? .snapToRoute : .raw
     )

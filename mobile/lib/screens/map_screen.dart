@@ -15,6 +15,7 @@ import 'package:beebeebike/providers/navigation_provider.dart';
 import 'package:beebeebike/providers/navigation_session_provider.dart';
 import 'package:beebeebike/providers/rating_overlay_provider.dart';
 import 'package:beebeebike/providers/route_provider.dart';
+import 'package:beebeebike/providers/supported_bbox_provider.dart';
 import 'package:beebeebike/providers/user_location_provider.dart';
 import 'package:beebeebike/services/brush_overlay.dart';
 import 'package:beebeebike/services/error_reporter.dart';
@@ -165,6 +166,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     try {
       final pos = await Geolocator.getLastKnownPosition() ??
           await Geolocator.getCurrentPosition();
+      final bbox = ref.read(supportedBboxProvider);
+      if (bbox != null && !bbox.contains(pos.latitude, pos.longitude)) {
+        _showOutsideBboxToast();
+        return;
+      }
       await controller.animateCamera(
         CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 16),
       );
@@ -235,6 +241,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       debugPrint('nav: start aborted (no origin/destination)');
       return;
     }
+    if (!ref.read(withinSupportedBboxProvider)) {
+      debugPrint('nav: start aborted (GPS outside supported bbox)');
+      _showOutsideBboxToast();
+      ref.read(navigationSessionProvider.notifier).state = false;
+      return;
+    }
     debugPrint('nav: start ${origin.name} -> ${destination.name}');
     final service = ref.read(navigationServiceProvider);
     // Prefer the live MapLibre fix (same source as the blue dot, written by
@@ -264,6 +276,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     } on Object catch (e, st) {
       reportError(e, st, context: 'nav.start');
     }
+  }
+
+  void _showOutsideBboxToast() {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.outsideBboxToast)),
+    );
   }
 
   Future<void> _speakNav(String text) async {
@@ -502,6 +522,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final routeActive = routeState.isLoading ||
         routeState.error != null ||
         preview != null;
+    final withinBbox = ref.watch(withinSupportedBboxProvider);
 
     ref
       ..listen<AsyncValue<Location?>>(homeLocationProvider, (_, next) {
@@ -746,6 +767,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             preview: preview,
                             onFlyToMyLocation: _flyToCurrentLocation,
                             onResetBearing: _resetBearingToNorth,
+                            startEnabled: withinBbox,
+                            onStartDisabledTap: _showOutsideBboxToast,
                             onStart: () {
                               unawaited(AppHaptics.startRide());
                               ref

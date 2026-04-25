@@ -78,6 +78,7 @@
   "searchSectionResults": "Ergebnisse",
   "homeGoHome": "Nach Hause",
   "routeStartRide": "Los geht's",
+  "outsideBboxToast": "Dein Standort liegt außerhalb von Berlin. Beebeebike funktioniert derzeit nur im Berliner Abdeckungsbereich.",
   "routeEta": "Ankunft {time}",
   "navArrives": "Ankunft um {time}",
 

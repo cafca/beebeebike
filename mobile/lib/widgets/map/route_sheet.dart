@@ -14,7 +14,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// preview ready). Fixed height; not draggable.
 class RouteSheet extends ConsumerWidget {
   const RouteSheet({
-    required this.routeState, required this.preview, required this.onFlyToMyLocation, required this.onResetBearing, required this.onStart, super.key,
+    required this.routeState,
+    required this.preview,
+    required this.onFlyToMyLocation,
+    required this.onResetBearing,
+    required this.onStart,
+    this.startEnabled = true,
+    this.onStartDisabledTap,
+    super.key,
   });
 
   final RouteState routeState;
@@ -22,6 +29,12 @@ class RouteSheet extends ConsumerWidget {
   final VoidCallback onFlyToMyLocation;
   final VoidCallback onResetBearing;
   final VoidCallback onStart;
+
+  /// When false the start button is rendered in a disabled visual state
+  /// and `onStart` is not invoked on tap. Falls through to
+  /// [onStartDisabledTap] instead, so the caller can surface a toast.
+  final bool startEnabled;
+  final VoidCallback? onStartDisabledTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,7 +86,10 @@ class RouteSheet extends ConsumerWidget {
                         const Icon(Icons.error_outline, color: Colors.red),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(l10n.routeLoadError,
+                          child: Text(
+                              routeState.error == kRouteErrorOriginOutsideBbox
+                                  ? l10n.outsideBboxToast
+                                  : l10n.routeLoadError,
                               style: Theme.of(context).textTheme.bodyMedium),
                         ),
                         IconButton(
@@ -92,6 +108,8 @@ class RouteSheet extends ConsumerWidget {
                       durationMinutes: (preview!.time / 60000).round(),
                       distanceKm: preview!.distance / 1000,
                       onStart: onStart,
+                      startEnabled: startEnabled,
+                      onStartDisabledTap: onStartDisabledTap,
                       onClose: () {
                         ref.read(routeControllerProvider.notifier).clear();
                         onFlyToMyLocation();

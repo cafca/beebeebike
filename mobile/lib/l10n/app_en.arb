@@ -78,6 +78,7 @@
   "searchSectionResults": "Results",
   "homeGoHome": "Go home",
   "routeStartRide": "Start ride",
+  "outsideBboxToast": "Your location is outside Berlin. Beebeebike currently only works inside the Berlin coverage area.",
   "routeEta": "ETA {time}",
   "@routeEta": {
     "placeholders": { "time": { "type": "String" } }

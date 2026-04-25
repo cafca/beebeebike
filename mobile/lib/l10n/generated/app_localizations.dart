@@ -506,6 +506,12 @@ abstract class AppLocalizations {
   /// **'Start ride'**
   String get routeStartRide;
 
+  /// No description provided for @outsideBboxToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Your location is outside Berlin. Beebeebike currently only works inside the Berlin coverage area.'**
+  String get outsideBboxToast;
+
   /// No description provided for @routeEta.
   ///
   /// In en, this message translates to:

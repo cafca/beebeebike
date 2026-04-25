@@ -7,11 +7,12 @@ part of 'user.dart';
 // **************************************************************************
 
 _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
-      id: json['id'] as String,
-      email: json['email'] as String?,
-      displayName: json['display_name'] as String? ?? '',
-      accountType: json['account_type'] as String,
-    );
+  id: json['id'] as String,
+  email: json['email'] as String?,
+  displayName: json['display_name'] as String? ?? '',
+  accountType: json['account_type'] as String,
+  bbox: const _BboxConverter().fromJson(json['bbox'] as Map<String, dynamic>?),
+);
 
 Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
     <String, dynamic>{
@@ -19,4 +20,5 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'email': instance.email,
       'display_name': instance.displayName,
       'account_type': instance.accountType,
+      'bbox': const _BboxConverter().toJson(instance.bbox),
     };

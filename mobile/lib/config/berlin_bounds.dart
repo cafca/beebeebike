@@ -9,6 +9,13 @@ class Bbox {
     required this.north,
   });
 
+  factory Bbox.fromJson(Map<String, dynamic> json) => Bbox(
+        west: (json['west'] as num).toDouble(),
+        south: (json['south'] as num).toDouble(),
+        east: (json['east'] as num).toDouble(),
+        north: (json['north'] as num).toDouble(),
+      );
+
   final double west;
   final double south;
   final double east;
@@ -16,6 +23,28 @@ class Bbox {
 
   /// Backend format: "west,south,east,north".
   String toQueryString() => '$west,$south,$east,$north';
+
+  /// Inclusive containment check. Edge points count as inside.
+  bool contains(double lat, double lng) =>
+      lng >= west && lng <= east && lat >= south && lat <= north;
+
+  Map<String, dynamic> toJson() => {
+        'west': west,
+        'south': south,
+        'east': east,
+        'north': north,
+      };
+
+  @override
+  bool operator ==(Object other) =>
+      other is Bbox &&
+      other.west == west &&
+      other.south == south &&
+      other.east == east &&
+      other.north == north;
+
+  @override
+  int get hashCode => Object.hash(west, south, east, north);
 }
 
 /// Full-sync bbox for rating areas. Covers Berlin plus a ~5km padding ring

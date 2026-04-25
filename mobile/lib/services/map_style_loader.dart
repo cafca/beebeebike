@@ -1,10 +1,9 @@
 import 'dart:io';
 
+import 'package:beebeebike/app.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-
-import '../app.dart';
 
 const _styleAssetPath = 'assets/styles/beebeebike-style.json';
 

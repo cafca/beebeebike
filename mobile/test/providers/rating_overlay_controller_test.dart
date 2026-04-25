@@ -45,9 +45,9 @@ class _FakeOverlay implements RatingOverlaySurface {
 class _FakeRatingsApi implements RatingsApi {
   final List<({String bbox, CancelToken? token})> calls = [];
   bool blockNext = false;
-  Map<String, dynamic> response = const {
+  Map<String, dynamic> response = const <String, dynamic>{
     'type': 'FeatureCollection',
-    'features': [],
+    'features': <dynamic>[],
   };
 
   @override
@@ -60,14 +60,17 @@ class _FakeRatingsApi implements RatingsApi {
       // Resolve only when the CancelToken is cancelled — mirrors Dio's
       // real behavior, so the controller's `on DioException` catch runs.
       final completer = Completer<Map<String, dynamic>>();
-      cancelToken?.whenCancel.then((_) {
-        if (!completer.isCompleted) {
-          completer.completeError(DioException(
-            requestOptions: RequestOptions(path: '/api/ratings'),
-            type: DioExceptionType.cancel,
-          ));
-        }
-      });
+      final whenCancel = cancelToken?.whenCancel;
+      if (whenCancel != null) {
+        unawaited(whenCancel.then((_) {
+          if (!completer.isCompleted) {
+            completer.completeError(DioException(
+              requestOptions: RequestOptions(path: '/api/ratings'),
+              type: DioExceptionType.cancel,
+            ));
+          }
+        }));
+      }
       return completer.future;
     }
     return response;
@@ -149,7 +152,7 @@ class _FakeEventsClient implements RatingEventsClient {
   bool get serverDisabled => _serverDisabled;
 
   @override
-  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 _Setup _setup({
@@ -322,7 +325,7 @@ void main() {
     final container = ProviderContainer(overrides: [
       appConfigProvider.overrideWithValue(_sseDisabledConfig),
       ratingsApiProvider.overrideWithValue(api),
-      authControllerProvider.overrideWith(() => _PendingAuthController()),
+      authControllerProvider.overrideWith(_PendingAuthController.new),
     ]);
     addTearDown(container.dispose);
 
@@ -337,7 +340,6 @@ void main() {
     test('does not start events client when SSE disabled in config',
         () async {
       final s = _setup(
-        config: _sseDisabledConfig,
         installFakeEventsClient: true,
       );
       addTearDown(s.container.dispose);
@@ -474,7 +476,7 @@ void main() {
       final container = ProviderContainer(overrides: [
         appConfigProvider.overrideWithValue(_sseEnabledConfig),
         ratingsApiProvider.overrideWithValue(api),
-        authControllerProvider.overrideWith(() => _PendingAuthController()),
+        authControllerProvider.overrideWith(_PendingAuthController.new),
         ratingEventsClientFactoryProvider.overrideWithValue(
           (onInvalidate, {onServerDisabled}) {
             capturedClient = _FakeEventsClient(onInvalidate, onServerDisabled);

@@ -23,12 +23,12 @@ class SwitchableLocationSource {
   void notifySourceChanged() => _resubscribe();
 
   void dispose() {
-    _sub?.cancel();
-    _out.close();
+    unawaited(_sub?.cancel());
+    unawaited(_out.close());
   }
 
   void _resubscribe() {
-    _sub?.cancel();
+    unawaited(_sub?.cancel());
     final src = usePlayback() ? playbackStream() : realStream();
     _sub = src.listen(_out.add, onError: _out.addError);
   }

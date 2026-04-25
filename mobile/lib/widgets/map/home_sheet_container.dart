@@ -1,19 +1,15 @@
+import 'package:beebeebike/widgets/brush_fab.dart';
+import 'package:beebeebike/widgets/home_sheet.dart';
+import 'package:beebeebike/widgets/map/compass_fab_inline.dart';
+import 'package:beebeebike/widgets/map/recenter_circle_fab.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../brush_fab.dart';
-import '../home_sheet.dart';
-import 'compass_fab_inline.dart';
-import 'recenter_circle_fab.dart';
 
 /// Home-mode bottom UI: the draggable [HomeSheet] plus a recenter/compass
 /// FAB column whose vertical position tracks the sheet's current snap size.
 class HomeSheetContainer extends ConsumerStatefulWidget {
   const HomeSheetContainer({
-    super.key,
-    required this.onFlyToMyLocation,
-    required this.onResetBearing,
-    required this.onNavigateHome,
+    required this.onFlyToMyLocation, required this.onResetBearing, required this.onNavigateHome, super.key,
   });
 
   final VoidCallback onFlyToMyLocation;

@@ -1,21 +1,22 @@
+import 'dart:async';
+
+import 'package:beebeebike/app.dart';
+import 'package:beebeebike/dev/dev_mode.dart';
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/providers/auth_provider.dart';
+import 'package:beebeebike/providers/location_provider.dart';
+import 'package:beebeebike/screens/legal_document_screen.dart';
+import 'package:beebeebike/screens/login_screen.dart';
+import 'package:beebeebike/screens/register_screen.dart';
+import 'package:beebeebike/services/error_reporter.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
+import 'package:beebeebike/widgets/language_picker.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import '../app.dart';
-import '../dev/dev_mode.dart';
-import '../l10n/generated/app_localizations.dart';
-import '../providers/auth_provider.dart';
-import '../providers/location_provider.dart';
-import '../services/error_reporter.dart';
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
-import '../widgets/language_picker.dart';
-import 'legal_document_screen.dart';
-import 'login_screen.dart';
-import 'register_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -158,8 +159,8 @@ class _AuthButton extends ConsumerWidget {
           label: l10n.onboardingCreateAccount,
           bg: BbbColors.ink,
           fg: Colors.white,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const RegisterScreen()),
+          onTap: () => Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(builder: (_) => const RegisterScreen()),
           ),
         ),
         const SizedBox(height: 8),
@@ -168,8 +169,8 @@ class _AuthButton extends ConsumerWidget {
           label: l10n.settingsLogIn,
           bg: BbbColors.bgAlt,
           fg: BbbColors.ink,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          onTap: () => Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
           ),
         ),
       ],
@@ -179,11 +180,7 @@ class _AuthButton extends ConsumerWidget {
 
 class _SettingsAuthTile extends StatelessWidget {
   const _SettingsAuthTile({
-    super.key,
-    required this.label,
-    required this.bg,
-    required this.fg,
-    required this.onTap,
+    required this.label, required this.bg, required this.fg, required this.onTap, super.key,
   });
 
   final String label;
@@ -272,8 +269,8 @@ class _LegalTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
+      onTap: () => Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
           builder: (_) => LegalDocumentScreen(title: title, url: url),
         ),
       ),
@@ -304,7 +301,7 @@ class _DangerSection extends ConsumerWidget {
     final isRegistered = user?.accountType == 'registered';
     if (!isRegistered) return const SizedBox.shrink();
 
-    final danger = BbbColors.rampHate;
+    const danger = BbbColors.rampHate;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,7 +324,7 @@ class _DangerSection extends ConsumerWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.delete_forever_outlined, color: danger),
+                    const Icon(Icons.delete_forever_outlined, color: danger),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -358,7 +355,7 @@ class _DangerSection extends ConsumerWidget {
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
-    final danger = BbbColors.rampHate;
+    const danger = BbbColors.rampHate;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -388,7 +385,7 @@ class _DangerSection extends ConsumerWidget {
         SnackBar(content: Text(l10n.settingsDeleteSuccess)),
       );
       if (navigator.canPop()) navigator.pop();
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       reportError(error, stackTrace, context: 'settings.deleteAccount');
       messenger.showSnackBar(
         SnackBar(
@@ -512,7 +509,7 @@ class _DevModeSection extends ConsumerWidget {
           subtitle: const Text('Simulate GPS along the active route'),
           value: playbackOn,
           onChanged: (v) =>
-              ref.read(playbackEnabledProvider.notifier).set(v),
+              ref.read(playbackEnabledProvider.notifier).set(value: v),
         ),
       ],
     );
@@ -538,7 +535,7 @@ class _VersionRowState extends ConsumerState<_VersionRow> {
       window: kDevTapWindow,
       onUnlock: _handleUnlock,
     );
-    _loadVersion();
+    unawaited(_loadVersion());
   }
 
   Future<void> _loadVersion() async {

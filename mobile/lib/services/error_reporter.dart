@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -16,11 +18,11 @@ void reportError(
   if (kDebugMode) {
     debugPrint('$context error: $error\n$stackTrace');
   }
-  Sentry.captureException(
+  unawaited(Sentry.captureException(
     error,
     stackTrace: stackTrace,
     withScope: (scope) => scope.setTag('context', context),
-  );
+  ));
 }
 
 /// Record a breadcrumb attached to subsequent Sentry events, and mirror it to
@@ -29,7 +31,7 @@ void reportError(
 /// lands without becoming their own GlitchTip issues.
 void addBreadcrumb(String message, {String? category}) {
   if (kDebugMode) debugPrint('${category ?? "breadcrumb"}: $message');
-  Sentry.addBreadcrumb(
+  unawaited(Sentry.addBreadcrumb(
     Breadcrumb(message: message, category: category, level: SentryLevel.info),
-  );
+  ));
 }

@@ -1,6 +1,5 @@
+import 'package:beebeebike/providers/search_history_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'search_history_provider.dart';
 
 /// Flip to `true` locally to replay the onboarding flow on every launch
 /// regardless of the persisted flag. Must stay `false` on committed code.

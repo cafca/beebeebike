@@ -1,10 +1,9 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:beebeebike/models/location.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-
-import '../models/location.dart';
 
 /// Owns the home-location Symbol on the MapLibre map. Re-renders the marker
 /// image and places a single [Symbol] at [Location], or removes it when home
@@ -28,7 +27,7 @@ class HomeMarkerService {
     _marker = await controller.addSymbol(SymbolOptions(
       geometry: LatLng(home.lat, home.lng),
       iconImage: 'home-marker',
-      iconSize: 1.0,
+      iconSize: 1,
       iconAnchor: 'center',
     ));
   }
@@ -36,12 +35,12 @@ class HomeMarkerService {
   static Future<Uint8List> _createImage() async {
     const double size = 52;
     final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    canvas.drawCircle(
-      const Offset(size / 2, size / 2),
-      size / 2,
-      Paint()..color = const Color(0xFF3B82F6),
-    );
+    final canvas = Canvas(recorder)
+      ..drawCircle(
+        const Offset(size / 2, size / 2),
+        size / 2,
+        Paint()..color = const Color(0xFF3B82F6),
+      );
     final tp = TextPainter(textDirection: TextDirection.ltr)
       ..text = TextSpan(
         text: String.fromCharCode(Icons.home.codePoint),

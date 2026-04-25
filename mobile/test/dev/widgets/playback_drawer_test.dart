@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:beebeebike/dev/playback_controller.dart';
 import 'package:beebeebike/dev/widgets/playback_drawer.dart';
 import 'package:beebeebike/models/route_preview.dart';
 import 'package:beebeebike/models/route_state.dart';
 import 'package:beebeebike/providers/route_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 RoutePreview _preview() => const RoutePreview(
       geometry: {
@@ -27,7 +27,7 @@ class _FakeRouteController extends Notifier<RouteState>
   @override
   RouteState build() => _initial;
   @override
-  noSuchMethod(Invocation i) => throw UnimplementedError(i.toString());
+  Never noSuchMethod(Invocation i) => throw UnimplementedError(i.toString());
 }
 
 Widget _wrap(ProviderContainer container) => UncontrolledProviderScope(

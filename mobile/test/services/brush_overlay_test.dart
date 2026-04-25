@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:beebeebike/services/brush_overlay.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class _FakeSurface implements BrushOverlaySurface {
   @override
@@ -40,7 +40,7 @@ void main() {
   test('BrushOverlaySurface contract is usable via a fake', () async {
     final fake = _FakeSurface();
     await fake.setPreview(
-      const {'type': 'Polygon', 'coordinates': []},
+      const <String, dynamic>{'type': 'Polygon', 'coordinates': <dynamic>[]},
       '#1abc9c',
     );
     expect(fake.lastColor, '#1abc9c');

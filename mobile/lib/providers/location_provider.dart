@@ -1,9 +1,8 @@
+import 'package:beebeebike/api/client.dart';
+import 'package:beebeebike/api/locations_api.dart';
+import 'package:beebeebike/models/location.dart';
+import 'package:beebeebike/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../api/client.dart';
-import '../api/locations_api.dart';
-import '../models/location.dart';
-import 'auth_provider.dart';
 
 final locationsApiProvider = Provider<LocationsApi>(
   (ref) => LocationsApi(ref.watch(dioProvider)),

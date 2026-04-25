@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter_test/flutter_test.dart';
 import 'package:beebeebike/services/brush_geometry.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 void main() {
@@ -124,7 +124,7 @@ void main() {
 /// Positive area = CCW (per GeoJSON right-hand rule for exterior rings).
 /// Negative area = CW.
 /// Parameters: coords is a list of [lng, lat] pairs.
-double _signedArea(List coords) {
+double _signedArea(List<dynamic> coords) {
   double s = 0;
   for (var i = 0; i < coords.length - 1; i++) {
     final a = coords[i] as List;

@@ -1,12 +1,9 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:flutter/material.dart';
-
-import '../l10n/generated/app_localizations.dart';
 
 class BeeBeeBikeSearchBar extends StatelessWidget {
   const BeeBeeBikeSearchBar({
-    super.key,
-    required this.onTap,
-    required this.onAvatarTap,
+    required this.onTap, required this.onAvatarTap, super.key,
   });
 
   final VoidCallback onTap;

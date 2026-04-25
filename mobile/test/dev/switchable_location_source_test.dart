@@ -1,8 +1,8 @@
 import 'dart:async';
 
+import 'package:beebeebike/dev/switchable_location_source.dart';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beebeebike/dev/switchable_location_source.dart';
 
 UserLocation _u(double lng) => UserLocation(
       lat: 0,

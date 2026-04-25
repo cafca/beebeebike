@@ -12,7 +12,8 @@ part of 'user.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 User _$UserFromJson(Map<String, dynamic> json) {
   return _User.fromJson(json);
@@ -26,6 +27,8 @@ mixin _$User {
   String get displayName => throw _privateConstructorUsedError;
   @JsonKey(name: 'account_type')
   String get accountType => throw _privateConstructorUsedError;
+  @_BboxConverter()
+  Bbox? get bbox => throw _privateConstructorUsedError;
 
   /// Serializes this User to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -41,11 +44,13 @@ abstract class $UserCopyWith<$Res> {
   factory $UserCopyWith(User value, $Res Function(User) then) =
       _$UserCopyWithImpl<$Res, User>;
   @useResult
-  $Res call(
-      {String id,
-      String? email,
-      @JsonKey(name: 'display_name') String displayName,
-      @JsonKey(name: 'account_type') String accountType});
+  $Res call({
+    String id,
+    String? email,
+    @JsonKey(name: 'display_name') String displayName,
+    @JsonKey(name: 'account_type') String accountType,
+    @_BboxConverter() Bbox? bbox,
+  });
 }
 
 /// @nodoc
@@ -67,40 +72,56 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? email = freezed,
     Object? displayName = null,
     Object? accountType = null,
+    Object? bbox = freezed,
   }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      email: freezed == email
-          ? _value.email
-          : email // ignore: cast_nullable_to_non_nullable
-              as String?,
-      displayName: null == displayName
-          ? _value.displayName
-          : displayName // ignore: cast_nullable_to_non_nullable
-              as String,
-      accountType: null == accountType
-          ? _value.accountType
-          : accountType // ignore: cast_nullable_to_non_nullable
-              as String,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            id:
+                null == id
+                    ? _value.id
+                    : id // ignore: cast_nullable_to_non_nullable
+                        as String,
+            email:
+                freezed == email
+                    ? _value.email
+                    : email // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            displayName:
+                null == displayName
+                    ? _value.displayName
+                    : displayName // ignore: cast_nullable_to_non_nullable
+                        as String,
+            accountType:
+                null == accountType
+                    ? _value.accountType
+                    : accountType // ignore: cast_nullable_to_non_nullable
+                        as String,
+            bbox:
+                freezed == bbox
+                    ? _value.bbox
+                    : bbox // ignore: cast_nullable_to_non_nullable
+                        as Bbox?,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
   factory _$$UserImplCopyWith(
-          _$UserImpl value, $Res Function(_$UserImpl) then) =
-      __$$UserImplCopyWithImpl<$Res>;
+    _$UserImpl value,
+    $Res Function(_$UserImpl) then,
+  ) = __$$UserImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String id,
-      String? email,
-      @JsonKey(name: 'display_name') String displayName,
-      @JsonKey(name: 'account_type') String accountType});
+  $Res call({
+    String id,
+    String? email,
+    @JsonKey(name: 'display_name') String displayName,
+    @JsonKey(name: 'account_type') String accountType,
+    @_BboxConverter() Bbox? bbox,
+  });
 }
 
 /// @nodoc
@@ -108,7 +129,7 @@ class __$$UserImplCopyWithImpl<$Res>
     extends _$UserCopyWithImpl<$Res, _$UserImpl>
     implements _$$UserImplCopyWith<$Res> {
   __$$UserImplCopyWithImpl(_$UserImpl _value, $Res Function(_$UserImpl) _then)
-      : super(_value, _then);
+    : super(_value, _then);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -119,36 +140,50 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? email = freezed,
     Object? displayName = null,
     Object? accountType = null,
+    Object? bbox = freezed,
   }) {
-    return _then(_$UserImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      email: freezed == email
-          ? _value.email
-          : email // ignore: cast_nullable_to_non_nullable
-              as String?,
-      displayName: null == displayName
-          ? _value.displayName
-          : displayName // ignore: cast_nullable_to_non_nullable
-              as String,
-      accountType: null == accountType
-          ? _value.accountType
-          : accountType // ignore: cast_nullable_to_non_nullable
-              as String,
-    ));
+    return _then(
+      _$UserImpl(
+        id:
+            null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                    as String,
+        email:
+            freezed == email
+                ? _value.email
+                : email // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        displayName:
+            null == displayName
+                ? _value.displayName
+                : displayName // ignore: cast_nullable_to_non_nullable
+                    as String,
+        accountType:
+            null == accountType
+                ? _value.accountType
+                : accountType // ignore: cast_nullable_to_non_nullable
+                    as String,
+        bbox:
+            freezed == bbox
+                ? _value.bbox
+                : bbox // ignore: cast_nullable_to_non_nullable
+                    as Bbox?,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$UserImpl implements _User {
-  const _$UserImpl(
-      {required this.id,
-      this.email,
-      @JsonKey(name: 'display_name') this.displayName = '',
-      @JsonKey(name: 'account_type') required this.accountType});
+  const _$UserImpl({
+    required this.id,
+    this.email,
+    @JsonKey(name: 'display_name') this.displayName = '',
+    @JsonKey(name: 'account_type') required this.accountType,
+    @_BboxConverter() this.bbox,
+  });
 
   factory _$UserImpl.fromJson(Map<String, dynamic> json) =>
       _$$UserImplFromJson(json);
@@ -163,10 +198,13 @@ class _$UserImpl implements _User {
   @override
   @JsonKey(name: 'account_type')
   final String accountType;
+  @override
+  @_BboxConverter()
+  final Bbox? bbox;
 
   @override
   String toString() {
-    return 'User(id: $id, email: $email, displayName: $displayName, accountType: $accountType)';
+    return 'User(id: $id, email: $email, displayName: $displayName, accountType: $accountType, bbox: $bbox)';
   }
 
   @override
@@ -179,13 +217,14 @@ class _$UserImpl implements _User {
             (identical(other.displayName, displayName) ||
                 other.displayName == displayName) &&
             (identical(other.accountType, accountType) ||
-                other.accountType == accountType));
+                other.accountType == accountType) &&
+            (identical(other.bbox, bbox) || other.bbox == bbox));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode =>
-      Object.hash(runtimeType, id, email, displayName, accountType);
+      Object.hash(runtimeType, id, email, displayName, accountType, bbox);
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.
@@ -197,19 +236,18 @@ class _$UserImpl implements _User {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$UserImplToJson(
-      this,
-    );
+    return _$$UserImplToJson(this);
   }
 }
 
 abstract class _User implements User {
-  const factory _User(
-          {required final String id,
-          final String? email,
-          @JsonKey(name: 'display_name') final String displayName,
-          @JsonKey(name: 'account_type') required final String accountType}) =
-      _$UserImpl;
+  const factory _User({
+    required final String id,
+    final String? email,
+    @JsonKey(name: 'display_name') final String displayName,
+    @JsonKey(name: 'account_type') required final String accountType,
+    @_BboxConverter() final Bbox? bbox,
+  }) = _$UserImpl;
 
   factory _User.fromJson(Map<String, dynamic> json) = _$UserImpl.fromJson;
 
@@ -223,6 +261,9 @@ abstract class _User implements User {
   @override
   @JsonKey(name: 'account_type')
   String get accountType;
+  @override
+  @_BboxConverter()
+  Bbox? get bbox;
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.

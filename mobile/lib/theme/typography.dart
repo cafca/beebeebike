@@ -1,7 +1,6 @@
+import 'package:beebeebike/theme/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import 'tokens.dart';
 
 /// Type roles per style guide. Manrope for UI, JetBrains Mono for mono sub /
 /// stats / eyebrow microcopy. Fraunces is display-only and not used on the
@@ -67,6 +66,6 @@ class BbbText {
         fontWeight: FontWeight.w700,
         letterSpacing: -1.5,
         color: color,
-        height: 1.0,
+        height: 1,
       );
 }

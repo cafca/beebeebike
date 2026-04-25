@@ -1,13 +1,11 @@
+import 'package:beebeebike/theme/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import 'tokens.dart';
 
 ThemeData buildBbbTheme() {
   final base = ThemeData(
     colorScheme: ColorScheme.fromSeed(
       seedColor: BbbColors.brand,
-      brightness: Brightness.light,
       primary: BbbColors.brand,
       surface: BbbColors.panel,
       onSurface: BbbColors.ink,

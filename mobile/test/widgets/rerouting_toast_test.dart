@@ -5,11 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('renders text and spinner', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      locale: const Locale('en'),
+    await tester.pumpWidget(const MaterialApp(
+      locale: Locale('en'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: const Scaffold(body: ReroutingToast()),
+      home: Scaffold(body: ReroutingToast()),
     ));
     expect(find.text('Rerouting…'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);

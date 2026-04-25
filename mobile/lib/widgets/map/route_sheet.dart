@@ -1,26 +1,27 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/models/route_preview.dart';
+import 'package:beebeebike/models/route_state.dart';
+import 'package:beebeebike/providers/route_provider.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/widgets/brush_fab.dart';
+import 'package:beebeebike/widgets/map/compass_fab_inline.dart';
+import 'package:beebeebike/widgets/map/recenter_circle_fab.dart';
+import 'package:beebeebike/widgets/route_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../l10n/generated/app_localizations.dart';
-import '../../models/route_preview.dart';
-import '../../models/route_state.dart';
-import '../../providers/route_provider.dart';
-import '../../theme/tokens.dart';
-import '../brush_fab.dart';
-import '../route_summary.dart';
-import 'compass_fab_inline.dart';
-import 'recenter_circle_fab.dart';
 
 /// Slides up over the home sheet when a route is active (loading, error, or
 /// preview ready). Fixed height; not draggable.
 class RouteSheet extends ConsumerWidget {
   const RouteSheet({
-    super.key,
     required this.routeState,
     required this.preview,
     required this.onFlyToMyLocation,
     required this.onResetBearing,
     required this.onStart,
+    this.startEnabled = true,
+    this.onStartDisabledTap,
+    super.key,
   });
 
   final RouteState routeState;
@@ -28,6 +29,12 @@ class RouteSheet extends ConsumerWidget {
   final VoidCallback onFlyToMyLocation;
   final VoidCallback onResetBearing;
   final VoidCallback onStart;
+
+  /// When false the start button is rendered in a disabled visual state
+  /// and `onStart` is not invoked on tap. Falls through to
+  /// [onStartDisabledTap] instead, so the caller can surface a toast.
+  final bool startEnabled;
+  final VoidCallback? onStartDisabledTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -79,7 +86,10 @@ class RouteSheet extends ConsumerWidget {
                         const Icon(Icons.error_outline, color: Colors.red),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(l10n.routeLoadError,
+                          child: Text(
+                              routeState.error == kRouteErrorOriginOutsideBbox
+                                  ? l10n.outsideBboxToast
+                                  : l10n.routeLoadError,
                               style: Theme.of(context).textTheme.bodyMedium),
                         ),
                         IconButton(
@@ -98,6 +108,8 @@ class RouteSheet extends ConsumerWidget {
                       durationMinutes: (preview!.time / 60000).round(),
                       distanceKm: preview!.distance / 1000,
                       onStart: onStart,
+                      startEnabled: startEnabled,
+                      onStartDisabledTap: onStartDisabledTap,
                       onClose: () {
                         ref.read(routeControllerProvider.notifier).clear();
                         onFlyToMyLocation();

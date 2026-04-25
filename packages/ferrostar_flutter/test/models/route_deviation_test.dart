@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:ferrostar_flutter/src/models/route_deviation.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('RouteDeviation round-trips', () {

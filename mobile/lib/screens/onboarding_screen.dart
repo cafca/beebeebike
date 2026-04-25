@@ -1,15 +1,16 @@
+import 'dart:async';
+
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/providers/onboarding_provider.dart';
+import 'package:beebeebike/screens/login_screen.dart';
+import 'package:beebeebike/screens/privacy_policy_screen.dart';
+import 'package:beebeebike/screens/register_screen.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
+import 'package:beebeebike/widgets/onboarding_dots.dart';
+import 'package:beebeebike/widgets/onboarding_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../providers/onboarding_provider.dart';
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
-import '../widgets/onboarding_dots.dart';
-import '../widgets/onboarding_page.dart';
-import 'login_screen.dart';
-import 'privacy_policy_screen.dart';
-import 'register_screen.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
@@ -31,17 +32,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _goNext() {
-    _controller.nextPage(
+    unawaited(_controller.nextPage(
       duration: const Duration(milliseconds: 240),
       curve: Curves.easeOut,
-    );
+    ));
   }
 
   void _goBack() {
-    _controller.previousPage(
+    unawaited(_controller.previousPage(
       duration: const Duration(milliseconds: 240),
       curve: Curves.easeOut,
-    );
+    ));
   }
 
   Future<void> _complete() async {
@@ -49,25 +50,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _openRegister() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
+    unawaited(Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
         builder: (_) => RegisterScreen(onSuccess: _complete),
       ),
-    );
+    ));
   }
 
   void _openLogin() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
+    unawaited(Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
         builder: (_) => LoginScreen(onSuccess: _complete),
       ),
-    );
+    ));
   }
 
   void _openPrivacyPolicy() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
-    );
+    unawaited(Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const PrivacyPolicyScreen()),
+    ));
   }
 
   String _eyebrow(int i) => '0${i + 1} / 0$_pageCount';

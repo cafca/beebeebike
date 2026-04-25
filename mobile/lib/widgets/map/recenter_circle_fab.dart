@@ -1,9 +1,10 @@
+import 'dart:async';
+
+import 'package:beebeebike/theme/tokens.dart';
 import 'package:flutter/material.dart';
 
-import '../../theme/tokens.dart';
-
 class RecenterCircleFab extends StatefulWidget {
-  const RecenterCircleFab({super.key, required this.onTap});
+  const RecenterCircleFab({required this.onTap, super.key});
 
   final VoidCallback onTap;
 
@@ -17,7 +18,7 @@ class _RecenterCircleFabState extends State<RecenterCircleFab>
   late final AnimationController _flash = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 220),
-    value: 1.0,
+    value: 1,
   );
 
   @override
@@ -29,7 +30,7 @@ class _RecenterCircleFabState extends State<RecenterCircleFab>
   void _handleTap() {
     setState(() => _pressed = false);
     widget.onTap();
-    _flash.forward(from: 0);
+    unawaited(_flash.forward(from: 0));
   }
 
   @override
@@ -40,7 +41,6 @@ class _RecenterCircleFabState extends State<RecenterCircleFab>
       curve: Curves.easeOut,
       child: Material(
         shape: const CircleBorder(),
-        elevation: 0,
         child: InkWell(
           customBorder: const CircleBorder(),
           onTapDown: (_) => setState(() => _pressed = true),

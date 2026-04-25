@@ -61,7 +61,7 @@ Future<_NavHarness> _pumpNavActive(WidgetTester tester) async {
   final cam = NavigationCameraController();
 
   final fakeService = NavigationService(
-    createController: (_, __) => throw UnimplementedError(),
+    createController: (_, _) => throw UnimplementedError(),
     loadNavigationRoute: ({required origin, required destination}) =>
         throw UnimplementedError(),
     locationStreamFactory: () => const Stream.empty(),
@@ -88,11 +88,11 @@ Future<_NavHarness> _pumpNavActive(WidgetTester tester) async {
         navigationServiceProvider.overrideWithValue(fakeService),
         navigationCameraControllerProvider.overrideWith((ref) => cam),
       ],
-      child: MaterialApp(
-        locale: const Locale('en'),
+      child: const MaterialApp(
+        locale: Locale('en'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const MapScreen(),
+        home: MapScreen(),
       ),
     ),
   );
@@ -114,15 +114,24 @@ Future<void> _triggerRebuild(
 }
 
 void main() {
-  testWidgets('recenter FAB hidden initially', (tester) async {
+  testWidgets('recenter FAB hidden in awaitingFirstFix (pre-first-fix)',
+      (tester) async {
     await _pumpNavActive(tester);
+    expect(find.byType(RecenterFab), findsNothing);
+  });
+
+  testWidgets('recenter FAB hidden when camera enters following mode',
+      (tester) async {
+    final h = await _pumpNavActive(tester);
+    h.cam.onNavStart();
+    await _triggerRebuild(tester, h.navStream);
     expect(find.byType(RecenterFab), findsNothing);
   });
 
   testWidgets('recenter FAB visible when camera enters free mode',
       (tester) async {
     final h = await _pumpNavActive(tester);
-    h.cam.onFirstFix();
+    h.cam.onNavStart();
     h.cam.onTrackingDismissed();
     await _triggerRebuild(tester, h.navStream);
     expect(find.byType(RecenterFab), findsOneWidget);

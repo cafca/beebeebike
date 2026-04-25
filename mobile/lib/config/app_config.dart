@@ -10,6 +10,27 @@ class AppConfig {
     this.imprintUrl = 'https://beebeebike.com/impressum/',
   });
 
+  factory AppConfig.fromEnvironment() {
+    return const AppConfig(
+      apiBaseUrl: String.fromEnvironment(
+        'BEEBEEBIKE_API_BASE_URL',
+        defaultValue: 'http://127.0.0.1:3000',
+      ),
+      tileServerBaseUrl: String.fromEnvironment(
+        'BEEBEEBIKE_TILE_SERVER_BASE_URL',
+        defaultValue: 'http://127.0.0.1:8080',
+      ),
+      tileStyleUrl: String.fromEnvironment(
+        'BEEBEEBIKE_TILE_STYLE_URL',
+        defaultValue: 'http://127.0.0.1:8080/assets/styles/colorful/style.json',
+      ),
+      ratingsSseEnabled: bool.fromEnvironment(
+        'BEEBEEBIKE_RATINGS_SSE_ENABLED',
+        defaultValue: true,
+      ),
+    );
+  }
+
   final String apiBaseUrl;
   final String tileServerBaseUrl;
   final String privacyPolicyUrl;
@@ -33,41 +54,4 @@ class AppConfig {
   /// env when disabling globally — either flag off is enough to stop the
   /// push traffic.
   final bool ratingsSseEnabled;
-
-  factory AppConfig.fromEnvironment() {
-    return const AppConfig(
-      apiBaseUrl: String.fromEnvironment(
-        'BEEBEEBIKE_API_BASE_URL',
-        defaultValue: 'http://127.0.0.1:3000',
-      ),
-      tileServerBaseUrl: String.fromEnvironment(
-        'BEEBEEBIKE_TILE_SERVER_BASE_URL',
-        defaultValue: 'http://127.0.0.1:8080',
-      ),
-      tileStyleUrl: String.fromEnvironment(
-        'BEEBEEBIKE_TILE_STYLE_URL',
-        defaultValue: 'http://127.0.0.1:8080/assets/styles/colorful/style.json',
-      ),
-      ratingsSseEnabled: bool.fromEnvironment(
-        'BEEBEEBIKE_RATINGS_SSE_ENABLED',
-        defaultValue: true,
-      ),
-      privacyPolicyUrl: String.fromEnvironment(
-        'BEEBEEBIKE_PRIVACY_POLICY_URL',
-        defaultValue: 'https://beebeebike.com/datenschutz/',
-      ),
-      imprintUrl: String.fromEnvironment(
-        'BEEBEEBIKE_IMPRINT_URL',
-        defaultValue: 'https://beebeebike.com/impressum/',
-      ),
-      glitchtipDsn: String.fromEnvironment(
-        'BEEBEEBIKE_GLITCHTIP_DSN',
-        defaultValue: '',
-      ),
-      environment: String.fromEnvironment(
-        'BEEBEEBIKE_ENVIRONMENT',
-        defaultValue: 'development',
-      ),
-    );
-  }
 }

@@ -1,6 +1,6 @@
+import 'package:beebeebike/dev/dev_mode.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:beebeebike/dev/dev_mode.dart';
 
 void main() {
   group('TapUnlockCounter', () {

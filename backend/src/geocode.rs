@@ -18,11 +18,17 @@ pub async fn geocode(
     Query(query): Query<GeocodeQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let limit = query.limit.unwrap_or(5).min(10);
+    let bbox = &state.config.bbox;
+    let bias_lon = (bbox.west + bbox.east) / 2.0;
+    let bias_lat = (bbox.south + bbox.north) / 2.0;
     let url = format!(
-        "{}/api?q={}&limit={}&lat=52.52&lon=13.405&bbox=13.0,52.3,13.8,52.7",
+        "{}/api?q={}&limit={}&lat={}&lon={}&bbox={}",
         state.config.photon_url,
         urlencoding::encode(&query.q),
         limit,
+        bias_lat,
+        bias_lon,
+        bbox.to_query_string(),
     );
 
     let resp = state

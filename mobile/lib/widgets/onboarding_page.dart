@@ -1,14 +1,10 @@
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
 import 'package:flutter/material.dart';
-
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
 
 class OnboardingPage extends StatelessWidget {
   const OnboardingPage({
-    super.key,
-    required this.icon,
-    required this.eyebrow,
-    required this.headline,
+    required this.icon, required this.eyebrow, required this.headline, super.key,
     this.body,
     this.bullets,
     this.footer,

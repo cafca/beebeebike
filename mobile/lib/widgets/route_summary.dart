@@ -1,24 +1,24 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
 import 'package:flutter/material.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
 
 /// Route Sheet (variant B) body — mono data strip + Start ride / heart row.
 /// The heart is visually present but disabled in this build.
 class RouteSummary extends StatelessWidget {
   const RouteSummary({
-    super.key,
-    required this.durationMinutes,
-    required this.distanceKm,
-    required this.onStart,
+    required this.durationMinutes, required this.distanceKm, required this.onStart, super.key,
     this.onClose,
+    this.startEnabled = true,
+    this.onStartDisabledTap,
   });
 
   final int durationMinutes;
   final double distanceKm;
   final VoidCallback onStart;
   final VoidCallback? onClose;
+  final bool startEnabled;
+  final VoidCallback? onStartDisabledTap;
 
   String _formatEta() {
     final eta = DateTime.now().add(Duration(minutes: durationMinutes));
@@ -56,7 +56,10 @@ class RouteSummary extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StartRideButton(onTap: onStart),
+              child: _StartRideButton(
+                onTap: startEnabled ? onStart : (onStartDisabledTap ?? onStart),
+                enabled: startEnabled,
+              ),
             ),
             const SizedBox(width: 10),
             const _SaveButton(enabled: false),
@@ -125,25 +128,29 @@ class _CloseButton extends StatelessWidget {
 }
 
 class _StartRideButton extends StatelessWidget {
-  const _StartRideButton({required this.onTap});
+  const _StartRideButton({required this.onTap, this.enabled = true});
 
   final VoidCallback onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Material(
-      color: BbbColors.ink,
-      borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-      child: InkWell(
+    return Opacity(
+      opacity: enabled ? 1 : 0.55,
+      child: Material(
+        color: BbbColors.ink,
         borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
-          child: Center(
-            child: Text(
-              l10n.routeStartRide,
-              style: BbbText.cardTitle().copyWith(color: Colors.white),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(BbbRadius.ctrl),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+            child: Center(
+              child: Text(
+                l10n.routeStartRide,
+                style: BbbText.cardTitle().copyWith(color: Colors.white),
+              ),
             ),
           ),
         ),
@@ -167,7 +174,7 @@ class _SaveButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: BbbColors.panel,
           borderRadius: BorderRadius.circular(BbbRadius.ctrl),
-          border: Border.all(color: BbbColors.divider, width: 1),
+          border: Border.all(color: BbbColors.divider),
         ),
         child: const Icon(
           Icons.favorite_border,

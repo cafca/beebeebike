@@ -45,7 +45,7 @@ class DevModeController extends AsyncNotifier<bool> {
     return prefs.getBool(kPrefDevModeUnlocked) ?? false;
   }
 
-  Future<void> setUnlocked(bool value) async {
+  Future<void> setUnlocked({required bool value}) async {
     state = AsyncData(value);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(kPrefDevModeUnlocked, value);
@@ -57,7 +57,7 @@ class DevModeController extends AsyncNotifier<bool> {
 
   Future<void> toggle() async {
     final current = state.valueOrNull ?? false;
-    await setUnlocked(!current);
+    await setUnlocked(value: !current);
   }
 }
 
@@ -71,7 +71,7 @@ class PlaybackEnabledController extends AsyncNotifier<bool> {
     return prefs.getBool(kPrefPlaybackEnabled) ?? false;
   }
 
-  Future<void> set(bool value) async {
+  Future<void> set({required bool value}) async {
     state = AsyncData(value);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(kPrefPlaybackEnabled, value);

@@ -97,7 +97,6 @@ void main() {
           },
         ),
         prefs: prefs,
-        loginSucceeds: true,
       ),
     );
     await tester.pumpAndSettle();
@@ -137,7 +136,6 @@ void main() {
           },
         ),
         prefs: prefs,
-        loginSucceeds: true,
       ),
     );
     await tester.pumpAndSettle();
@@ -174,7 +172,7 @@ void main() {
     ]);
     addTearDown(container.dispose);
 
-    final expected = kAlwaysShowOnboarding ? isFalse : isTrue;
+    const expected = kAlwaysShowOnboarding ? isFalse : isTrue;
     expect(container.read(onboardingCompletedProvider), expected);
   });
 }

@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'package:flutter_test/flutter_test.dart';
+
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:ferrostar_flutter/src/ferrostar_flutter_platform.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 class _FakePlatform extends FerrostarFlutterPlatform {
   String? lastCall;
@@ -65,7 +66,7 @@ void main() {
 
   test('createController goes through facade', () async {
     final c = await FerrostarFlutter.instance.createController(
-      osrmJson: {'code': 'Ok', 'routes': []},
+      osrmJson: {'code': 'Ok', 'routes': <Object?>[]},
       waypoints: [const WaypointInput(lat: 52.52, lng: 13.405)],
     );
     expect(c.id, 'test-id');
@@ -74,7 +75,7 @@ void main() {
 
   test('updateLocation after dispose throws StateError', () async {
     final c = await FerrostarFlutter.instance.createController(
-      osrmJson: {'code': 'Ok', 'routes': []},
+      osrmJson: {'code': 'Ok', 'routes': <Object?>[]},
       waypoints: [const WaypointInput(lat: 52.52, lng: 13.405)],
     );
     await c.dispose();

@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:ferrostar_flutter/src/models/navigation_state.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('NavigationState', () {

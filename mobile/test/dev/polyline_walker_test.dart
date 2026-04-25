@@ -1,15 +1,15 @@
+import 'package:beebeebike/dev/polyline_walker.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-import 'package:beebeebike/dev/polyline_walker.dart';
 
 void main() {
   group('PolylineWalker', () {
     // ~111 km per degree of latitude. These three points form a 2-leg polyline
     // running due east along the equator, so each leg's bearing is 90.
     final points = [
-      const LatLng(0.0, 0.0),
-      const LatLng(0.0, 0.001), // ~111 m east
-      const LatLng(0.0, 0.003), // ~222 m further east
+      const LatLng(0, 0),
+      const LatLng(0, 0.001), // ~111 m east
+      const LatLng(0, 0.003), // ~222 m further east
     ];
 
     test('totalLengthM ≈ sum of segment lengths', () {
@@ -52,13 +52,13 @@ void main() {
 
     test('handles zero-length segment without NaN', () {
       final points = [
-        const LatLng(0.0, 0.0),
-        const LatLng(0.0, 0.0), // duplicate of previous
-        const LatLng(0.0, 0.001),
+        const LatLng(0, 0),
+        const LatLng(0, 0), // duplicate of previous
+        const LatLng(0, 0.001),
       ];
       final w = PolylineWalker(points);
       // Asking for position right at the zero-length boundary must return finite coords.
-      final p = w.positionAt(0.0);
+      final p = w.positionAt(0);
       expect(p.latLng.latitude.isFinite, isTrue);
       expect(p.latLng.longitude.isFinite, isTrue);
       // And mid-route still works.

@@ -1,17 +1,16 @@
 import 'dart:async';
 
+import 'package:beebeebike/api/client.dart';
+import 'package:beebeebike/api/geocode_api.dart';
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/models/geocode_result.dart';
+import 'package:beebeebike/models/location.dart';
+import 'package:beebeebike/providers/location_provider.dart';
+import 'package:beebeebike/providers/search_history_provider.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../api/client.dart';
-import '../api/geocode_api.dart';
-import '../l10n/generated/app_localizations.dart';
-import '../models/geocode_result.dart';
-import '../models/location.dart';
-import '../providers/location_provider.dart';
-import '../providers/search_history_provider.dart';
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
 
 final _geocodeApiProvider =
     Provider<GeocodeApi>((ref) => GeocodeApi(ref.watch(dioProvider)));
@@ -39,7 +38,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void _onChanged(String value) {
     _debounce?.cancel();
     if (value.trim().isEmpty) {
-      setState(() => _results.clear());
+      setState(_results.clear);
       return;
     }
     _debounce = Timer(
@@ -53,8 +52,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     try {
       final results = await ref.read(_geocodeApiProvider).search(query);
       if (mounted) setState(() => _results..clear()..addAll(results));
-    } catch (_) {
-      if (mounted) setState(() => _results.clear());
+    } on Object catch (_) {
+      if (mounted) setState(_results.clear);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -91,7 +90,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           onChanged: _onChanged,
           onSubmitted: (value) {
             _debounce?.cancel();
-            if (value.trim().isNotEmpty) _search(value.trim());
+            if (value.trim().isNotEmpty) unawaited(_search(value.trim()));
           },
         ),
       ),
@@ -204,8 +203,7 @@ class _SearchRow extends StatelessWidget {
   const _SearchRow({
     required this.icon,
     required this.title,
-    this.subtitle,
-    required this.onTap,
+    required this.onTap, this.subtitle,
   });
 
   final IconData icon;

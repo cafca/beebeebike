@@ -43,11 +43,11 @@ void main() {
           ...testProviderOverrides(prefs: prefs),
           routeControllerProvider.overrideWith(_LoadingRouteController.new),
         ],
-        child: MaterialApp(
-          locale: const Locale('en'),
+        child: const MaterialApp(
+          locale: Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const MapScreen(),
+          home: MapScreen(),
         ),
       ),
     );
@@ -65,11 +65,11 @@ void main() {
           ...testProviderOverrides(prefs: prefs),
           routeControllerProvider.overrideWith(_ErrorRouteController.new),
         ],
-        child: MaterialApp(
-          locale: const Locale('en'),
+        child: const MaterialApp(
+          locale: Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const MapScreen(),
+          home: MapScreen(),
         ),
       ),
     );
@@ -87,11 +87,11 @@ void main() {
           ...testProviderOverrides(prefs: prefs),
           routeControllerProvider.overrideWith(_PreviewRouteController.new),
         ],
-        child: MaterialApp(
-          locale: const Locale('en'),
+        child: const MaterialApp(
+          locale: Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const MapScreen(),
+          home: MapScreen(),
         ),
       ),
     );
@@ -117,11 +117,11 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          locale: const Locale('en'),
+        child: const MaterialApp(
+          locale: Locale('en'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const MapScreen(),
+          home: MapScreen(),
         ),
       ),
     );

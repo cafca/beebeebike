@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Imprint — beebeebike</title>
+<link rel="icon" href="/favicon.svg" />
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; font-family: system-ui, -apple-system, Helvetica, Arial, sans-serif; color: #1b1b1b; background: #F7F3EC; line-height: 1.55; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { color: #2E6F66; margin-top: 0; }
+  h2 { color: #2E6F66; margin-top: 2em; }
+  a { color: #2E6F66; }
+  img.provider { display: block; max-width: 100%; height: auto; margin: 1em 0 2em; border-radius: 8px; }
+  nav.crumb { font-size: 13px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  nav.crumb .links a { margin-right: 12px; }
+  nav.crumb .lang a { margin-left: 8px; }
+  .meta { color: #5f5f5f; font-size: 14px; }
+  .legal-note { font-size: 13px; color: #5f5f5f; font-style: italic; margin-top: 2em; border-top: 1px solid #d8d2c2; padding-top: 1em; }
+  html.embed nav.crumb { display: none; }
+</style>
+<script>
+  (function () {
+    try {
+      var params = new URLSearchParams(location.search);
+      var embedParam = params.get('embed');
+      var embed = embedParam === '1';
+      try { if (embed) sessionStorage.setItem('beebeebike.embed', '1'); } catch (e) {}
+      try { if (!embed && sessionStorage.getItem('beebeebike.embed') === '1') embed = true; } catch (e) {}
+      if (embed) document.documentElement.classList.add('embed');
+      var forced = params.get('lang');
+      if (forced) { try { localStorage.setItem('beebeebike.lang', forced); } catch (e) {} return; }
+      var stored = null;
+      try { stored = localStorage.getItem('beebeebike.lang'); } catch (e) {}
+      if (stored === 'de') { location.replace('/impressum/' + (embed ? '?embed=1' : '')); }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+<main>
+  <nav class="crumb">
+    <span class="links"><a href="/">← Back to app</a> <a href="/datenschutz-en/">Privacy</a></span>
+    <span class="lang"><strong>EN</strong> | <a href="/impressum/?lang=de">DE</a></span>
+  </nav>
+  <h1>Imprint</h1>
+  <p class="meta">Information pursuant to § 5 TMG and § 18 (2) MStV</p>
+
+  <img class="provider" src="/legal/provider.png" alt="Provider: name, address and contact" />
+
+  <h2>Responsible for content under § 18 (2) MStV</h2>
+  <p>See provider details above.</p>
+
+  <h2>Disclaimer</h2>
+  <p><strong>Liability for content.</strong> The contents of these pages are created with the greatest care. However, we cannot guarantee accuracy, completeness or timeliness. As a service provider, we are responsible for our own content on these pages in accordance with § 7 (1) TMG and general law. Under §§ 8 to 10 TMG, we are not obligated to monitor transmitted or stored third-party information.</p>
+  <p><strong>Liability for links.</strong> Our offering may contain links to external third-party websites whose content we cannot influence. The respective provider is always responsible for the content of linked pages.</p>
+  <p><strong>Copyright.</strong> Content and works created by the site operators are subject to German copyright law. The beebeebike source code is published under an open licence; see the repository for details.</p>
+
+  <p class="legal-note">This English version is provided for convenience. The <a href="/impressum/?lang=de">German version</a> is legally binding.</p>
+</main>
+</body>
+</html>

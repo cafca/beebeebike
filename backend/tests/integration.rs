@@ -10,7 +10,7 @@
 
 use axum::http::{HeaderName, HeaderValue, StatusCode};
 use axum_test::TestServer;
-use beebeebike_backend::{build_router, config::Config, AppState};
+use beebeebike_backend::{bbox::Bbox, build_router, config::Config, AppState};
 use serde_json::{json, Value};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
@@ -55,6 +55,7 @@ async fn setup_with_db_and_cap(max_undo_history: usize) -> Option<(TestServer, s
         // SSE pipeline not exercised by these tests — keeping it off
         // avoids spawning a listener task per test run.
         ratings_events_enabled: false,
+        bbox: Bbox::BERLIN,
     };
     let state = Arc::new(AppState {
         db: db.clone(),
@@ -93,6 +94,7 @@ async fn setup_with_graphhopper_url(graphhopper_url: String) -> Option<TestServe
         max_areas_per_request: 200,
         max_undo_history: 15,
         ratings_events_enabled: false,
+        bbox: Bbox::BERLIN,
     };
 
     let state = Arc::new(AppState {

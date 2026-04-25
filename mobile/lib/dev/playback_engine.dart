@@ -1,11 +1,10 @@
 import 'dart:async';
 
+import 'package:beebeebike/dev/playback_constants.dart';
+import 'package:beebeebike/dev/playback_state.dart';
+import 'package:beebeebike/dev/polyline_walker.dart';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
-
-import 'playback_constants.dart';
-import 'playback_state.dart';
-import 'polyline_walker.dart';
 
 class PlaybackEngine {
   PlaybackEngine();
@@ -14,7 +13,7 @@ class PlaybackEngine {
   Timer? _timer;
   PolylineWalker? _walker;
   PlaybackState _state = const PlaybackState();
-  double _lastBearing = 0.0;
+  double _lastBearing = 0;
 
   Stream<UserLocation> get stream => _controller.stream;
   PlaybackState get state => _state;
@@ -27,7 +26,7 @@ class PlaybackEngine {
     _state = _state.copyWith(
       routeLengthM: walker.totalLengthM,
       routeBaseSpeedMps: routeBaseSpeedMps,
-      cumulativeM: 0.0,
+      cumulativeM: 0,
       isPlaying: false,
       overrideLatLng: null,
     );
@@ -80,7 +79,7 @@ class PlaybackEngine {
 
   void dispose() {
     _stopTimer();
-    _controller.close();
+    unawaited(_controller.close());
   }
 
   void _startTimer() {
@@ -104,7 +103,7 @@ class PlaybackEngine {
       _stopTimer();
       return;
     }
-    final dt = 1.0 / kPlaybackTickHz;
+    const dt = 1.0 / kPlaybackTickHz;
     final advance = _state.routeBaseSpeedMps * _state.speedMultiplier * dt;
     final next = (_state.cumulativeM + advance).clamp(0.0, _state.routeLengthM);
     final reachedEnd = next >= _state.routeLengthM;
@@ -126,7 +125,7 @@ class PlaybackEngine {
         lng: override.longitude,
         horizontalAccuracyM: kPlaybackFakeAccuracyM,
         courseDeg: _lastBearing,
-        speedMps: 0.0,
+        speedMps: 0,
         timestampMs: DateTime.now().millisecondsSinceEpoch,
       ));
       return;

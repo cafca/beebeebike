@@ -1,16 +1,22 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:ferrostar_flutter/src/models/waypoint_input.dart';
 import 'package:ferrostar_flutter/src/models/navigation_config.dart';
+import 'package:ferrostar_flutter/src/models/waypoint_input.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('WaypointInput serializes', () {
-    const w = WaypointInput(lat: 52.52, lng: 13.405, kind: WaypointKind.viaPoint);
+    const w = WaypointInput(
+      lat: 52.52,
+      lng: 13.405,
+      kind: WaypointKind.viaPoint,
+    );
     expect(w.toJson(), {'lat': 52.52, 'lng': 13.405, 'kind': 'via_point'});
   });
 
   test('WaypointInput kinds', () {
-    expect(WaypointInput.fromJson({'lat': 0.0, 'lng': 0.0, 'kind': 'break'}).kind,
-        WaypointKind.breakPoint);
+    expect(
+      WaypointInput.fromJson({'lat': 0.0, 'lng': 0.0, 'kind': 'break'}).kind,
+      WaypointKind.breakPoint,
+    );
   });
 
   test('NavigationConfig default serializes with sane defaults', () {

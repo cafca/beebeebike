@@ -1,5 +1,7 @@
 use std::env;
 
+use crate::bbox::Bbox;
+
 pub struct Config {
     pub database_url: String,
     pub graphhopper_url: String,
@@ -20,6 +22,9 @@ pub struct Config {
     /// `pg_notify` call. Clients that hit the disabled endpoint get a 404
     /// and fall back to camera-idle polling.
     pub ratings_events_enabled: bool,
+    /// Supported coverage area returned to clients via the auth endpoint.
+    /// Mobile gates nav-start on this; geocoder biases search to it.
+    pub bbox: Bbox,
 }
 
 impl Config {
@@ -55,6 +60,18 @@ impl Config {
                 .ok()
                 .map(|v| !matches!(v.to_lowercase().as_str(), "0" | "false" | "no"))
                 .unwrap_or(true),
+            bbox: env::var("BEEBEEBIKE_BBOX")
+                .ok()
+                .and_then(|raw| match Bbox::parse(&raw) {
+                    Ok(b) => Some(b),
+                    Err(e) => {
+                        eprintln!(
+                            "BEEBEEBIKE_BBOX={raw:?} could not be parsed ({e}); using default"
+                        );
+                        None
+                    }
+                })
+                .unwrap_or(Bbox::BERLIN),
         }
     }
 }
@@ -102,6 +119,7 @@ mod tests {
                 "MAX_AREAS_PER_REQUEST",
                 "BEEBEEBIKE_MAX_UNDO_HISTORY",
                 "BEEBEEBIKE_RATINGS_SSE_ENABLED",
+                "BEEBEEBIKE_BBOX",
             ] {
                 env::remove_var(var);
             }
@@ -119,6 +137,37 @@ mod tests {
             config.ratings_events_enabled,
             "SSE should default to enabled"
         );
+        assert_eq!(config.bbox, Bbox::BERLIN);
+    }
+
+    #[test]
+    fn bbox_env_override() {
+        with_env_vars(&[("BEEBEEBIKE_BBOX", "10.0,50.0,11.0,51.0")], || {
+            let config = Config::from_env();
+            assert_eq!(
+                config.bbox,
+                Bbox {
+                    west: 10.0,
+                    south: 50.0,
+                    east: 11.0,
+                    north: 51.0,
+                }
+            );
+        });
+    }
+
+    #[test]
+    fn bbox_invalid_env_falls_back_to_default() {
+        for bad in ["not-a-bbox", "1,2,3", "a,b,c,d"] {
+            with_env_vars(&[("BEEBEEBIKE_BBOX", bad)], || {
+                let config = Config::from_env();
+                assert_eq!(
+                    config.bbox,
+                    Bbox::BERLIN,
+                    "invalid value {bad:?} should fall back"
+                );
+            });
+        }
     }
 
     #[test]

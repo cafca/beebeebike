@@ -1,15 +1,14 @@
 import 'dart:async';
 
+import 'package:beebeebike/dev/playback_constants.dart';
+import 'package:beebeebike/dev/playback_engine.dart';
+import 'package:beebeebike/dev/playback_state.dart';
+import 'package:beebeebike/dev/polyline_walker.dart';
+import 'package:beebeebike/models/route_preview.dart';
+import 'package:beebeebike/providers/route_provider.dart';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart' show UserLocation;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
-
-import '../models/route_preview.dart';
-import '../providers/route_provider.dart';
-import 'playback_constants.dart';
-import 'playback_engine.dart';
-import 'playback_state.dart';
-import 'polyline_walker.dart';
 
 final playbackEngineProvider = Provider<PlaybackEngine>((ref) {
   final engine = PlaybackEngine();
@@ -29,11 +28,11 @@ class PlaybackController extends Notifier<PlaybackState> {
     } else {
       engine.clearRoute();
     }
-    _engineSub?.cancel();
+    unawaited(_engineSub?.cancel());
     _engineSub = engine.stream.listen((_) {
       state = engine.state;
     });
-    ref.onDispose(() => _engineSub?.cancel());
+    ref.onDispose(() => unawaited(_engineSub?.cancel()));
     return engine.state;
   }
 
@@ -88,7 +87,7 @@ class PlaybackController extends Notifier<PlaybackState> {
   }
 
   void cycleSpeed() {
-    final list = kPlaybackSpeedMultipliers;
+    const list = kPlaybackSpeedMultipliers;
     final current = state.speedMultiplier;
     final idx = list.indexOf(current);
     final next = list[(idx + 1) % list.length];

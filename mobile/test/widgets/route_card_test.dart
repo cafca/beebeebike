@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/providers/route_provider.dart';
@@ -50,7 +52,7 @@ void main() {
       ),
     );
 
-    container.read(routeControllerProvider.notifier).setOrigin(
+    unawaited(container.read(routeControllerProvider.notifier).setOrigin(
           const Location(
             id: 'N:1',
             name: 'Brandenburger Tor',
@@ -58,7 +60,7 @@ void main() {
             lng: 13.3777,
             lat: 52.5163,
           ),
-        );
+        ));
     await tester.pump();
 
     expect(find.text('Brandenburger Tor'), findsOneWidget);
@@ -79,7 +81,7 @@ void main() {
       ),
     );
 
-    container.read(routeControllerProvider.notifier).setOrigin(
+    unawaited(container.read(routeControllerProvider.notifier).setOrigin(
           const Location(
             id: 'gps',
             name: 'Current location',
@@ -87,7 +89,7 @@ void main() {
             lng: 13.4533,
             lat: 52.5065,
           ),
-        );
+        ));
     await tester.pump();
 
     expect(find.text('Current location'), findsOneWidget);
@@ -108,7 +110,7 @@ void main() {
       ),
     );
 
-    container.read(routeControllerProvider.notifier).setDestination(
+    unawaited(container.read(routeControllerProvider.notifier).setDestination(
           const Location(
             id: 'N:42',
             name: 'Alexanderplatz',
@@ -116,7 +118,7 @@ void main() {
             lng: 13.4050,
             lat: 52.5200,
           ),
-        );
+        ));
     await tester.pump();
 
     expect(find.text('Alexanderplatz'), findsOneWidget);
@@ -160,9 +162,9 @@ void main() {
       ),
     );
 
-    container.read(routeControllerProvider.notifier).setDestination(
+    unawaited(container.read(routeControllerProvider.notifier).setDestination(
           fakeDest(),
-        );
+        ));
     await tester.pump();
 
     final swapButton = tester.widget<IconButton>(
@@ -183,7 +185,7 @@ void main() {
     addTearDown(container.dispose);
 
     // No origin set — destination alone must not compute a route
-    container.read(routeControllerProvider.notifier).setDestination(
+    unawaited(container.read(routeControllerProvider.notifier).setDestination(
           const Location(
             id: 'N:42',
             name: 'Alexanderplatz',
@@ -191,7 +193,7 @@ void main() {
             lng: 13.4050,
             lat: 52.5200,
           ),
-        );
+        ));
 
     final state = container.read(routeControllerProvider);
     expect(state.origin, isNull);
@@ -203,7 +205,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
-      overrides: testProviderOverrides(prefs: prefs, routeSucceeds: true),
+      overrides: testProviderOverrides(prefs: prefs),
     );
     addTearDown(container.dispose);
 

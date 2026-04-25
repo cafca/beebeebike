@@ -1,28 +1,27 @@
+import 'dart:async';
+
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/models/location.dart';
+import 'package:beebeebike/providers/auth_provider.dart';
+import 'package:beebeebike/providers/home_eta_provider.dart';
+import 'package:beebeebike/providers/location_provider.dart';
+import 'package:beebeebike/providers/route_provider.dart';
+import 'package:beebeebike/providers/search_history_provider.dart';
+import 'package:beebeebike/screens/login_screen.dart';
+import 'package:beebeebike/screens/register_screen.dart';
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
+import 'package:beebeebike/widgets/saved_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-
-import '../l10n/generated/app_localizations.dart';
-import '../models/location.dart';
-import '../providers/auth_provider.dart';
-import '../providers/home_eta_provider.dart';
-import '../providers/location_provider.dart';
-import '../providers/route_provider.dart';
-import '../providers/search_history_provider.dart';
-import '../screens/login_screen.dart';
-import '../screens/register_screen.dart';
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
-import 'saved_item.dart';
 
 /// Landing-state bottom sheet. Two snap points: peek (~16 %) and a mid
 /// stop sized to fit the Go Home row + three recent items. The paint
 /// brush FAB lives in the map-screen overlay column, not here.
 class HomeSheet extends ConsumerStatefulWidget {
   const HomeSheet({
-    super.key,
-    required this.onNavigateHome,
-    required this.sheetController,
+    required this.onNavigateHome, required this.sheetController, super.key,
   });
 
   final VoidCallback onNavigateHome;
@@ -135,8 +134,8 @@ class _AuthRow extends StatelessWidget {
             bg: BbbColors.ink,
             fg: Colors.white,
             iconBg: const Color.fromRGBO(255, 255, 255, 0.14),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+            onTap: () => Navigator.of(context).push<void>(
+              MaterialPageRoute<void>(builder: (_) => const RegisterScreen()),
             ),
           ),
         ),
@@ -149,8 +148,8 @@ class _AuthRow extends StatelessWidget {
             bg: BbbColors.bgAlt,
             fg: BbbColors.ink,
             iconBg: BbbColors.divider,
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            onTap: () => Navigator.of(context).push<void>(
+              MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
             ),
           ),
         ),
@@ -161,13 +160,7 @@ class _AuthRow extends StatelessWidget {
 
 class _AuthButton extends StatelessWidget {
   const _AuthButton({
-    super.key,
-    required this.label,
-    required this.icon,
-    required this.bg,
-    required this.fg,
-    required this.iconBg,
-    required this.onTap,
+    required this.label, required this.icon, required this.bg, required this.fg, required this.iconBg, required this.onTap, super.key,
   });
 
   final String label;
@@ -232,7 +225,7 @@ class _GoHomeButton extends StatelessWidget {
     if (eta == null) return null;
     return eta.when(
       loading: () => 'Calculating ETA…',
-      error: (_, __) => '—',
+      error: (_, _) => '—',
       data: (mins) => mins == null ? '—' : '$mins min',
     );
   }
@@ -348,7 +341,7 @@ class _RecentSectionState extends ConsumerState<_RecentSection> {
     if (!widget.sheetController.isAttached) return;
     if (widget.sheetController.size <= _pullThreshold) return;
     _distancesRequested = true;
-    _computeDistances();
+    unawaited(_computeDistances());
   }
 
   Future<void> _computeDistances() async {
@@ -358,7 +351,7 @@ class _RecentSectionState extends ConsumerState<_RecentSection> {
     try {
       pos = await Geolocator.getLastKnownPosition() ??
           await Geolocator.getCurrentPosition();
-    } catch (_) {
+    } on Object catch (_) {
       return;
     }
     if (!mounted) return;
@@ -387,17 +380,17 @@ class _RecentSectionState extends ConsumerState<_RecentSection> {
       try {
         pos = await Geolocator.getLastKnownPosition() ??
             await Geolocator.getCurrentPosition();
-      } catch (_) {}
+      } on Object catch (_) {}
       if (!mounted) return;
-      notifier.setOrigin(Location(
+      unawaited(notifier.setOrigin(Location(
         id: 'gps',
         name: 'Mein Standort',
         label: 'Mein Standort',
         lng: pos?.longitude ?? 13.4533,
         lat: pos?.latitude ?? 52.5065,
-      ));
+      )));
     }
-    notifier.setDestination(destination);
+    unawaited(notifier.setDestination(destination));
   }
 
   @override
@@ -428,4 +421,3 @@ class _RecentSectionState extends ConsumerState<_RecentSection> {
     );
   }
 }
-

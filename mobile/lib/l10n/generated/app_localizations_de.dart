@@ -228,6 +228,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get routeStartRide => 'Los geht\'s';
 
   @override
+  String get outsideBboxToast =>
+      'Dein Standort liegt außerhalb von Berlin. Beebeebike funktioniert derzeit nur im Berliner Abdeckungsbereich.';
+
+  @override
   String routeEta(String time) {
     return 'Ankunft $time';
   }

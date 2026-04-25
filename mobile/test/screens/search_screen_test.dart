@@ -151,7 +151,6 @@ void main() {
       buildTestWidget(
         const SearchScreen(),
         prefs: prefs,
-        geocodeReturnsResults: true,
       ),
     );
 
@@ -170,7 +169,6 @@ void main() {
       buildTestWidget(
         const SearchScreen(),
         prefs: prefs,
-        geocodeReturnsResults: true,
       ),
     );
 
@@ -192,7 +190,6 @@ void main() {
       buildTestWidget(
         const SearchScreen(),
         prefs: prefs,
-        geocodeReturnsResults: true,
       ),
     );
 
@@ -252,7 +249,6 @@ void main() {
           ),
         ),
         prefs: prefs,
-        geocodeReturnsResults: true,
       ),
     );
 

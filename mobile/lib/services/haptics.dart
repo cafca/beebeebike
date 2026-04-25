@@ -6,6 +6,7 @@ class AppHaptics {
   static Future<void> routeSuccess() => _safe(hf.HapticsType.success);
   static Future<void> routeError() => _safe(hf.HapticsType.error);
   static Future<void> startRide() => _safe(hf.HapticsType.medium);
+  static Future<void> recolor() => _safe(hf.HapticsType.medium);
   static Future<void> offRoute() => _safe(hf.HapticsType.warning);
   static Future<void> arrived() => _safe(hf.HapticsType.success);
 
@@ -14,7 +15,7 @@ class AppHaptics {
       if (await hf.Haptics.canVibrate()) {
         await hf.Haptics.vibrate(type);
       }
-    } catch (_) {
+    } on Object catch (_) {
       // Haptics are fire-and-forget; failure must never break app flow.
     }
   }

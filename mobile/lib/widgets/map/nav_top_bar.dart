@@ -1,28 +1,22 @@
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/navigation/camera_controller.dart';
+import 'package:beebeebike/navigation/maneuver_icons.dart';
+import 'package:beebeebike/navigation/nav_constants.dart';
+import 'package:beebeebike/providers/navigation_camera_provider.dart';
+import 'package:beebeebike/providers/navigation_provider.dart';
+import 'package:beebeebike/widgets/map/compass_fab_inline.dart';
+import 'package:beebeebike/widgets/recenter_fab.dart';
+import 'package:beebeebike/widgets/rerouting_toast.dart';
+import 'package:beebeebike/widgets/tts_toggle_fab.dart';
+import 'package:beebeebike/widgets/turn_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../l10n/generated/app_localizations.dart';
-import '../../navigation/camera_controller.dart';
-import '../../navigation/maneuver_icons.dart';
-import '../../navigation/nav_constants.dart';
-import '../../providers/navigation_camera_provider.dart';
-import '../../providers/navigation_provider.dart';
-import '../recenter_fab.dart';
-import '../rerouting_toast.dart';
-import '../tts_toggle_fab.dart';
-import '../turn_banner.dart';
-import 'compass_fab_inline.dart';
 
 /// TurnBanner + RecenterFab, shown during navigation above the navigation
 /// sheet.
 class NavTopBar extends ConsumerWidget {
   const NavTopBar({
-    super.key,
-    required this.ttsEnabled,
-    required this.rerouting,
-    required this.onToggleTts,
-    required this.onRecenter,
-    required this.onResetBearing,
+    required this.ttsEnabled, required this.rerouting, required this.onToggleTts, required this.onRecenter, required this.onResetBearing, super.key,
   });
 
   final bool ttsEnabled;

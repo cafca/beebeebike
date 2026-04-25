@@ -1,6 +1,5 @@
+import 'package:beebeebike/models/location.dart';
 import 'package:dio/dio.dart';
-
-import '../models/location.dart';
 
 class LocationsApi {
   LocationsApi(this._dio);
@@ -9,7 +8,7 @@ class LocationsApi {
 
   Future<Location?> getHome() async {
     try {
-      final response = await _dio.get('/api/locations/home');
+      final response = await _dio.get<dynamic>('/api/locations/home');
       final data = response.data;
       if (data == null) return null;
       return Location.fromJson(Map<String, dynamic>.from(data as Map));
@@ -20,7 +19,7 @@ class LocationsApi {
   }
 
   Future<Location> setHome(Location location) async {
-    final response = await _dio.put('/api/locations/home', data: {
+    final response = await _dio.put<dynamic>('/api/locations/home', data: <String, dynamic>{
       'label': location.label,
       'lng': location.lng,
       'lat': location.lat,
@@ -29,6 +28,6 @@ class LocationsApi {
   }
 
   Future<void> deleteHome() async {
-    await _dio.delete('/api/locations/home');
+    await _dio.delete<dynamic>('/api/locations/home');
   }
 }

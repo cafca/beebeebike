@@ -1,8 +1,7 @@
+import 'package:beebeebike/dev/playback_controller.dart';
+import 'package:beebeebike/dev/playback_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../playback_controller.dart';
-import '../playback_engine.dart';
 
 class PlaybackDrawer extends ConsumerStatefulWidget {
   const PlaybackDrawer({super.key});
@@ -87,9 +86,8 @@ class _PlaybackDrawerState extends ConsumerState<PlaybackDrawer> {
                   key: const ValueKey('playback-progress'),
                   value: state.cumulativeM
                       .clamp(0.0, state.routeLengthM.clamp(1.0, double.infinity)),
-                  min: 0.0,
                   max: state.routeLengthM <= 0 ? 1.0 : state.routeLengthM,
-                  onChanged: hasRoute ? (v) => notifier.seek(v) : null,
+                  onChanged: hasRoute ? notifier.seek : null,
                 ),
               ),
             ),

@@ -31,7 +31,8 @@ class PolylineWalker {
       return WalkerPoint(_points.last, _bearings.last);
     }
     // Find segment whose end-cumulative >= cumulativeM.
-    int lo = 1, hi = _cumulative.length - 1;
+    var lo = 1;
+    var hi = _cumulative.length - 1;
     while (lo < hi) {
       final mid = (lo + hi) >> 1;
       if (_cumulative[mid] < cumulativeM) {
@@ -56,7 +57,7 @@ class PolylineWalker {
   }
 
   static List<double> _buildCumulative(List<LatLng> points) {
-    final out = <double>[0.0];
+    final out = <double>[0];
     for (var i = 1; i < points.length; i++) {
       final d = Geolocator.distanceBetween(
         points[i - 1].latitude,

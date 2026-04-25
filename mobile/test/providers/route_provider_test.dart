@@ -1,17 +1,17 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/models/route_preview.dart';
 import 'package:beebeebike/models/user.dart';
 import 'package:beebeebike/providers/auth_provider.dart';
 import 'package:beebeebike/providers/route_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('setDestination computes a preview when origin already exists', () async {
     final container = ProviderContainer(overrides: [
       routePreviewLoaderProvider.overrideWithValue(
-        ({required origin, required destination}) async => RoutePreview(
-          geometry: const {'type': 'LineString', 'coordinates': []},
+        ({required origin, required destination}) async => const RoutePreview(
+          geometry: <String, dynamic>{'type': 'LineString', 'coordinates': <dynamic>[]},
           distance: 3200,
           time: 720,
         ),
@@ -36,13 +36,13 @@ void main() {
         ({required origin, required destination}) async {
           callCount++;
           return RoutePreview(
-            geometry: const {'type': 'LineString', 'coordinates': []},
+            geometry: const <String, dynamic>{'type': 'LineString', 'coordinates': <dynamic>[]},
             distance: 1000.0 * callCount,
-            time: 300000.0,
+            time: 300000,
           );
         },
       ),
-      authControllerProvider.overrideWith(() => _FakeAuthController()),
+      authControllerProvider.overrideWith(_FakeAuthController.new),
     ]);
     addTearDown(container.dispose);
 
@@ -59,7 +59,7 @@ void main() {
     (container.read(authControllerProvider.notifier) as _FakeAuthController)
         .simulateLogin();
     // Allow Riverpod listeners to fire.
-    await Future.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
 
     expect(callCount, 2);
     expect(container.read(routeControllerProvider).preview?.distance, 2000.0);

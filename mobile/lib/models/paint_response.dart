@@ -1,4 +1,4 @@
-// ignore_for_file: invalid_annotation_target
+// ignore_for_file: invalid_annotation_target, freezed/json_serializable produce annotations on getters that this rule otherwise flags.
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'paint_response.freezed.dart';

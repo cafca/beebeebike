@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:ferrostar_flutter/src/models/user_location.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('UserLocation', () {

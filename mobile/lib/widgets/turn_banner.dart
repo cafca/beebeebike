@@ -1,13 +1,10 @@
+import 'package:beebeebike/theme/tokens.dart';
+import 'package:beebeebike/theme/typography.dart';
 import 'package:flutter/material.dart';
-
-import '../theme/tokens.dart';
-import '../theme/typography.dart';
 
 class TurnBanner extends StatelessWidget {
   const TurnBanner({
-    super.key,
-    required this.primaryText,
-    required this.distanceText,
+    required this.primaryText, required this.distanceText, super.key,
     this.icon = Icons.straight,
   });
 

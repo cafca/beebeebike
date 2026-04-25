@@ -1,10 +1,9 @@
 import 'dart:async';
 
+import 'package:beebeebike/services/error_reporter.dart';
+import 'package:beebeebike/services/haptics.dart';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/foundation.dart';
-
-import '../services/error_reporter.dart';
-import '../services/haptics.dart';
 
 typedef CreateController = Future<FerrostarController> Function(
   Map<String, dynamic> osrmJson,
@@ -16,7 +15,7 @@ typedef LoadNavigationRoute = Future<Map<String, dynamic>> Function({
 });
 typedef SpeakInstruction = Future<void> Function(String text);
 typedef LocationStreamFactory = Stream<UserLocation> Function();
-typedef SetWakelock = Future<void> Function(bool enabled);
+typedef SetWakelock = Future<void> Function({required bool enabled});
 
 class NavigationService {
   NavigationService({
@@ -27,7 +26,7 @@ class NavigationService {
     SetWakelock? setWakelock,
   }) : setWakelock = setWakelock ?? _noopWakelock;
 
-  static Future<void> _noopWakelock(bool _) async {}
+  static Future<void> _noopWakelock({required bool enabled}) async {}
 
   final CreateController createController;
   final LoadNavigationRoute loadNavigationRoute;
@@ -99,7 +98,7 @@ class NavigationService {
         // utterance once.
         if (instruction.uuid == _lastSpokenUuid) return;
         _lastSpokenUuid = instruction.uuid;
-        speakInstruction(instruction.text);
+        unawaited(speakInstruction(instruction.text));
       },
     );
 
@@ -107,7 +106,7 @@ class NavigationService {
       if (_rerouteInProgress) return;
       _rerouteInProgress = true;
       _rerouteController.add(true);
-      AppHaptics.offRoute();
+      unawaited(AppHaptics.offRoute());
       debugPrint(
           'nav: deviation ${deviation.deviationM.toStringAsFixed(0)}m, rerouting');
       try {
@@ -121,7 +120,7 @@ class NavigationService {
         if (_controller == null) return;
         await controller.replaceRoute(rerouteJson);
         _rerouteSucceededController.add(null);
-      } catch (e, st) {
+      } on Object catch (e, st) {
         reportError(e, st, context: 'nav.reroute');
       } finally {
         _rerouteInProgress = false;
@@ -130,13 +129,16 @@ class NavigationService {
     });
 
     _locationSub = locationStreamFactory().listen(
-      (location) => _controller?.updateLocation(location),
+      (location) {
+        final controller = _controller;
+        if (controller != null) unawaited(controller.updateLocation(location));
+      },
     );
 
     try {
-      await setWakelock(true);
+      await setWakelock(enabled: true);
       _wakelockActive = true;
-    } catch (e, st) {
+    } on Object catch (e, st) {
       reportError(e, st, context: 'nav.wakelock.enable');
     }
   }
@@ -144,8 +146,8 @@ class NavigationService {
   Future<void> dispose() async {
     if (_wakelockActive) {
       try {
-        await setWakelock(false);
-      } catch (e, st) {
+        await setWakelock(enabled: false);
+      } on Object catch (e, st) {
         reportError(e, st, context: 'nav.wakelock.disable');
       }
       _wakelockActive = false;

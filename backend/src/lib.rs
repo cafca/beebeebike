@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod bbox;
 pub mod config;
 pub mod errors;
 pub mod geocode;

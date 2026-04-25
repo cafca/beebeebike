@@ -1,7 +1,7 @@
+import 'package:beebeebike/api/routing_api.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
-import 'package:beebeebike/api/routing_api.dart';
 
 void main() {
   test('computeNavigationRoute returns raw JSON from /api/navigate', () async {
@@ -34,9 +34,9 @@ void main() {
       const [13.405, 52.52],
       const [13.45, 52.51],
       ratingWeight: 0.5,
-      distanceInfluence: 70.0,
+      distanceInfluence: 70,
     );
 
-    expect(json['routes'][0]['distance'], 1234.5);
+    expect(((json['routes'] as List).first as Map<String, dynamic>)['distance'], 1234.5);
   });
 }

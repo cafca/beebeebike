@@ -1,7 +1,8 @@
 import 'dart:convert';
+
+import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ferrostar_flutter/ferrostar_flutter.dart';
 
 void main() => runApp(const MaterialApp(home: E2EHome()));
 
@@ -39,7 +40,7 @@ class _E2EHomeState extends State<E2EHome> {
         _ctrl = ctrl;
         _log = 'Controller ready';
       });
-    } catch (e) {
+    } on Object catch (e) {
       setState(() => _log = 'Error: $e');
     } finally {
       setState(() => _loading = false);
@@ -51,11 +52,11 @@ class _E2EHomeState extends State<E2EHome> {
       await _ctrl?.updateLocation(UserLocation(
         lat: 59.4429,
         lng: 24.7653,
-        horizontalAccuracyM: 5.0,
-        courseDeg: 315.0,
+        horizontalAccuracyM: 5,
+        courseDeg: 315,
         timestampMs: DateTime.now().millisecondsSinceEpoch,
       ));
-    } catch (e) {
+    } on Object catch (e) {
       setState(() => _log = 'Tick error: $e');
     }
   }

@@ -1,6 +1,5 @@
+import 'package:beebeebike/models/route_preview.dart';
 import 'package:dio/dio.dart';
-
-import '../models/route_preview.dart';
 
 class RoutingApi {
   RoutingApi(this._dio);
@@ -13,7 +12,7 @@ class RoutingApi {
     double? ratingWeight,
     double? distanceInfluence,
   }) async {
-    final response = await _dio.post('/api/route', data: {
+    final response = await _dio.post<dynamic>('/api/route', data: <String, dynamic>{
       'origin': origin,
       'destination': destination,
       if (ratingWeight != null) 'rating_weight': ratingWeight,
@@ -28,7 +27,7 @@ class RoutingApi {
     double? ratingWeight,
     double? distanceInfluence,
   }) async {
-    final response = await _dio.post('/api/navigate', data: {
+    final response = await _dio.post<dynamic>('/api/navigate', data: <String, dynamic>{
       'origin': origin,
       'destination': destination,
       if (ratingWeight != null) 'rating_weight': ratingWeight,

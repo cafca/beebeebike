@@ -1,11 +1,10 @@
+import 'package:beebeebike/dev/playback_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
-import '../playback_controller.dart';
-
 class SyntheticPuckOverlay extends ConsumerStatefulWidget {
-  const SyntheticPuckOverlay({super.key, required this.mapController});
+  const SyntheticPuckOverlay({required this.mapController, super.key});
 
   final MapLibreMapController? mapController;
 

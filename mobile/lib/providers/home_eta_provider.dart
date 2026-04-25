@@ -1,9 +1,8 @@
+import 'package:beebeebike/models/location.dart';
+import 'package:beebeebike/providers/location_provider.dart';
+import 'package:beebeebike/providers/route_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
-
-import '../models/location.dart';
-import 'location_provider.dart';
-import 'route_provider.dart';
 
 /// Coarse position stream — emits only on significant movement (≥200 m).
 /// Drives periodic ETA refresh without hitting the router on every GPS tick.
@@ -24,12 +23,12 @@ final homeEtaMinutesProvider = FutureProvider<int?>((ref) async {
   if (home == null) return null;
 
   final streamed = ref.watch(significantPositionProvider).valueOrNull;
-  Position? pos = streamed;
+  var pos = streamed;
   if (pos == null) {
     try {
       pos = await Geolocator.getLastKnownPosition() ??
           await Geolocator.getCurrentPosition();
-    } catch (_) {
+    } on Object catch (_) {
       return null;
     }
   }

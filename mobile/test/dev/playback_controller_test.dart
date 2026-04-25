@@ -1,10 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:beebeebike/dev/playback_controller.dart';
 import 'package:beebeebike/models/route_preview.dart';
 import 'package:beebeebike/models/route_state.dart';
 import 'package:beebeebike/providers/route_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 
 RoutePreview _fixturePreview() => const RoutePreview(
       geometry: {
@@ -26,10 +26,11 @@ class _FakeRouteController extends Notifier<RouteState>
   @override
   RouteState build() => _initial;
 
+  // ignore: use_setters_to_change_properties -- test helper; setter would clash with Notifier.state
   void emit(RouteState s) => state = s;
 
   @override
-  noSuchMethod(Invocation invocation) =>
+  Never noSuchMethod(Invocation invocation) =>
       throw UnimplementedError(invocation.memberName.toString());
 }
 
@@ -65,8 +66,8 @@ void main() {
         ),
       ]);
       addTearDown(container.dispose);
-      final notifier = container.read(playbackControllerProvider.notifier);
-      notifier.play();
+      final notifier = container.read(playbackControllerProvider.notifier)
+        ..play();
       expect(container.read(playbackControllerProvider).isPlaying, isTrue);
       notifier.pause();
       expect(container.read(playbackControllerProvider).isPlaying, isFalse);
@@ -81,8 +82,8 @@ void main() {
         ),
       ]);
       addTearDown(container.dispose);
-      final notifier = container.read(playbackControllerProvider.notifier);
-      notifier.cycleSpeed();
+      final notifier = container.read(playbackControllerProvider.notifier)
+        ..cycleSpeed();
       expect(container.read(playbackControllerProvider).speedMultiplier, 2.0);
       notifier.cycleSpeed();
       expect(container.read(playbackControllerProvider).speedMultiplier, 5.0);
@@ -101,8 +102,8 @@ void main() {
         ),
       ]);
       addTearDown(container.dispose);
-      final notifier = container.read(playbackControllerProvider.notifier);
-      notifier.setOverride(const LatLng(1, 2));
+      final notifier = container.read(playbackControllerProvider.notifier)
+        ..setOverride(const LatLng(1, 2));
       expect(container.read(playbackControllerProvider).overrideLatLng,
           isNotNull);
       notifier.clearOverride();

@@ -14,7 +14,7 @@ use sqlx::{FromRow, PgPool};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{errors::AppError, AppState};
+use crate::{bbox::Bbox, errors::AppError, AppState};
 
 // ---------------------------------------------------------------------------
 // Request / response types
@@ -39,6 +39,9 @@ pub struct UserResponse {
     pub email: Option<String>,
     pub display_name: String,
     pub account_type: String,
+    /// Supported coverage area for this client. Mobile uses it to gate
+    /// nav-start when the live GPS fix is outside the rectangle.
+    pub bbox: Bbox,
 }
 
 // ---------------------------------------------------------------------------
@@ -123,21 +126,23 @@ async fn optional_session_user(db: &PgPool, headers: &HeaderMap) -> Result<Optio
     Ok(row.map(|row| row.user_id))
 }
 
-fn user_response(user: UserRowNoHash) -> UserResponse {
+fn user_response(user: UserRowNoHash, bbox: Bbox) -> UserResponse {
     UserResponse {
         id: user.id,
         email: user.email,
         display_name: user.display_name,
         account_type: user.account_type,
+        bbox,
     }
 }
 
-fn user_response_with_hash(user: UserRow) -> UserResponse {
+fn user_response_with_hash(user: UserRow, bbox: Bbox) -> UserResponse {
     UserResponse {
         id: user.id,
         email: Some(user.email),
         display_name: user.display_name,
         account_type: user.account_type,
+        bbox,
     }
 }
 
@@ -247,7 +252,7 @@ pub async fn register(
         .await?;
     let session_id = create_session(&state.db, user.id).await?;
 
-    let mut response = Json(user_response_with_hash(user)).into_response();
+    let mut response = Json(user_response_with_hash(user, state.config.bbox)).into_response();
     response
         .headers_mut()
         .insert("Set-Cookie", session_cookie(&session_id));
@@ -281,7 +286,7 @@ pub async fn login(
 
     let session_id = create_session(&state.db, user.id).await?;
 
-    let mut response = Json(user_response_with_hash(user)).into_response();
+    let mut response = Json(user_response_with_hash(user, state.config.bbox)).into_response();
     response
         .headers_mut()
         .insert("Set-Cookie", session_cookie(&session_id));
@@ -301,7 +306,7 @@ pub async fn anonymous(
         .await?
         .ok_or(AppError::Unauthorized)?;
 
-        return Ok(Json(user_response(user)).into_response());
+        return Ok(Json(user_response(user, state.config.bbox)).into_response());
     }
 
     let user = sqlx::query_as::<_, UserRowNoHash>(
@@ -316,7 +321,7 @@ pub async fn anonymous(
 
     let session_id = create_session(&state.db, user.id).await?;
 
-    let mut response = Json(user_response(user)).into_response();
+    let mut response = Json(user_response(user, state.config.bbox)).into_response();
     response
         .headers_mut()
         .insert("Set-Cookie", session_cookie(&session_id));
@@ -387,7 +392,7 @@ pub async fn me(
     .await?
     .ok_or(AppError::Unauthorized)?;
 
-    Ok(Json(user_response(user)))
+    Ok(Json(user_response(user, state.config.bbox)))
 }
 
 fn map_unique_email_error(e: sqlx::Error) -> AppError {
@@ -474,5 +479,22 @@ mod tests {
         let s = cookie.to_str().unwrap();
         assert!(s.contains("session="));
         assert!(s.contains("Max-Age=0"));
+    }
+
+    #[test]
+    fn user_response_serializes_bbox() {
+        let resp = UserResponse {
+            id: Uuid::nil(),
+            email: None,
+            display_name: "test".into(),
+            account_type: "anonymous".into(),
+            bbox: Bbox::BERLIN,
+        };
+        let v: serde_json::Value = serde_json::to_value(&resp).unwrap();
+        let bbox = v.get("bbox").expect("bbox field present");
+        assert!((bbox["west"].as_f64().unwrap() - 13.0).abs() < 1e-9);
+        assert!((bbox["south"].as_f64().unwrap() - 52.3).abs() < 1e-9);
+        assert!((bbox["east"].as_f64().unwrap() - 13.8).abs() < 1e-9);
+        assert!((bbox["north"].as_f64().unwrap() - 52.7).abs() < 1e-9);
     }
 }

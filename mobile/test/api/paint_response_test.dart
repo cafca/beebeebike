@@ -1,5 +1,5 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:beebeebike/models/paint_response.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('parses backend JSON with created_id and clipping counts', () {

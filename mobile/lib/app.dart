@@ -1,14 +1,13 @@
+import 'package:beebeebike/config/app_config.dart';
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/providers/auth_provider.dart';
+import 'package:beebeebike/providers/locale_provider.dart';
+import 'package:beebeebike/providers/onboarding_provider.dart';
+import 'package:beebeebike/screens/map_screen.dart';
+import 'package:beebeebike/screens/onboarding_screen.dart';
+import 'package:beebeebike/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'config/app_config.dart';
-import 'l10n/generated/app_localizations.dart';
-import 'providers/auth_provider.dart';
-import 'providers/locale_provider.dart';
-import 'providers/onboarding_provider.dart';
-import 'screens/map_screen.dart';
-import 'screens/onboarding_screen.dart';
-import 'theme/app_theme.dart';
 
 final appConfigProvider = Provider<AppConfig>((ref) => AppConfig.fromEnvironment());
 

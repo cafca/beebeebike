@@ -8,10 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart' hide UserLocation;
+import 'package:maplibre_gl/maplibre_gl.dart' as ml show UserLocation;
 
 import '../l10n/generated/app_localizations.dart';
 import '../models/location.dart';
 import '../models/route_state.dart';
+import '../navigation/camera_controller.dart';
 import '../navigation/location_converter.dart';
 import '../navigation/nav_constants.dart';
 import '../providers/brush_provider.dart';
@@ -22,6 +24,7 @@ import '../providers/location_provider.dart';
 import '../providers/map_bearing_provider.dart';
 import '../providers/rating_overlay_provider.dart';
 import '../providers/route_provider.dart';
+import '../providers/user_location_provider.dart';
 import '../services/brush_overlay.dart';
 import '../services/error_reporter.dart';
 import '../services/haptics.dart';
@@ -69,21 +72,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final l10n = AppLocalizations.of(context)!;
     final notifier = ref.read(routeControllerProvider.notifier);
     if (ref.read(routeControllerProvider).origin == null) {
-      Position? pos;
-      try {
-        pos = await Geolocator.getLastKnownPosition() ??
-            await Geolocator.getCurrentPosition();
-      } catch (_) {}
+      final origin = await _resolveCurrentOriginLocation(l10n);
       if (!mounted) return;
-      notifier.setOrigin(
-        Location(
-          id: 'gps',
-          name: l10n.locationCurrent,
-          label: l10n.locationCurrent,
-          lng: pos?.longitude ?? 13.4533,
-          lat: pos?.latitude ?? 52.5065,
-        ),
-      );
+      notifier.setOrigin(origin);
     }
     notifier.setDestination(
       Location(
@@ -194,19 +185,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final l10n = AppLocalizations.of(context)!;
     final notifier = ref.read(routeControllerProvider.notifier);
     if (ref.read(routeControllerProvider).origin == null) {
-      Position? pos;
-      try {
-        pos = await Geolocator.getLastKnownPosition() ??
-            await Geolocator.getCurrentPosition();
-      } catch (_) {}
+      final origin = await _resolveCurrentOriginLocation(l10n);
       if (!mounted) return;
-      notifier.setOrigin(Location(
-        id: 'gps',
-        name: l10n.locationCurrent,
-        label: l10n.locationCurrent,
-        lng: pos?.longitude ?? 13.4533,
-        lat: pos?.latitude ?? 52.5065,
-      ));
+      notifier.setOrigin(origin);
     }
     notifier.setDestination(Location(
       id: home.id,
@@ -223,14 +204,27 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     await _homeMarker.update(controller, home);
   }
 
-  Future<void> _handleBrowseLocationUpdate(double lat, double lng) async {
+  /// Single entry point for MapLibre's user-location callback. Caches the
+  /// fix in userLocationProvider (used to seed nav, pick route origins, and
+  /// fall back recenter when ferrostar hasn't snapped yet), auto-centers in
+  /// browse mode on first fix, and — edge case — promotes the camera into
+  /// following mode if nav started before any fix was cached.
+  Future<void> _onUserLocationUpdated(ml.UserLocation loc) async {
+    final uloc = maplibreToUserLocation(loc);
+    ref.read(userLocationProvider.notifier).state = uloc;
+    if (ref.read(navigationSessionProvider)) {
+      final cam = ref.read(navigationCameraControllerProvider);
+      if (cam.mode == CameraMode.awaitingFirstFix) {
+        await _activateFollowingCamera(uloc);
+      }
+      return;
+    }
     if (_browseAutocentered) return;
-    if (ref.read(navigationSessionProvider)) return;
     final controller = _mapController;
     if (controller == null) return;
     _browseAutocentered = true;
     await controller.animateCamera(
-      CameraUpdate.newLatLngZoom(LatLng(lat, lng), 16),
+      CameraUpdate.newLatLngZoom(LatLng(uloc.lat, uloc.lng), 16),
     );
   }
 
@@ -244,13 +238,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
     debugPrint('nav: start ${origin.name} -> ${destination.name}');
     final service = ref.read(navigationServiceProvider);
-    // Fetch last-known position synchronously (no GPS wait) so the controller
-    // has an initial fix and NavigationState emits immediately.
-    UserLocation? initial;
-    try {
-      final pos = await Geolocator.getLastKnownPosition();
-      if (pos != null) initial = positionToUserLocation(pos);
-    } catch (_) {}
+    // Prefer the live MapLibre fix (same source as the blue dot, written by
+    // onUserLocationUpdated). Fall back to Geolocator's cache only if MapLibre
+    // hasn't emitted yet — its cache can lag behind by 20-30m at cycling speed.
+    UserLocation? initial = ref.read(userLocationProvider);
+    if (initial == null) {
+      try {
+        final pos = await Geolocator.getLastKnownPosition();
+        if (pos != null) initial = positionToUserLocation(pos);
+      } catch (_) {}
+    }
     try {
       await service.start(
         origin: WaypointInput(lat: origin.lat, lng: origin.lng),
@@ -259,6 +256,12 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         initialLocation: initial,
       );
       if (mounted) _speakNav(AppLocalizations.of(context)!.navTtsDeparting);
+      if (initial != null) {
+        // We already have a fix — skip awaitingFirstFix entirely. Without this
+        // the camera waits for ferrostar to emit a `.navigating` state with
+        // snapped_location, which won't happen until a stream tick arrives.
+        await _activateFollowingCamera(initial);
+      }
     } catch (e, st) {
       reportError(e, st, context: 'nav.start');
     }
@@ -296,11 +299,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  Future<void> _handleFirstFix(UserLocation loc) async {
-    debugPrint('nav: first fix');
-    AppHaptics.firstFix();
+  /// Transitions the camera into following mode for a nav session that has a
+  /// known starting location. Idempotent: safe to call again on the first
+  /// onUserLocationUpdated during nav as a fallback for the no-cache edge case.
+  Future<void> _activateFollowingCamera(UserLocation loc) async {
     final cam = ref.read(navigationCameraControllerProvider);
-    cam.onFirstFix();
+    if (cam.mode != CameraMode.awaitingFirstFix) return;
+    debugPrint('nav: activating following camera');
+    AppHaptics.firstFix();
+    cam.onNavStart();
     final controller = _mapController;
     if (controller == null) return;
     // Enable tracking first so maplibre drives the camera target, then
@@ -340,12 +347,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   Future<void> _handleRecenterTap() async {
     final controller = _mapController;
     if (controller == null) return;
+    // Prefer ferrostar's snapped position so the camera lands on the route
+    // line, not the raw fix. Fall back to the latest MapLibre fix when nav
+    // hasn't produced a snapped state (e.g. before the first ferrostar tick).
     final snapped = ref.read(navigationStateProvider).value?.snappedLocation;
-    if (snapped == null) return;
+    final loc = snapped ?? ref.read(userLocationProvider);
+    if (loc == null) return;
     final cam = ref.read(navigationCameraControllerProvider);
     cam.onRecenterTapped();
     await controller.animateCamera(CameraUpdate.newLatLngZoom(
-        LatLng(snapped.lat, snapped.lng), cam.followZoom));
+        LatLng(loc.lat, loc.lng), cam.followZoom));
     if (!mounted) return;
     await controller
         .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
@@ -358,11 +369,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final prevState = prev?.value;
     final nextState = next.value;
     if (nextState == null) return;
-
-    if (prevState?.snappedLocation == null &&
-        nextState.snappedLocation != null) {
-      _handleFirstFix(nextState.snappedLocation!);
-    }
 
     if (prevState?.status != TripStatus.complete &&
         nextState.status == TripStatus.complete) {
@@ -390,24 +396,58 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   Future<void> _refreshPreviewFromGps() async {
-    Position? pos;
-    try {
-      pos = await Geolocator.getLastKnownPosition() ??
-          await Geolocator.getCurrentPosition();
-    } catch (e) {
-      debugPrint('nav: refresh-preview GPS error: $e');
+    final cached = ref.read(userLocationProvider);
+    double? lat = cached?.lat;
+    double? lng = cached?.lng;
+    if (lat == null || lng == null) {
+      try {
+        final pos = await Geolocator.getLastKnownPosition() ??
+            await Geolocator.getCurrentPosition();
+        lat = pos.latitude;
+        lng = pos.longitude;
+      } catch (e) {
+        debugPrint('nav: refresh-preview GPS error: $e');
+      }
     }
-    if (!mounted || pos == null) return;
+    if (!mounted || lat == null || lng == null) return;
     final l10n = AppLocalizations.of(context)!;
     ref.read(routeControllerProvider.notifier).setOrigin(
           Location(
             id: 'gps',
             name: l10n.locationCurrent,
             label: l10n.locationCurrent,
-            lat: pos.latitude,
-            lng: pos.longitude,
+            lat: lat,
+            lng: lng,
           ),
         );
+  }
+
+  /// Resolves a "current location" Location for use as a route origin. Prefers
+  /// the cached MapLibre fix (live, written from onUserLocationUpdated), then
+  /// Geolocator's last-known/current, and finally a Berlin-center fallback.
+  Future<Location> _resolveCurrentOriginLocation(AppLocalizations l10n) async {
+    final cached = ref.read(userLocationProvider);
+    if (cached != null) {
+      return Location(
+        id: 'gps',
+        name: l10n.locationCurrent,
+        label: l10n.locationCurrent,
+        lat: cached.lat,
+        lng: cached.lng,
+      );
+    }
+    Position? pos;
+    try {
+      pos = await Geolocator.getLastKnownPosition() ??
+          await Geolocator.getCurrentPosition();
+    } catch (_) {}
+    return Location(
+      id: 'gps',
+      name: l10n.locationCurrent,
+      label: l10n.locationCurrent,
+      lat: pos?.latitude ?? 52.5065,
+      lng: pos?.longitude ?? 13.4533,
+    );
   }
 
   Future<TapFeature?> _probeRatingFeature(LatLng coords) async {
@@ -613,8 +653,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   onMapCreated: (controller) {
                     _mapController = controller;
                   },
-                  onUserLocationUpdated: (loc) => _handleBrowseLocationUpdate(
-                      loc.position.latitude, loc.position.longitude),
+                  onUserLocationUpdated: _onUserLocationUpdated,
                   onStyleLoadedCallback: () async {
                     // Attach rating overlay AFTER style is loaded — MapLibre
                     // silently ignores addGeoJsonSource / addLayer calls

@@ -9,7 +9,10 @@ class NavigationCameraController extends ChangeNotifier {
   CameraMode get mode => _mode;
   double get followZoom => _followZoom;
 
-  void onFirstFix() {
+  /// Transitions awaitingFirstFix → following. Called when nav starts and we
+  /// already have a cached user location, or (edge case) when the first
+  /// location update arrives during nav after the session began with no fix.
+  void onNavStart() {
     if (_mode != CameraMode.awaitingFirstFix) return;
     _mode = CameraMode.following;
     notifyListeners();

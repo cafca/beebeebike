@@ -12,9 +12,18 @@ class PlaybackDrawer extends ConsumerStatefulWidget {
 }
 
 class _PlaybackDrawerState extends ConsumerState<PlaybackDrawer> {
-  // Direct engine reference — stored during build so we can safely call
+  // Direct engine reference — stored in initState so we can safely call
   // engine.pause() from dispose() without touching `ref` (forbidden post-unmount).
+  // Initialising here (rather than in build) also closes the race where dispose()
+  // could fire before the first build, leaving the Timer.periodic leaked.
   PlaybackEngine? _engine;
+
+  @override
+  void initState() {
+    super.initState();
+    _engine = ProviderScope.containerOf(context, listen: false)
+        .read(playbackEngineProvider);
+  }
 
   @override
   void dispose() {
@@ -27,7 +36,6 @@ class _PlaybackDrawerState extends ConsumerState<PlaybackDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    _engine = ref.read(playbackEngineProvider);
     final state = ref.watch(playbackControllerProvider);
     final notifier = ref.read(playbackControllerProvider.notifier);
     final hasRoute = state.routeLengthM > 0;

@@ -10,12 +10,15 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../api/client.dart';
 import '../api/routing_api.dart';
+import '../dev/dev_mode.dart';
+import '../dev/playback_controller.dart';
+import '../dev/switchable_location_source.dart';
 import '../navigation/location_converter.dart';
 import '../navigation/navigation_service.dart';
 import '../services/error_reporter.dart';
 import 'locale_provider.dart';
 
-Stream<UserLocation> _buildLocationStream() async* {
+Stream<UserLocation> _buildRealLocationStream() async* {
   var permission = await Geolocator.checkPermission();
   if (permission == LocationPermission.denied) {
     permission = await Geolocator.requestPermission();
@@ -54,6 +57,20 @@ Stream<UserLocation> _buildLocationStream() async* {
   yield* Geolocator.getPositionStream(locationSettings: settings)
       .map(positionToUserLocation);
 }
+
+final locationSourceProvider = Provider<SwitchableLocationSource>((ref) {
+  final source = SwitchableLocationSource(
+    usePlayback: () =>
+        ref.read(playbackEnabledProvider).valueOrNull ?? false,
+    realStream: _buildRealLocationStream,
+    playbackStream: () => ref.read(playbackEngineProvider).stream,
+  );
+  ref.listen<AsyncValue<bool>>(playbackEnabledProvider, (_, __) {
+    source.notifySourceChanged();
+  });
+  ref.onDispose(source.dispose);
+  return source;
+});
 
 final ttsFactoryProvider = Provider<FlutterTts Function()>((_) => FlutterTts.new);
 
@@ -139,7 +156,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
         ),
     loadNavigationRoute: ({required origin, required destination}) =>
         routingApi.computeNavigationRoute(origin, destination),
-    locationStreamFactory: _buildLocationStream,
+    locationStreamFactory: () => ref.read(locationSourceProvider).stream,
     setWakelock: (enabled) => WakelockPlus.toggle(enable: enabled),
     speakInstruction: (text) async {
       if (!ref.read(ttsEnabledProvider)) return;

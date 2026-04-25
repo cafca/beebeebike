@@ -180,7 +180,7 @@ extension Serialization {
     return NavigationControllerConfig(
       waypointAdvance: .waypointWithinRange(35.0),
       stepAdvanceCondition: stepAdvanceDistanceEntryAndExit(
-        minimumHorizontalAccuracy: 32, distanceToEndOfStep: 30, distanceAfterEndStep: 5),
+        distanceToEndOfStep: 30, distanceAfterEndOfStep: 5, minimumHorizontalAccuracy: 32),
       arrivalStepAdvanceCondition: stepAdvanceDistanceToEndOfStep(
         distance: 30, minimumHorizontalAccuracy: 32),
       routeDeviationTracking: .staticThreshold(minimumHorizontalAccuracy: 25, maxAcceptableDeviation: devM),

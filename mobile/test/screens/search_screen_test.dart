@@ -1,10 +1,25 @@
+import 'dart:async';
+
+import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/models/location.dart';
+import 'package:beebeebike/providers/location_provider.dart';
 import 'package:beebeebike/screens/search_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/test_helpers.dart';
+
+class _ThrowingHomeController extends HomeLocationController {
+  @override
+  Future<Location?> build() async => null;
+
+  @override
+  Future<void> save(Location location) async {
+    throw Exception('simulated save failure');
+  }
+}
 
 void main() {
   setUp(() {
@@ -327,6 +342,57 @@ void main() {
 
       expect(popped, isNotNull);
       expect(popped!.name, 'Alexanderplatz');
+    });
+
+    testWidgets('shows error snackbar and stays on screen when save throws',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...testProviderOverrides(prefs: prefs, authenticated: true),
+            homeLocationProvider.overrideWith(_ThrowingHomeController.new),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates:
+                AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      unawaited(Navigator.of(context).push<Location>(
+                        MaterialPageRoute<Location>(
+                          builder: (_) =>
+                              const SearchScreen(mode: SearchMode.pickHome),
+                        ),
+                      ));
+                    },
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Alex');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Alexanderplatz'));
+      await tester.pumpAndSettle();
+
+      expect(find.text("Couldn't set home"), findsOneWidget);
+      expect(find.byType(SearchScreen), findsOneWidget);
     });
   });
 }

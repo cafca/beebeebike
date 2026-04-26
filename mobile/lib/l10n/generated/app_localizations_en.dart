@@ -221,6 +221,26 @@ class AppLocalizationsEn extends AppLocalizations {
       'You can use beebeebike right away anonymously. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.';
 
   @override
+  String get settingsSetHome => 'Set home';
+
+  @override
+  String get settingsChangeHome => 'Change home';
+
+  @override
+  String get homeSheetSetHome => 'Set home';
+
+  @override
+  String get searchPickHomeTitle => 'Pick home location';
+
+  @override
+  String homeSetSuccess(String label) {
+    return 'Home set to $label';
+  }
+
+  @override
+  String get homeSetError => 'Couldn\'t set home';
+
+  @override
   String get searchHint => 'Where to?';
 
   @override

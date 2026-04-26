@@ -76,6 +76,16 @@
   "onboarding3Headline": "Am Rechner malen, am Rad fahren",
   "onboarding3Body": "Du kannst beebeebike sofort anonym nutzen. Mit einem kostenlosen Konto kannst du auf beebeebike.com am Rechner schneller malen — deine Bewertungen landen automatisch auf dem Handy.",
 
+  "settingsSetHome": "Zuhause festlegen",
+  "settingsChangeHome": "Zuhause ändern",
+  "homeSheetSetHome": "Zuhause festlegen",
+  "searchPickHomeTitle": "Zuhause auswählen",
+  "homeSetSuccess": "Zuhause auf {label} gesetzt",
+  "@homeSetSuccess": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "homeSetError": "Zuhause konnte nicht gespeichert werden",
+
   "searchHint": "Wohin?",
   "searchSavedPlaces": "Gespeicherte Orte",
   "searchSectionQuick": "Schnell",

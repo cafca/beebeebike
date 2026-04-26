@@ -7,6 +7,7 @@ import 'package:beebeebike/models/route_preview.dart';
 import 'package:beebeebike/models/route_state.dart';
 import 'package:beebeebike/models/user.dart';
 import 'package:beebeebike/providers/auth_provider.dart';
+import 'package:beebeebike/providers/cobblestone_avoidance_provider.dart';
 import 'package:beebeebike/providers/supported_bbox_provider.dart';
 import 'package:beebeebike/services/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,12 +25,14 @@ typedef RoutePreviewLoader = Future<RoutePreview> Function({
 
 final routePreviewLoaderProvider = Provider<RoutePreviewLoader>((ref) {
   final api = RoutingApi(ref.watch(dioProvider));
+  final cobblestone = ref.watch(cobblestoneAvoidanceProvider);
   return ({required origin, required destination}) {
     return api.computeRoute(
       [origin.lng, origin.lat],
       [destination.lng, destination.lat],
       ratingWeight: 0.5,
       distanceInfluence: 70,
+      cobblestoneAvoidance: cobblestone.wireValue,
     );
   };
 });

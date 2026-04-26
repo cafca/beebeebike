@@ -35,6 +35,7 @@ void main() {
 
   testWidgets('danger zone visible when registered', (tester) async {
     final prefs = await SharedPreferences.getInstance();
+    await pumpTall(tester);
     await tester.pumpWidget(
       buildTestWidget(
         const SettingsScreen(),

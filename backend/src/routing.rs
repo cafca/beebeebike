@@ -16,6 +16,31 @@ pub struct RouteRequest {
     pub destination: [f64; 2], // [lng, lat]
     pub rating_weight: Option<f64>,
     pub distance_influence: Option<f64>,
+    pub cobblestone_avoidance: Option<CobblestoneAvoidance>,
+}
+
+/// How aggressively the router should avoid cobblestone surfaces. The default
+/// matches the long-standing baked-in penalty (priority 0.5, speed 0.75); the
+/// other levels let users opt out entirely or push avoidance harder.
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CobblestoneAvoidance {
+    Allow,
+    #[default]
+    Default,
+    Strong,
+}
+
+impl CobblestoneAvoidance {
+    /// (priority_multiplier, speed_multiplier) for cobblestone surfaces.
+    /// `None` means no rule should be emitted.
+    fn multipliers(self) -> Option<(f64, f64)> {
+        match self {
+            Self::Allow => None,
+            Self::Default => Some((0.5, 0.75)),
+            Self::Strong => Some((0.2, 0.5)),
+        }
+    }
 }
 
 const PROFILE: &str = "bike";
@@ -180,7 +205,21 @@ fn build_graphhopper_request(
     });
 
     let mut priority_statements: Vec<Value> = Vec::new();
+    let mut speed_statements: Vec<Value> = Vec::new();
     let mut features: Vec<Value> = Vec::new();
+
+    if let Some((priority_mul, speed_mul)) =
+        body.cobblestone_avoidance.unwrap_or_default().multipliers()
+    {
+        priority_statements.push(json!({
+            "if": "surface == COBBLESTONE",
+            "multiply_by": priority_mul.to_string(),
+        }));
+        speed_statements.push(json!({
+            "if": "surface == COBBLESTONE",
+            "multiply_by": speed_mul.to_string(),
+        }));
+    }
 
     for row in rows {
         let area_id = format!("area_{}", row.id);
@@ -212,13 +251,20 @@ fn build_graphhopper_request(
     if !priority_statements.is_empty() {
         let custom_model_obj = custom_model.as_object_mut().unwrap();
         custom_model_obj.insert("priority".into(), json!(priority_statements));
-        custom_model_obj.insert(
-            "areas".into(),
-            json!({
-                "type": "FeatureCollection",
-                "features": features,
-            }),
-        );
+        if !features.is_empty() {
+            custom_model_obj.insert(
+                "areas".into(),
+                json!({
+                    "type": "FeatureCollection",
+                    "features": features,
+                }),
+            );
+        }
+    }
+
+    if !speed_statements.is_empty() {
+        let custom_model_obj = custom_model.as_object_mut().unwrap();
+        custom_model_obj.insert("speed".into(), json!(speed_statements));
     }
 
     let request_obj = gh_request.as_object_mut().unwrap();
@@ -456,6 +502,54 @@ mod tests {
                 priorities[i - 1]
             );
         }
+    }
+
+    #[test]
+    fn cobblestone_default_matches_legacy_static_rules() {
+        // The static custom_model used to multiply priority by 0.5 and speed
+        // by 0.75 for cobblestone. The default level must keep that exact
+        // behavior so omitting the field changes nothing.
+        let (p, s) = CobblestoneAvoidance::Default.multipliers().unwrap();
+        assert!((p - 0.5).abs() < 1e-12);
+        assert!((s - 0.75).abs() < 1e-12);
+    }
+
+    #[test]
+    fn cobblestone_allow_emits_no_rule() {
+        assert!(CobblestoneAvoidance::Allow.multipliers().is_none());
+    }
+
+    #[test]
+    fn cobblestone_strong_is_harsher_than_default() {
+        let (p_def, s_def) = CobblestoneAvoidance::Default.multipliers().unwrap();
+        let (p_strong, s_strong) = CobblestoneAvoidance::Strong.multipliers().unwrap();
+        assert!(p_strong < p_def);
+        assert!(s_strong < s_def);
+    }
+
+    #[test]
+    fn cobblestone_avoidance_deserializes_snake_case() {
+        let parse = |s: &str| -> CobblestoneAvoidance {
+            serde_json::from_value(json!(s)).expect("valid level")
+        };
+        assert_eq!(parse("allow"), CobblestoneAvoidance::Allow);
+        assert_eq!(parse("default"), CobblestoneAvoidance::Default);
+        assert_eq!(parse("strong"), CobblestoneAvoidance::Strong);
+    }
+
+    #[test]
+    fn route_request_omits_cobblestone_field_uses_default() {
+        let body: RouteRequest = serde_json::from_value(json!({
+            "origin": [13.4, 52.5],
+            "destination": [13.5, 52.6],
+        }))
+        .expect("valid body");
+        assert!(body.cobblestone_avoidance.is_none());
+        // unwrap_or_default() must hand us the legacy-equivalent level.
+        assert_eq!(
+            body.cobblestone_avoidance.unwrap_or_default(),
+            CobblestoneAvoidance::Default
+        );
     }
 
     #[test]

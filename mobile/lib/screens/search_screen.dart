@@ -31,6 +31,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final List<GeocodeResult> _results = [];
   Timer? _debounce;
   bool _loading = false;
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -65,12 +66,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   Future<void> _selectLocation(Location location) async {
     if (widget.mode == SearchMode.pickHome) {
+      if (_saving) return;
       final messenger = ScaffoldMessenger.of(context);
       final navigator = Navigator.of(context);
       final l10n = AppLocalizations.of(context)!;
+      setState(() => _saving = true);
       try {
         await ref.read(homeLocationProvider.notifier).save(location);
       } on Object catch (_) {
+        if (mounted) setState(() => _saving = false);
         messenger.showSnackBar(SnackBar(content: Text(l10n.homeSetError)));
         return;
       }

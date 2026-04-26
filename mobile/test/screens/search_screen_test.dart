@@ -21,6 +21,20 @@ class _ThrowingHomeController extends HomeLocationController {
   }
 }
 
+class _CountingHomeController extends HomeLocationController {
+  int saveCount = 0;
+
+  @override
+  Future<Location?> build() async => null;
+
+  @override
+  Future<void> save(Location location) async {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    saveCount++;
+    state = AsyncValue.data(location);
+  }
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -393,6 +407,57 @@ void main() {
 
       expect(find.text("Couldn't set home"), findsOneWidget);
       expect(find.byType(SearchScreen), findsOneWidget);
+    });
+
+    testWidgets('rapid double-tap only calls save() once', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final controller = _CountingHomeController();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...testProviderOverrides(prefs: prefs, authenticated: true),
+            homeLocationProvider.overrideWith(() => controller),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      unawaited(Navigator.of(context).push<Location>(
+                        MaterialPageRoute<Location>(
+                          builder: (_) =>
+                              const SearchScreen(mode: SearchMode.pickHome),
+                        ),
+                      ));
+                    },
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Alex');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      // Two rapid taps without settling in between.
+      await tester.tap(find.text('Alexanderplatz'));
+      await tester.tap(find.text('Alexanderplatz'));
+      await tester.pumpAndSettle();
+
+      expect(controller.saveCount, 1);
     });
   });
 }

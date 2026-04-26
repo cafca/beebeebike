@@ -1,5 +1,6 @@
 import 'package:beebeebike/screens/search_screen.dart';
 import 'package:beebeebike/screens/settings_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -55,5 +56,30 @@ void main() {
     expect(find.byType(SearchScreen), findsOneWidget);
     final search = tester.widget<SearchScreen>(find.byType(SearchScreen));
     expect(search.mode, SearchMode.pickHome);
+  });
+
+  testWidgets('shows success snackbar after picker returns a location',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+
+    await tester.pumpWidget(buildTestWidget(
+      const SettingsScreen(),
+      prefs: prefs,
+      authenticated: true,
+    ));
+    await tester.pump();
+
+    await tester.tap(find.text('Set home'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Alex');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Alexanderplatz'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Home set to'), findsOneWidget);
   });
 }

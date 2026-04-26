@@ -507,16 +507,27 @@ class _SetHomeRow extends StatelessWidget {
 
   final Location? home;
 
+  Future<void> _onTap(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final saved = await Navigator.of(context).push<Location>(
+      MaterialPageRoute<Location>(
+        builder: (_) => const SearchScreen(mode: SearchMode.pickHome),
+      ),
+    );
+    if (saved != null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.homeSetSuccess(saved.label))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final hasHome = home != null;
     return InkWell(
-      onTap: () => Navigator.of(context).push<Location>(
-        MaterialPageRoute<Location>(
-          builder: (_) => const SearchScreen(mode: SearchMode.pickHome),
-        ),
-      ),
+      onTap: () => _onTap(context),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
         child: Row(

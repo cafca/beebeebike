@@ -110,23 +110,30 @@ class _GoHomeRow extends ConsumerWidget {
     final eta = home != null ? ref.watch(homeEtaMinutesProvider) : null;
 
     if (!loggedIn) return const _AuthRow();
-    if (home == null) return _SetHomeCta(onTap: () => _openPicker(context));
+    if (home == null) return _SetHomeCta(onTap: () => unawaited(_openPicker(context)));
     return _GoHomeButton(
       etaMinutes: eta,
       onTap: onNavigateHome,
       onLongPress: () {
         unawaited(HapticFeedback.mediumImpact());
-        _openPicker(context);
+        unawaited(_openPicker(context));
       },
     );
   }
 
-  void _openPicker(BuildContext context) {
-    unawaited(Navigator.of(context).push<Location>(
+  Future<void> _openPicker(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final saved = await Navigator.of(context).push<Location>(
       MaterialPageRoute<Location>(
         builder: (_) => const SearchScreen(mode: SearchMode.pickHome),
       ),
-    ));
+    );
+    if (saved != null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.homeSetSuccess(saved.label))),
+      );
+    }
   }
 }
 

@@ -9,10 +9,12 @@ import 'package:beebeebike/providers/route_provider.dart';
 import 'package:beebeebike/providers/search_history_provider.dart';
 import 'package:beebeebike/screens/login_screen.dart';
 import 'package:beebeebike/screens/register_screen.dart';
+import 'package:beebeebike/screens/search_screen.dart';
 import 'package:beebeebike/theme/tokens.dart';
 import 'package:beebeebike/theme/typography.dart';
 import 'package:beebeebike/widgets/saved_item.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -105,16 +107,27 @@ class _GoHomeRow extends ConsumerWidget {
     final user = ref.watch(authControllerProvider).valueOrNull;
     final loggedIn = user?.email != null;
     final home = ref.watch(homeLocationProvider).valueOrNull;
-    final enabled = home != null;
-    final eta = enabled ? ref.watch(homeEtaMinutesProvider) : null;
+    final eta = home != null ? ref.watch(homeEtaMinutesProvider) : null;
 
-    return loggedIn
-        ? _GoHomeButton(
-            enabled: enabled,
-            etaMinutes: eta,
-            onTap: enabled ? onNavigateHome : null,
-          )
-        : const _AuthRow();
+    if (!loggedIn) return const _AuthRow();
+    if (home == null) return _SetHomeCta(onTap: () => _openPicker(context));
+    return _GoHomeButton(
+      enabled: true,
+      etaMinutes: eta,
+      onTap: onNavigateHome,
+      onLongPress: () {
+        unawaited(HapticFeedback.mediumImpact());
+        _openPicker(context);
+      },
+    );
+  }
+
+  void _openPicker(BuildContext context) {
+    unawaited(Navigator.of(context).push<Location>(
+      MaterialPageRoute<Location>(
+        builder: (_) => const SearchScreen(mode: SearchMode.pickHome),
+      ),
+    ));
   }
 }
 
@@ -213,11 +226,13 @@ class _GoHomeButton extends StatelessWidget {
     required this.enabled,
     required this.etaMinutes,
     this.onTap,
+    this.onLongPress,
   });
 
   final bool enabled;
   final AsyncValue<int?>? etaMinutes;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
 
   String? _subtitle() {
     if (!enabled) return null;
@@ -245,6 +260,7 @@ class _GoHomeButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding:
@@ -286,6 +302,49 @@ class _GoHomeButton extends StatelessWidget {
                       ),
                     ],
                   ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SetHomeCta extends StatelessWidget {
+  const _SetHomeCta({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Material(
+      color: BbbColors.ink,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Color.fromRGBO(255, 255, 255, 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.home_outlined,
+                    size: 17, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.homeSheetSetHome,
+                  style: BbbText.cardTitle().copyWith(color: Colors.white),
                 ),
               ),
             ],

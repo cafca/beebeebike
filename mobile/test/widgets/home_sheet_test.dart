@@ -4,8 +4,10 @@ import 'dart:convert';
 import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/providers/route_provider.dart';
+import 'package:beebeebike/screens/search_screen.dart';
 import 'package:beebeebike/widgets/home_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -133,18 +135,55 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 
-  testWidgets('Go home button disabled when no home saved', (tester) async {
+  testWidgets('shows Set home CTA when logged in but no home saved',
+      (tester) async {
     final prefs = await _prefsWithHistory(const []);
     final controller = DraggableScrollableController();
     addTearDown(controller.dispose);
 
-    await tester.pumpWidget(_host(prefs: prefs, controller: controller));
+    await tester.pumpWidget(_host(
+      prefs: prefs,
+      controller: controller,
+    ));
     await tester.pump();
 
-    expect(find.text('Go home'), findsOneWidget);
-    // Without a saved home there is no ETA subtitle.
-    expect(find.textContaining('min'), findsNothing);
-    expect(find.text('Calculating ETA…'), findsNothing);
+    expect(find.text('Set home'), findsOneWidget);
+    expect(find.text('Go home'), findsNothing);
+  });
+
+  testWidgets('long-press on Go home triggers haptic and navigates to picker',
+      (tester) async {
+    final prefs = await _prefsWithHistory(const []);
+    final controller = DraggableScrollableController();
+    addTearDown(controller.dispose);
+
+    final hapticCalls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding
+        .instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'HapticFeedback.vibrate') hapticCalls.add(call);
+      return null;
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding
+          .instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    await tester.pumpWidget(_host(
+      prefs: prefs,
+      controller: controller,
+      homeLocation: fakeHome(),
+    ));
+    await tester.pump();
+
+    await tester.longPress(find.text('Go home'));
+    await tester.pumpAndSettle();
+
+    expect(hapticCalls, isNotEmpty);
+    expect(find.byType(SearchScreen), findsOneWidget);
+    final search = tester.widget<SearchScreen>(find.byType(SearchScreen));
+    expect(search.mode, SearchMode.pickHome);
   });
 
   testWidgets('Log in button shown when not authenticated', (tester) async {

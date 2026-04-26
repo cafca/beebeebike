@@ -112,7 +112,6 @@ class _GoHomeRow extends ConsumerWidget {
     if (!loggedIn) return const _AuthRow();
     if (home == null) return _SetHomeCta(onTap: () => _openPicker(context));
     return _GoHomeButton(
-      enabled: true,
       etaMinutes: eta,
       onTap: onNavigateHome,
       onLongPress: () {
@@ -223,19 +222,16 @@ class _AuthButton extends StatelessWidget {
 
 class _GoHomeButton extends StatelessWidget {
   const _GoHomeButton({
-    required this.enabled,
     required this.etaMinutes,
     this.onTap,
     this.onLongPress,
   });
 
-  final bool enabled;
   final AsyncValue<int?>? etaMinutes;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
   String? _subtitle() {
-    if (!enabled) return null;
     final eta = etaMinutes;
     if (eta == null) return null;
     return eta.when(
@@ -249,11 +245,9 @@ class _GoHomeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final subtitle = _subtitle();
-    final bg = enabled ? BbbColors.ink : BbbColors.bgAlt;
-    final fg = enabled ? Colors.white : BbbColors.inkFaint;
-    final iconBg = enabled
-        ? const Color.fromRGBO(255, 255, 255, 0.14)
-        : BbbColors.divider;
+    const bg = BbbColors.ink;
+    const fg = Colors.white;
+    const iconBg = Color.fromRGBO(255, 255, 255, 0.14);
 
     return Material(
       color: bg,
@@ -270,11 +264,11 @@ class _GoHomeButton extends StatelessWidget {
               Container(
                 width: 32,
                 height: 32,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: iconBg,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.home_rounded,
                   size: 17,
                   color: fg,
@@ -337,7 +331,7 @@ class _SetHomeCta extends StatelessWidget {
                   color: Color.fromRGBO(255, 255, 255, 0.14),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.home_outlined,
+                child: const Icon(Icons.home_rounded,
                     size: 17, color: Colors.white),
               ),
               const SizedBox(width: 12),

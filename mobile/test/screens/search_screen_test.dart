@@ -270,4 +270,63 @@ void main() {
     expect(poppedResult!.lng, 13.4050);
     expect(poppedResult!.lat, 52.5200);
   });
+
+  group('pickHome mode', () {
+    testWidgets('app bar title uses pick-home string', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(buildTestWidget(
+        const SearchScreen(mode: SearchMode.pickHome),
+        prefs: prefs,
+        authenticated: true,
+      ));
+      await tester.pump();
+
+      expect(find.text('Pick home location'), findsOneWidget);
+      // Quick section / current-location shortcut MUST NOT render.
+      expect(find.text('QUICK'), findsNothing);
+    });
+
+    testWidgets('tapping a result saves home and pops with the Location',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      Location? popped;
+      await tester.pumpWidget(buildTestWidget(
+        Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  popped = await Navigator.of(context).push<Location>(
+                    MaterialPageRoute<Location>(
+                      builder: (_) =>
+                          const SearchScreen(mode: SearchMode.pickHome),
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+        prefs: prefs,
+        authenticated: true,
+      ));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Alex');
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Alexanderplatz'));
+      await tester.pumpAndSettle();
+
+      expect(popped, isNotNull);
+      expect(popped!.name, 'Alexanderplatz');
+    });
+  });
 }

@@ -218,4 +218,35 @@ void main() {
     expect(find.text('Go home'), findsOneWidget);
     expect(find.text('Calculating ETA…'), findsOneWidget);
   });
+
+  testWidgets('Set home CTA shows success snackbar after picker returns a location',
+      (tester) async {
+    final prefs = await _prefsWithHistory(const []);
+    final controller = DraggableScrollableController();
+    addTearDown(controller.dispose);
+
+    // No homeLocation — renders the "Set home" CTA, not the long-press path.
+    // authenticated defaults to true in _host; no homeLocation needed.
+    await tester.pumpWidget(_host(
+      prefs: prefs,
+      controller: controller,
+    ));
+    await tester.pump();
+
+    expect(find.text('Set home'), findsOneWidget);
+
+    await tester.tap(find.text('Set home'));
+    await tester.pumpAndSettle();
+
+    // We're now inside SearchScreen (pickHome mode). Type a query, wait for
+    // the debounce, then tap the geocode result.
+    await tester.enterText(find.byType(TextField), 'Alex');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Alexanderplatz'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Home set to'), findsOneWidget);
+  });
 }

@@ -44,7 +44,7 @@ jobs:
           host: ${{ vars.DEPLOY_HOST }}
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "compose.prod.yml,backend/graphhopper_config.yml"
+          source: "compose.prod.yml,backend/graphhopper_config.yml,backend/custom_models/*"
           target: beebeebike/
 
       - name: Deploy via SSH

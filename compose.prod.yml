@@ -34,6 +34,7 @@ services:
       - "/data/graphhopper-cache"
     volumes:
       - ./backend/graphhopper_config.yml:/config/config.yml:ro
+      - ./backend/custom_models:/custom_models:ro
       - ./data/osm/berlin/berlin.osm.pbf:/data/berlin.osm.pbf:ro
       - ./data/osm/berlin/graphhopper:/data/graphhopper-cache
     environment:

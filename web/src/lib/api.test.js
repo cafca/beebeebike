@@ -68,12 +68,12 @@ describe('api', () => {
         return HttpResponse.json({ geometry: {}, distance: 0, time: 0 });
       })
     );
-    await api.route([1, 2], [3, 4], 0.5, 70);
+    await api.route([1, 2], [3, 4], 0.5, 60);
     expect(captured).toEqual({
       origin: [1, 2],
       destination: [3, 4],
       rating_weight: 0.5,
-      distance_influence: 70,
+      distance_influence: 60,
     });
   });
 

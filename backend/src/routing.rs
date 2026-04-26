@@ -18,6 +18,8 @@ pub struct RouteRequest {
     pub distance_influence: Option<f64>,
 }
 
+const PROFILE: &str = "bike";
+
 #[derive(Serialize)]
 pub struct RouteResponse {
     pub geometry: Value,
@@ -102,10 +104,6 @@ fn rating_to_priority(value: i16, preference_strength: f64) -> f64 {
     RATING_UNIT_PRIORITY_FACTOR.powf(rating_effect * preference_strength.clamp(0.0, 1.0))
 }
 
-fn resolve_distance_influence(requested: Option<f64>, default: f64) -> f64 {
-    requested.unwrap_or(default).clamp(0.0, 100.0)
-}
-
 fn resolve_gh_locale(headers: &axum::http::HeaderMap) -> &'static str {
     let raw = headers
         .get(axum::http::header::ACCEPT_LANGUAGE)
@@ -173,12 +171,10 @@ fn build_graphhopper_request(
         .rating_weight
         .unwrap_or(state.config.rating_weight)
         .clamp(0.0, 1.0);
-    let distance_influence =
-        resolve_distance_influence(body.distance_influence, state.config.distance_influence);
 
     let mut gh_request = json!({
         "points": [body.origin, body.destination],
-        "profile": "bike",
+        "profile": PROFILE,
         "locale": locale,
         "ch.disable": true,
     });
@@ -206,9 +202,12 @@ fn build_graphhopper_request(
         }));
     }
 
-    let mut custom_model = json!({
-        "distance_influence": distance_influence,
-    });
+    let mut custom_model = json!({});
+    // Only inject distance_influence when the client explicitly asks for it;
+    // otherwise let the profile's own value (in its custom_model JSON) win.
+    if let Some(requested) = body.distance_influence {
+        custom_model["distance_influence"] = json!(requested.clamp(0.0, 100.0));
+    }
 
     if !priority_statements.is_empty() {
         let custom_model_obj = custom_model.as_object_mut().unwrap();
@@ -457,14 +456,6 @@ mod tests {
                 priorities[i - 1]
             );
         }
-    }
-
-    #[test]
-    fn distance_influence_uses_request_or_default_and_clamps() {
-        assert!((resolve_distance_influence(Some(70.0), 25.0) - 70.0).abs() < 1e-9);
-        assert!((resolve_distance_influence(None, 70.0) - 70.0).abs() < 1e-9);
-        assert!((resolve_distance_influence(Some(-10.0), 70.0) - 0.0).abs() < 1e-9);
-        assert!((resolve_distance_influence(Some(130.0), 70.0) - 100.0).abs() < 1e-9);
     }
 
     #[test]

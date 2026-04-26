@@ -278,6 +278,36 @@ abstract class AppLocalizations {
   /// **'Geocoding by Photon, hosted by Komoot'**
   String get settingsCreditPhoton;
 
+  /// No description provided for @settingsSectionRouting.
+  ///
+  /// In en, this message translates to:
+  /// **'Routing'**
+  String get settingsSectionRouting;
+
+  /// No description provided for @settingsCobblestoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cobblestone streets'**
+  String get settingsCobblestoneTitle;
+
+  /// No description provided for @settingsCobblestoneAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get settingsCobblestoneAllow;
+
+  /// No description provided for @settingsCobblestoneDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Avoid'**
+  String get settingsCobblestoneDefault;
+
+  /// No description provided for @settingsCobblestoneStrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Strongly avoid'**
+  String get settingsCobblestoneStrong;
+
   /// No description provided for @settingsSectionLegal.
   ///
   /// In en, this message translates to:

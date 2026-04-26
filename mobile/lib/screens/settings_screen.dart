@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:beebeebike/app.dart';
 import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/providers/auth_provider.dart';
+import 'package:beebeebike/providers/cobblestone_avoidance_provider.dart';
 import 'package:beebeebike/providers/location_provider.dart';
 import 'package:beebeebike/screens/legal_document_screen.dart';
 import 'package:beebeebike/screens/login_screen.dart';
@@ -36,6 +39,8 @@ class SettingsScreen extends ConsumerWidget {
           _AccountSection(),
           _SectionDivider(),
           _LanguageSection(),
+          _SectionDivider(),
+          _RoutingSection(),
           _SectionDivider(),
           _LegalSection(),
           _SectionDivider(),
@@ -213,6 +218,59 @@ class _LanguageSection extends StatelessWidget {
         _SectionHeader(l10n.settingsSectionLanguage),
         const LanguagePicker(),
         const SizedBox(height: 6),
+      ],
+    );
+  }
+}
+
+class _RoutingSection extends ConsumerWidget {
+  const _RoutingSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final selected = ref.watch(cobblestoneAvoidanceProvider);
+    final controller = ref.read(cobblestoneAvoidanceProvider.notifier);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(l10n.settingsSectionRouting),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+          child: Text(l10n.settingsCobblestoneTitle, style: BbbText.cardTitle()),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+          child: SegmentedButton<CobblestoneAvoidance>(
+            showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(
+              foregroundColor: BbbColors.inkMuted,
+              selectedForegroundColor: BbbColors.ink,
+              selectedBackgroundColor: BbbColors.bgAlt,
+              textStyle: BbbText.label(),
+            ),
+            segments: <ButtonSegment<CobblestoneAvoidance>>[
+              ButtonSegment(
+                value: CobblestoneAvoidance.allow,
+                label: Text(l10n.settingsCobblestoneAllow),
+              ),
+              ButtonSegment(
+                value: CobblestoneAvoidance.defaultLevel,
+                label: Text(l10n.settingsCobblestoneDefault),
+              ),
+              ButtonSegment(
+                value: CobblestoneAvoidance.strong,
+                label: Text(l10n.settingsCobblestoneStrong),
+              ),
+            ],
+            selected: <CobblestoneAvoidance>{selected},
+            onSelectionChanged: (next) {
+              if (next.isEmpty) return;
+              unawaited(controller.setPref(next.first));
+            },
+          ),
+        ),
       ],
     );
   }

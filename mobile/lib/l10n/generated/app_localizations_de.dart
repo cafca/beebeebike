@@ -103,6 +103,21 @@ class AppLocalizationsDe extends AppLocalizations {
       'Geocoding mit Photon, gehostet von Komoot';
 
   @override
+  String get settingsSectionRouting => 'Routing';
+
+  @override
+  String get settingsCobblestoneTitle => 'Kopfsteinpflaster';
+
+  @override
+  String get settingsCobblestoneAllow => 'Erlauben';
+
+  @override
+  String get settingsCobblestoneDefault => 'Meiden';
+
+  @override
+  String get settingsCobblestoneStrong => 'Stark meiden';
+
+  @override
   String get settingsSectionLegal => 'Rechtliches';
 
   @override

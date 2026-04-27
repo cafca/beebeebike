@@ -24,7 +24,7 @@ services:
     restart: unless-stopped
 
   graphhopper:
-    image: israelhikingmap/graphhopper:latest
+    image: ghcr.io/cafca/beebeebike-graphhopper:latest
     container_name: beebeebike-graphhopper
     entrypoint:
       - "./graphhopper.sh"

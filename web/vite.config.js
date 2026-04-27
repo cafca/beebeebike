@@ -35,9 +35,15 @@ export default defineConfig(({ mode }) => {
   server: {
     port: devPort,
     proxy: {
-      '/api': process.env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
+      '/api': {
+        target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
       '/tiles': {
         target: process.env.VITE_TILES_PROXY_TARGET || process.env.VITE_TILE_PROXY_TARGET || 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
         rewrite: (path) => path.replace(/^\/tiles/, ''),
       },
     },

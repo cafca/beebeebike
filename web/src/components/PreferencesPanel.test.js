@@ -7,7 +7,7 @@ import PreferencesPanel from './PreferencesPanel.svelte';
 beforeEach(() => {
   // Reset to defaults
   preferences.ratingWeight = 0.5;
-  preferences.distanceInfluence = 70;
+  preferences.distanceInfluence = 60;
   route.origin = null;
   route.destination = null;
 });
@@ -23,8 +23,8 @@ describe('PreferencesPanel', () => {
   it('renders Route directness label and formatted value', () => {
     render(PreferencesPanel);
     expect(screen.getByLabelText(/route directness/i)).toBeInTheDocument();
-    // Default distanceInfluence 70 → "70"
-    expect(screen.getByText('70')).toBeInTheDocument();
+    // Default distanceInfluence 60 → "60"
+    expect(screen.getByText('60')).toBeInTheDocument();
   });
 
   it('updating the rating-weight slider persists the new value', async () => {

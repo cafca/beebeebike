@@ -102,6 +102,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCreditPhoton => 'Geocoding by Photon, hosted by Komoot';
 
   @override
+  String get settingsSectionRouting => 'Routing';
+
+  @override
+  String get settingsCobblestoneTitle => 'Cobblestone streets';
+
+  @override
+  String get settingsCobblestoneAllow => 'Allow';
+
+  @override
+  String get settingsCobblestoneDefault => 'Avoid';
+
+  @override
+  String get settingsCobblestoneStrong => 'Strongly avoid';
+
+  @override
   String get settingsSectionLegal => 'Legal';
 
   @override

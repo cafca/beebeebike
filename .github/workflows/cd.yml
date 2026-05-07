@@ -6,6 +6,7 @@ on:
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}
+  GH_IMAGE: ghcr.io/${{ github.repository }}-graphhopper
 
 jobs:
   ship:
@@ -37,6 +38,20 @@ jobs:
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
 
+      # Thin GH image that bakes in backend/custom_models/. Lets prod ship the
+      # routing rules atomically with `docker compose pull` instead of host-side
+      # scp dance.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/graphhopper.Dockerfile
+          push: true
+          cache-from: type=gha,scope=graphhopper-image
+          cache-to: type=gha,mode=max,scope=graphhopper-image
+          tags: |
+            ${{ env.GH_IMAGE }}:latest
+            ${{ env.GH_IMAGE }}:${{ github.sha }}
+
       - name: Sync runtime config to server
         if: vars.DEPLOY_HOST != ''
         uses: appleboy/scp-action@v1
@@ -55,7 +70,38 @@ jobs:
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
+            set -euo pipefail
             cd ~/beebeebike
             docker compose -f compose.prod.yml pull
             docker compose -f compose.prod.yml up -d --remove-orphans
+
+            # If the new GH image carries a different profile (custom model or
+            # config edit), GH refuses to load the existing graph cache and
+            # logs "Profile '<name>' does not match". Detect that and reimport;
+            # leave the cache alone otherwise so deploys stay fast.
+            #
+            # Poll for up to 90s — cold-boot JVM can take ~10–20s before
+            # checkProfilesConsistency runs, and the previous fixed sleep raced
+            # past the error (#75 first deploy). Exit early on either signal:
+            # successful boot (port 8989 answering /info) or hash mismatch.
+            mismatch=0
+            for _ in $(seq 1 30); do
+              sleep 3
+              if docker logs --tail 100 beebeebike-graphhopper 2>&1 | grep -q "does not match"; then
+                mismatch=1
+                break
+              fi
+              if docker exec beebeebike-graphhopper wget -qO- http://localhost:8989/info >/dev/null 2>&1; then
+                break
+              fi
+            done
+
+            if [ "$mismatch" = 1 ]; then
+              echo "Profile hash mismatch detected — wiping GH cache and reimporting."
+              docker compose -f compose.prod.yml stop graphhopper
+              docker run --rm -v "$PWD/data/osm/berlin:/data" alpine \
+                rm -rf /data/graphhopper
+              docker compose -f compose.prod.yml up -d graphhopper
+            fi
+
             docker image prune -f

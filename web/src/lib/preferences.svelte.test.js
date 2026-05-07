@@ -10,7 +10,7 @@ import {
 beforeEach(() => {
   // Module-level $state retains values between tests; reset by invoking setters.
   setRatingWeight(0.5);
-  setDistanceInfluence(70);
+  setDistanceInfluence(60);
 });
 
 describe('preferences', () => {
@@ -32,7 +32,7 @@ describe('preferences', () => {
     setRatingWeight('hello');
     expect(preferences.ratingWeight).toBe(0.5);
     setDistanceInfluence(undefined);
-    expect(preferences.distanceInfluence).toBe(70);
+    expect(preferences.distanceInfluence).toBe(60);
   });
 
   it('persists ratingWeight to localStorage', () => {

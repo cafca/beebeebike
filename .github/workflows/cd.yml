@@ -76,11 +76,27 @@ jobs:
             docker compose -f compose.prod.yml up -d --remove-orphans
 
             # If the new GH image carries a different profile (custom model or
-            # config edit), GH will refuse to load the existing graph cache and
-            # log "Profile '<name>' does not match". Detect that and reimport;
+            # config edit), GH refuses to load the existing graph cache and
+            # logs "Profile '<name>' does not match". Detect that and reimport;
             # leave the cache alone otherwise so deploys stay fast.
-            sleep 12
-            if docker logs --tail 80 beebeebike-graphhopper 2>&1 | grep -q "does not match"; then
+            #
+            # Poll for up to 90s — cold-boot JVM can take ~10–20s before
+            # checkProfilesConsistency runs, and the previous fixed sleep raced
+            # past the error (#75 first deploy). Exit early on either signal:
+            # successful boot (port 8989 answering /info) or hash mismatch.
+            mismatch=0
+            for _ in $(seq 1 30); do
+              sleep 3
+              if docker logs --tail 100 beebeebike-graphhopper 2>&1 | grep -q "does not match"; then
+                mismatch=1
+                break
+              fi
+              if docker exec beebeebike-graphhopper wget -qO- http://localhost:8989/info >/dev/null 2>&1; then
+                break
+              fi
+            done
+
+            if [ "$mismatch" = 1 ]; then
               echo "Profile hash mismatch detected — wiping GH cache and reimporting."
               docker compose -f compose.prod.yml stop graphhopper
               docker run --rm -v "$PWD/data/osm/berlin:/data" alpine \

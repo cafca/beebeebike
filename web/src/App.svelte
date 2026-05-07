@@ -11,6 +11,7 @@
   import { loadHomeLocation, locations } from './lib/locations.svelte.js';
   import { initOverlay } from './lib/overlay.js';
   import { initBrush, destroyBrush } from './lib/brush.svelte.js';
+  import { initDebugOverlay } from './lib/debugOverlay.svelte.js';
   import { applyStartAtHome, centerOnHome, clearRoute, initRouting, route, syncHomeMarker, syncRouteMarkers } from './lib/routing.svelte.js';
 
   let map = $state(null);
@@ -44,6 +45,7 @@
         initOverlay(map);
         initBrush(map);
         initRouting(map);
+        initDebugOverlay(map);
       });
       return () => destroyBrush();
     }

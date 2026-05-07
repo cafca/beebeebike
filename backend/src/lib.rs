@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod bbox;
 pub mod config;
+pub mod debug;
 pub mod errors;
 pub mod geocode;
 pub mod locations;
@@ -54,6 +55,7 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/api/route", post(routing::get_route))
         .route("/api/navigate", post(routing::get_navigation_route))
         .route("/api/geocode", get(geocode::geocode))
+        .route("/api/debug/mvt/{z}/{x}/{y}", get(debug::mvt))
         .route(
             "/.well-known/apple-app-site-association",
             get(apple_app_site_association),

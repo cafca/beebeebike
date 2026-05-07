@@ -9,6 +9,7 @@ beforeEach(() => {
   route.destination = null;
   route.data = null;
   route.loading = false;
+  route.editingField = 'origin';
   locations.home = null;
   locations.startAtHome = false;
 });

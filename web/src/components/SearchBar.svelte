@@ -1,10 +1,13 @@
 <script>
+  import { tick } from 'svelte';
   import { api } from '../lib/api.js';
   import {
     route,
     applyStartAtHome,
-    computeRoute,
     clearRoute,
+    setDestination,
+    setOrigin,
+    swapWaypoints,
     syncHomeMarker,
   } from '../lib/routing.svelte.js';
   import {
@@ -19,17 +22,38 @@
   let query = $state('');
   let results = $state([]);
   let debounceTimer;
-  let settingField = $state('origin');
   let homeActionError = $state('');
   let showPreferences = $state(false);
-
-  $effect(() => {
-    settingField = route.origin ? 'destination' : 'origin';
-  });
+  let originInputEl = $state(null);
+  let destInputEl = $state(null);
 
   let canSaveHome = $derived(
     route.origin && !locations.home && route.origin.savedLocationName !== 'home'
   );
+
+  let showClear = $derived(
+    (route.origin || route.destination) &&
+      (!locations.startAtHome ||
+        route.destination ||
+        route.data ||
+        route.origin?.savedLocationName !== 'home')
+  );
+
+  async function startEdit(field) {
+    if (route.editingField === field) return;
+    route.editingField = field;
+    query = '';
+    results = [];
+    await tick();
+    const el = field === 'origin' ? originInputEl : destInputEl;
+    el?.focus();
+  }
+
+  function exitEdit() {
+    route.editingField = null;
+    query = '';
+    results = [];
+  }
 
   function onInput() {
     clearTimeout(debounceTimer);
@@ -45,6 +69,13 @@
         }));
       } catch { results = []; }
     }, 300);
+  }
+
+  function onKey(event) {
+    if (event.key === 'Escape') {
+      exitEdit();
+      event.currentTarget.blur();
+    }
   }
 
   function getIconType(props) {
@@ -67,18 +98,9 @@
     return parts.join(', ') || 'Unknown';
   }
 
-  function select(result) {
-    if (locations.startAtHome && locations.home && !route.origin) {
-      route.origin = routePointFromLocation(locations.home);
-      route.destination = result;
-      computeRoute();
-    } else if (settingField === 'origin') {
-      route.origin = result;
-      settingField = 'destination';
-    } else {
-      route.destination = result;
-      computeRoute();
-    }
+  function selectResult(result) {
+    if (route.editingField === 'origin') setOrigin(result);
+    else setDestination(result);
     query = '';
     results = [];
   }
@@ -88,6 +110,7 @@
     try {
       const home = await saveHomeLocation(route.origin);
       route.origin = routePointFromLocation(home);
+      route.editingField = null;
       syncHomeMarker();
     } catch (e) {
       homeActionError = e.message;
@@ -117,64 +140,71 @@
 
   function handleClear() {
     clearRoute();
-    settingField = 'origin';
   }
 </script>
 
 <div class="search-container">
   <div class="search-bar">
-    <div class="panel-actions">
-      <button
-        class="icon-btn"
-        class:active={showPreferences}
-        aria-label="Preferences"
-        aria-pressed={showPreferences}
-        title="Preferences"
-        onclick={() => showPreferences = !showPreferences}
-      >
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"/>
-        </svg>
-      </button>
-
-      {#if route.origin && (!locations.startAtHome || route.destination || route.data || route.origin.savedLocationName !== 'home')}
+    {#if showClear}
+      <div class="panel-actions">
         <button class="icon-btn clear-btn" onclick={handleClear} title="Clear route" aria-label="Clear route">&times;</button>
+      </div>
+    {/if}
+
+    <div class="row row-origin">
+      <span class="dot origin-dot"></span>
+      {#if route.editingField === 'origin'}
+        <input
+          bind:this={originInputEl}
+          type="text"
+          placeholder="Search origin..."
+          bind:value={query}
+          oninput={onInput}
+          onkeydown={onKey}
+        />
+      {:else if route.origin}
+        <button type="button" class="row-btn" onclick={() => startEdit('origin')}>{route.origin.name}</button>
+      {:else}
+        <button type="button" class="row-btn placeholder" onclick={() => startEdit('origin')}>Search origin...</button>
       {/if}
     </div>
 
-    {#if route.origin}
-      <div class="waypoint">
-        <span class="dot origin-dot"></span>
-        <span>{route.origin.name}</span>
-      </div>
-    {/if}
-    {#if route.destination}
-      <div class="waypoint">
-        <span class="dot dest-dot"></span>
-        <span>{route.destination.name}</span>
-      </div>
-    {/if}
+    <div class="row row-dest">
+      <span class="dot dest-dot"></span>
+      {#if route.editingField === 'destination'}
+        <input
+          bind:this={destInputEl}
+          type="text"
+          placeholder="Search destination..."
+          bind:value={query}
+          oninput={onInput}
+          onkeydown={onKey}
+        />
+      {:else if route.destination}
+        <button type="button" class="row-btn" onclick={() => startEdit('destination')}>{route.destination.name}</button>
+      {:else}
+        <button type="button" class="row-btn placeholder" onclick={() => startEdit('destination')}>Search destination...</button>
+      {/if}
+      {#if route.destination}
+        <button type="button" class="swap-btn" onclick={swapWaypoints} title="Swap origin and destination" aria-label="Swap origin and destination">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 3 L5 13 M3 5 L5 3 L7 5"/>
+            <path d="M11 13 L11 3 M9 11 L11 13 L13 11"/>
+          </svg>
+        </button>
+      {/if}
+    </div>
 
-    {#if !route.destination}
-      <input
-        type="text"
-        placeholder={settingField === 'origin' ? 'Search origin...' : 'Search destination...'}
-        bind:value={query}
-        oninput={onInput}
-      />
-    {/if}
-
-    {#if canSaveHome}
-      <button class="save-home-btn" onclick={handleSaveHome} disabled={locations.saving}>
-        <svg viewBox="0 0 20 20" aria-hidden="true">
-          <path d="M3 9.1 10 3l7 6.1-1.2 1.4L10 5.4l-5.8 5.1L3 9.1Z" />
-          <path d="M5 9.6 10 5.2l5 4.4V16a1 1 0 0 1-1 1h-2.8v-4.5H8.8V17H6a1 1 0 0 1-1-1V9.6Z" />
-        </svg>
-        <span>{locations.saving ? 'Saving...' : 'Save start as home'}</span>
-      </button>
-    {:else if locations.home}
-      <div class="home-control">
+    <div class="footer-actions">
+      {#if canSaveHome}
+        <button class="save-home-btn" onclick={handleSaveHome} disabled={locations.saving}>
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M3 9.1 10 3l7 6.1-1.2 1.4L10 5.4l-5.8 5.1L3 9.1Z" />
+            <path d="M5 9.6 10 5.2l5 4.4V16a1 1 0 0 1-1 1h-2.8v-4.5H8.8V17H6a1 1 0 0 1-1-1V9.6Z" />
+          </svg>
+          <span>{locations.saving ? 'Saving...' : 'Save start as home'}</span>
+        </button>
+      {:else if locations.home}
         <label class="home-toggle">
           <input
             type="checkbox"
@@ -187,8 +217,21 @@
         <button class="reset-home-btn" onclick={handleResetHome} disabled={locations.saving}>
           reset
         </button>
-      </div>
-    {/if}
+      {/if}
+      <button
+        type="button"
+        class="prefs-btn"
+        class:active={showPreferences}
+        aria-pressed={showPreferences}
+        onclick={() => showPreferences = !showPreferences}
+      >
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.3 7A2 2 0 1 1 7.1 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1a2 2 0 1 1 0 4H21a1.7 1.7 0 0 0-1.6 1Z"/>
+        </svg>
+        <span>Preferences</span>
+      </button>
+    </div>
 
     {#if homeActionError}
       <div class="home-error">{homeActionError}</div>
@@ -199,11 +242,11 @@
     {/if}
   </div>
 
-  {#if results.length > 0}
+  {#if results.length > 0 && route.editingField}
     <ul class="results">
       {#each results as result}
         <li>
-          <button class="result-btn" onclick={() => select(result)}>
+          <button class="result-btn" onclick={() => selectResult(result)}>
             {#if result.iconType === 'train'}
               <svg class="result-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="3" y="1.5" width="10" height="9" rx="2"/>
@@ -279,7 +322,7 @@
   .panel-actions {
     position: absolute;
     top: 11px;
-    right: 11px;
+    right: 14px;
     display: flex;
     gap: 4px;
     z-index: 2;
@@ -302,25 +345,48 @@
     background: var(--brand-soft);
     color: var(--brand);
   }
-  input {
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+  }
+  .row-origin {
+    padding-right: 36px;
+  }
+  .row input {
     border: none;
     outline: none;
     background: transparent;
     font: 500 15px/1.4 var(--font-sans);
     color: var(--ink);
-    padding: 6px 0;
-    width: calc(100% - 68px);
+    padding: 4px 0;
+    flex: 1;
+    min-width: 0;
   }
-  input::placeholder {
+  .row input::placeholder {
     color: var(--ink-faint);
   }
-  .waypoint {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .row-btn {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 4px 0;
+    cursor: pointer;
     font: 600 14px/1.3 var(--font-sans);
     color: var(--ink);
-    padding: 4px 68px 4px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .row-btn.placeholder {
+    color: var(--ink-faint);
+    font-weight: 500;
+  }
+  .row-btn:hover {
+    color: var(--brand);
   }
   .dot {
     width: 10px;
@@ -330,18 +396,69 @@
   }
   .origin-dot { background: var(--brand); }
   .dest-dot { background: var(--route-ink); }
+  .swap-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink-muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .swap-btn:hover {
+    background: var(--brand-soft);
+    color: var(--brand);
+  }
   .clear-btn {
     font-size: 18px;
     line-height: 1;
+  }
+  .footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .prefs-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 8px 12px;
+    margin-left: auto;
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-ctrl);
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+    font: 600 13px/1.3 var(--font-sans);
+    flex: 0 0 auto;
+  }
+  .prefs-btn:hover {
+    background: var(--bg);
+  }
+  .prefs-btn.active {
+    background: var(--brand-soft);
+    color: var(--brand);
+    border-color: var(--brand-soft);
+  }
+  .prefs-btn svg {
+    flex: 0 0 auto;
   }
   .save-home-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
     min-height: 34px;
-    margin-top: 4px;
     padding: 8px 12px;
     border: 1px solid var(--divider);
     border-radius: var(--radius-ctrl);
@@ -362,14 +479,6 @@
     height: 16px;
     fill: currentColor;
     flex: 0 0 auto;
-  }
-  .home-control {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    min-height: 32px;
-    margin-top: 2px;
   }
   .home-toggle {
     display: flex;

@@ -6,6 +6,7 @@ import 'package:beebeebike/api/client.dart';
 import 'package:beebeebike/api/routing_api.dart';
 import 'package:beebeebike/navigation/location_converter.dart';
 import 'package:beebeebike/navigation/navigation_service.dart';
+import 'package:beebeebike/providers/cobblestone_avoidance_provider.dart';
 import 'package:beebeebike/providers/locale_provider.dart';
 import 'package:beebeebike/services/error_reporter.dart';
 import 'package:ferrostar_flutter/ferrostar_flutter.dart';
@@ -137,7 +138,12 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
           waypoints: waypoints,
         ),
     loadNavigationRoute: ({required origin, required destination}) =>
-        routingApi.computeNavigationRoute(origin, destination),
+        routingApi.computeNavigationRoute(
+          origin,
+          destination,
+          cobblestoneAvoidance:
+              ref.read(cobblestoneAvoidanceProvider).wireValue,
+        ),
     locationStreamFactory: _buildLocationStream,
     setWakelock: ({required enabled}) => WakelockPlus.toggle(enable: enabled),
     speakInstruction: (text) async {

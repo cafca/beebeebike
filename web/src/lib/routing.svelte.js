@@ -9,6 +9,7 @@ export const route = $state({
   destination: null,  // { lng, lat, name }
   data: null,         // { geometry, distance, time }
   loading: false,
+  editingField: 'origin', // 'origin' | 'destination' | null — focus row on empty load
 });
 
 let currentMap = null;
@@ -119,8 +120,30 @@ export function clearRoute() {
   route.origin = locations.startAtHome
     ? routePointFromLocation(locations.home)
     : null;
+  route.editingField = route.origin ? null : 'origin';
   clearRouteGeometry();
   syncRouteMarkers();
+}
+
+export function setOrigin(point) {
+  route.origin = point;
+  route.editingField = null;
+  if (route.destination) computeRoute({ fitBounds: !route.data });
+}
+
+export function setDestination(point) {
+  route.destination = point;
+  route.editingField = null;
+  if (route.origin) computeRoute({ fitBounds: !route.data });
+}
+
+export function swapWaypoints() {
+  const o = route.origin;
+  const d = route.destination;
+  if (!o || !d) return;
+  route.origin = d;
+  route.destination = o;
+  computeRoute({ fitBounds: false });
 }
 
 export function centerOnHome(map) {
@@ -136,6 +159,7 @@ export function applyStartAtHome() {
   if (!locations.startAtHome || !locations.home) return;
   if (route.data || route.destination) return;
   route.origin = routePointFromLocation(locations.home);
+  route.editingField = null;
 }
 
 export function syncHomeMarker() {
@@ -172,8 +196,7 @@ export function syncRouteMarkers() {
       });
       originMarker.on('dragend', () => {
         const { lng, lat } = originMarker.getLngLat();
-        route.origin = { lng, lat, name: `${lat.toFixed(5)}, ${lng.toFixed(5)}` };
-        if (route.destination) computeRoute({ fitBounds: false });
+        setOrigin({ lng, lat, name: `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
       });
     }
     originMarker.setLngLat([route.origin.lng, route.origin.lat]).addTo(currentMap);
@@ -192,8 +215,7 @@ export function syncRouteMarkers() {
       });
       destMarker.on('dragend', () => {
         const { lng, lat } = destMarker.getLngLat();
-        route.destination = { lng, lat, name: `${lat.toFixed(5)}, ${lng.toFixed(5)}` };
-        computeRoute({ fitBounds: false });
+        setDestination({ lng, lat, name: `${lat.toFixed(5)}, ${lng.toFixed(5)}` });
       });
     }
     destMarker.setLngLat([route.destination.lng, route.destination.lat]).addTo(currentMap);
@@ -274,13 +296,20 @@ function cancelPendingRouteClick() {
 }
 
 function setRoutePoint(lngLat) {
-  if (route.data) return;
-
   const point = {
     lng: lngLat.lng,
     lat: lngLat.lat,
     name: `Pinned point (${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)})`,
   };
+
+  if (route.editingField === 'origin') {
+    setOrigin(point);
+    return;
+  }
+  if (route.editingField === 'destination') {
+    setDestination(point);
+    return;
+  }
 
   if (locations.startAtHome && locations.home && !route.origin) {
     route.origin = routePointFromLocation(locations.home);
@@ -292,7 +321,6 @@ function setRoutePoint(lngLat) {
   }
 
   if (!route.destination) {
-    route.destination = point;
-    computeRoute();
+    setDestination(point);
   }
 }

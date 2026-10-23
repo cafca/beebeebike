@@ -7,8 +7,19 @@
     setRatingWeight,
   } from '../lib/preferences.svelte.js';
   import { computeRoute, route } from '../lib/routing.svelte.js';
+  import {
+    ENCODED_VALUES,
+    debugState,
+    setEncodedValue,
+    toggleMember,
+    setAllMembersVisible,
+    setAllMembersHidden,
+    setHideFootways,
+  } from '../lib/debugOverlay.svelte.js';
 
   let recomputeTimer;
+
+  const sortedEncodedValues = [...ENCODED_VALUES].sort((a, b) => a.key.localeCompare(b.key));
 
   function queueRouteUpdate() {
     if (!route.origin || !route.destination) return;
@@ -77,6 +88,79 @@
   <div class="scale-labels" aria-hidden="true">
     <span>Flexible</span>
     <span>Direct</span>
+  </div>
+
+  <div class="debug-section">
+    <div class="preference-row">
+      <div class="preference-copy">
+        <label for="debug-ev">Debug: encoded value overlay</label>
+        <p>Internal tool. Visualises a GraphHopper edge attribute on the map.</p>
+      </div>
+    </div>
+    <select
+      id="debug-ev"
+      value={debugState.selectedKey ?? ''}
+      onchange={(e) => setEncodedValue(e.currentTarget.value || null)}
+    >
+      <option value="">Off</option>
+      {#each sortedEncodedValues as ev (ev.key)}
+        <option value={ev.key}>{ev.key}</option>
+      {/each}
+    </select>
+
+    {#if debugState.selected}
+      {@const ev = debugState.selected}
+      <div class="legend">
+        {#if ev.kind === 'enum'}
+          <div class="legend-actions">
+            <button type="button" onclick={setAllMembersVisible}>All</button>
+            <button type="button" onclick={setAllMembersHidden}>None</button>
+          </div>
+          {#each ev.members as m (m.value)}
+            {@const hidden = debugState.hidden.includes(m.value)}
+            <label class="legend-row legend-row-toggle" class:dimmed={hidden}>
+              <input
+                type="checkbox"
+                checked={!hidden}
+                onchange={() => toggleMember(m.value)}
+              />
+              <span class="swatch" style="background: {m.color}"></span>
+              <span class="legend-label">{m.label}</span>
+            </label>
+          {/each}
+        {:else if ev.kind === 'boolean'}
+          <div class="legend-row">
+            <span class="swatch" style="background: {ev.trueColor}"></span>
+            <span class="legend-label">true</span>
+          </div>
+          <div class="legend-row">
+            <span class="swatch" style="background: {ev.falseColor}"></span>
+            <span class="legend-label">false</span>
+          </div>
+        {:else if ev.kind === 'number'}
+          <div
+            class="legend-gradient"
+            style="background: linear-gradient(to right, {ev.stops.map(([, c]) => c).join(', ')})"
+          ></div>
+          <div class="legend-axis">
+            {#each ev.stops as [v] (v)}
+              <span class="legend-tick">{v}</span>
+            {/each}
+          </div>
+        {/if}
+        {#if ev.note}
+          <p class="legend-note">{@html ev.note}</p>
+        {/if}
+        <label class="legend-row legend-row-toggle global-toggle">
+          <input
+            type="checkbox"
+            checked={debugState.hideFootways}
+            onchange={(e) => setHideFootways(e.currentTarget.checked)}
+          />
+          <span class="legend-label">Hide <code>road_class=footway</code></span>
+        </label>
+      </div>
+    {/if}
   </div>
 
   <div class="credits">
@@ -149,6 +233,105 @@
     margin-top: 4px;
     color: var(--ink-faint);
     font: 500 12px/1.3 var(--font-sans);
+  }
+  .debug-section {
+    margin-top: 18px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--divider);
+  }
+  .debug-section select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-ctrl, 6px);
+    font: 500 13px/1.3 var(--font-mono);
+    background: var(--panel);
+    color: var(--ink);
+  }
+  .legend {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font: 500 12px/1.3 var(--font-mono);
+    color: var(--ink-muted);
+  }
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .legend-row-toggle {
+    cursor: pointer;
+    user-select: none;
+  }
+  .legend-row-toggle input[type='checkbox'] {
+    margin: 0;
+    accent-color: var(--brand);
+  }
+  .legend-row-toggle.dimmed .swatch,
+  .legend-row-toggle.dimmed .legend-label {
+    opacity: 0.4;
+  }
+  .legend-actions {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .legend-actions button {
+    padding: 2px 8px;
+    border: 1px solid var(--divider);
+    border-radius: var(--radius-ctrl, 6px);
+    background: var(--panel);
+    color: var(--ink);
+    font: 500 11px/1.3 var(--font-sans);
+    cursor: pointer;
+  }
+  .legend-actions button:hover {
+    background: var(--divider);
+  }
+  .global-toggle {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--divider);
+  }
+  .global-toggle code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  .swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--divider);
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-label {
+    font-family: var(--font-mono);
+  }
+  .legend-gradient {
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid var(--divider);
+  }
+  .legend-axis {
+    display: flex;
+    justify-content: space-between;
+    color: var(--ink-faint);
+  }
+  .legend-note {
+    margin: 8px 0 0;
+    color: var(--ink-muted);
+    font: 400 12px/1.55 var(--font-sans);
+  }
+  .legend-note :global(strong) { font-weight: 600; }
+  .legend-note :global(code) {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--divider);
+    padding: 1px 3px;
+    border-radius: 3px;
   }
   .credits {
     margin-top: 18px;

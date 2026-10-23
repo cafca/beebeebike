@@ -1,0 +1,16 @@
+services:
+  db:
+    container_name: beebeebike-bouman-db
+    ports: !override ["5433:5432"]
+  graphhopper:
+    container_name: beebeebike-bouman-graphhopper
+    ports: !override ["18989:8989"]
+  tiles:
+    container_name: beebeebike-bouman-tiles
+    ports: !override ["18080:8080"]
+  backend:
+    container_name: beebeebike-bouman-backend
+    ports: !override ["3001:3000"]
+volumes:
+  pgdata:
+    name: beebeebike-bouman-pgdata

@@ -48,7 +48,9 @@ services:
       - "127.0.0.1:${TILES_HOST_PORT}:8080"
     volumes:
       - ./data/tiles/berlin.versatiles:/tiles/berlin.versatiles:ro
-    command: ["/app/versatiles", "server", "-s", "/app/frontend-dev.br.tar", "[osm]/tiles/berlin.versatiles"]
+    # The image entrypoint already runs `versatiles serve --static ...`;
+    # only the tile source is passed here.
+    command: ["[osm]/tiles/berlin.versatiles"]
     mem_limit: ${TILES_MEM_LIMIT}
     restart: unless-stopped
 

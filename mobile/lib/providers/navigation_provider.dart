@@ -4,6 +4,9 @@ import 'dart:ui' as ui;
 
 import 'package:beebeebike/api/client.dart';
 import 'package:beebeebike/api/routing_api.dart';
+import 'package:beebeebike/dev/dev_mode.dart';
+import 'package:beebeebike/dev/playback_controller.dart';
+import 'package:beebeebike/dev/switchable_location_source.dart';
 import 'package:beebeebike/navigation/location_converter.dart';
 import 'package:beebeebike/navigation/navigation_service.dart';
 import 'package:beebeebike/providers/cobblestone_avoidance_provider.dart';
@@ -16,7 +19,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
-Stream<UserLocation> _buildLocationStream() async* {
+Stream<UserLocation> _buildRealLocationStream() async* {
   var permission = await Geolocator.checkPermission();
   if (permission == LocationPermission.denied) {
     permission = await Geolocator.requestPermission();
@@ -52,6 +55,21 @@ Stream<UserLocation> _buildLocationStream() async* {
   yield* Geolocator.getPositionStream(locationSettings: settings)
       .map(positionToUserLocation);
 }
+
+final locationSourceProvider = Provider<SwitchableLocationSource>((ref) {
+  final source = SwitchableLocationSource(
+    usePlayback: () =>
+        ref.read(playbackEnabledProvider).valueOrNull ?? false,
+    realStream: _buildRealLocationStream,
+    playbackStream: () => ref.read(playbackEngineProvider).stream,
+  );
+  ref
+    ..listen<AsyncValue<bool>>(playbackEnabledProvider, (_, _) {
+      source.notifySourceChanged();
+    })
+    ..onDispose(source.dispose);
+  return source;
+});
 
 final ttsFactoryProvider = Provider<FlutterTts Function()>((_) => FlutterTts.new);
 
@@ -144,7 +162,7 @@ final navigationServiceProvider = Provider<NavigationService>((ref) {
           cobblestoneAvoidance:
               ref.read(cobblestoneAvoidanceProvider).wireValue,
         ),
-    locationStreamFactory: _buildLocationStream,
+    locationStreamFactory: () => ref.read(locationSourceProvider).stream,
     setWakelock: ({required enabled}) => WakelockPlus.toggle(enable: enabled),
     speakInstruction: (text) async {
       if (!ref.read(ttsEnabledProvider)) return;

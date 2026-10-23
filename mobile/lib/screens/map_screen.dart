@@ -1,6 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:beebeebike/dev/dev_mode.dart';
+import 'package:beebeebike/dev/playback_controller.dart';
+import 'package:beebeebike/dev/playback_state.dart';
+import 'package:beebeebike/dev/widgets/playback_drawer.dart';
+import 'package:beebeebike/dev/widgets/synthetic_puck_overlay.dart';
 import 'package:beebeebike/l10n/generated/app_localizations.dart';
 import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/models/route_state.dart';
@@ -62,6 +67,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   BrushController? _brushNotifier;
   bool _rerouting = false;
   bool _browseAutocentered = false;
+  bool _playbackDrawerExpanded = false;
   int _paintPointerCount = 0;
   bool _paintMultiTouch = false;
 
@@ -329,11 +335,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     cam.onNavStart();
     final controller = _mapController;
     if (controller == null) return;
+    final playback = ref.read(playbackEnabledProvider).valueOrNull ?? false;
     // Enable tracking first so maplibre drives the camera target, then
     // apply zoom. newLatLngZoom before trackingCompass gets clobbered —
     // the tracking mode kicks in and resets zoom to whatever it was.
-    await controller
-        .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+    // Skip trackingCompass in playback mode — native GPS puck is hidden and
+    // camera follow is driven by the synthetic location listener instead.
+    if (!playback) {
+      await controller
+          .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+    }
     if (!mounted) return;
     await controller.animateCamera(CameraUpdate.zoomTo(cam.followZoom));
   }
@@ -375,8 +386,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     await controller.animateCamera(CameraUpdate.newLatLngZoom(
         LatLng(loc.lat, loc.lng), cam.followZoom));
     if (!mounted) return;
-    await controller
-        .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+    final playback = ref.read(playbackEnabledProvider).valueOrNull ?? false;
+    // Skip trackingCompass in playback mode — native GPS puck is hidden and
+    // camera follow is driven by the synthetic location listener instead.
+    if (!playback) {
+      await controller
+          .updateMyLocationTrackingMode(MyLocationTrackingMode.trackingCompass);
+    }
   }
 
   void _onNavStateChange(
@@ -519,6 +535,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final paintMode = ref.watch(
       brushControllerProvider.select((s) => s.paintMode),
     );
+    final playback = ref.watch(playbackEnabledProvider).valueOrNull ?? false;
     final routeActive = routeState.isLoading ||
         routeState.error != null ||
         preview != null;
@@ -560,6 +577,21 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         } else if (prev == true) {
           unawaited(_endNavigationSession());
         }
+      })
+      ..listen<PlaybackState>(playbackControllerProvider, (prev, next) {
+        final on = ref.read(playbackEnabledProvider).valueOrNull ?? false;
+        if (!on) return;
+        if (next.routeLengthM <= 0) return;
+        final mode = ref.read(navigationCameraControllerProvider).mode;
+        if (mode != CameraMode.following) return;
+        final c = _mapController;
+        if (c == null) return;
+        final ll =
+            ref.read(playbackControllerProvider.notifier).currentLatLng();
+        unawaited(c.animateCamera(
+          CameraUpdate.newLatLng(ll),
+          duration: const Duration(milliseconds: 240),
+        ));
       });
 
     return Scaffold(
@@ -644,7 +676,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                   ),
                   cameraTargetBounds: CameraTargetBounds(_berlinBounds),
                   minMaxZoomPreference: const MinMaxZoomPreference(10, 18),
-                  myLocationEnabled: true,
+                  myLocationEnabled: !playback,
                   trackCameraPosition: true,
                   scrollGesturesEnabled: !paintMode,
                   rotateGesturesEnabled: !paintMode,
@@ -714,6 +746,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     if ((bearing - current).abs() > 0.1) {
                       ref.read(mapBearingProvider.notifier).state = bearing;
                     }
+                    if (mounted) setState(() {}); // re-project synthetic puck
                   },
                 ),
               ),
@@ -783,6 +816,37 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             onNavigateHome: _navigateHome,
                           ),
           ),
+          if (ref.watch(playbackEnabledProvider).valueOrNull ?? false)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Row(
+                children: [
+                  if (_playbackDrawerExpanded) const PlaybackDrawer(),
+                  Material(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    child: InkWell(
+                      onTap: () => setState(() =>
+                          _playbackDrawerExpanded = !_playbackDrawerExpanded),
+                      child: SizedBox(
+                        width: 16,
+                        height: 64,
+                        child: Icon(
+                          _playbackDrawerExpanded
+                              ? Icons.chevron_left
+                              : Icons.chevron_right,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (ref.watch(playbackEnabledProvider).valueOrNull ?? false)
+            SyntheticPuckOverlay(mapController: _mapController),
         ],
       ),
     );

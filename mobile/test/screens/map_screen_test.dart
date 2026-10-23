@@ -135,7 +135,7 @@ void main() {
     expect(container.read(navigationSessionProvider), isTrue);
   });
 
-  testWidgets('empty state shows disabled Go home button when logged in',
+  testWidgets('empty state shows Set home CTA when logged in but no home saved',
       (tester) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -144,10 +144,10 @@ void main() {
     );
     await tester.pump();
 
-    // Landing sheet always renders the Go home button; without a saved home
-    // the button is visually disabled and omits the ETA subtitle.
-    expect(find.text('Go home'), findsOneWidget);
-    expect(find.text('Set home to enable'), findsNothing);
+    // Without a saved home the sheet shows the Set home CTA, not a disabled
+    // Go home button.
+    expect(find.text('Set home'), findsOneWidget);
+    expect(find.text('Go home'), findsNothing);
   });
 
   testWidgets('Go home subtitle shows calculating state while ETA resolves',

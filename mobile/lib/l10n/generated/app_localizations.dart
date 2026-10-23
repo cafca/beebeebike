@@ -494,6 +494,42 @@ abstract class AppLocalizations {
   /// **'You can use beebeebike right away anonymously. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.'**
   String get onboarding3Body;
 
+  /// No description provided for @settingsSetHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Set home'**
+  String get settingsSetHome;
+
+  /// No description provided for @settingsChangeHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Change home'**
+  String get settingsChangeHome;
+
+  /// No description provided for @homeSheetSetHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Set home'**
+  String get homeSheetSetHome;
+
+  /// No description provided for @searchPickHomeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick home location'**
+  String get searchPickHomeTitle;
+
+  /// No description provided for @homeSetSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Home set to {label}'**
+  String homeSetSuccess(String label);
+
+  /// No description provided for @homeSetError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t set home'**
+  String get homeSetError;
+
   /// No description provided for @searchHint.
   ///
   /// In en, this message translates to:

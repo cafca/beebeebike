@@ -222,6 +222,26 @@ class AppLocalizationsDe extends AppLocalizations {
       'Du kannst beebeebike sofort anonym nutzen. Mit einem kostenlosen Konto kannst du auf beebeebike.com am Rechner schneller malen — deine Bewertungen landen automatisch auf dem Handy.';
 
   @override
+  String get settingsSetHome => 'Zuhause festlegen';
+
+  @override
+  String get settingsChangeHome => 'Zuhause ändern';
+
+  @override
+  String get homeSheetSetHome => 'Zuhause festlegen';
+
+  @override
+  String get searchPickHomeTitle => 'Zuhause auswählen';
+
+  @override
+  String homeSetSuccess(String label) {
+    return 'Zuhause auf $label gesetzt';
+  }
+
+  @override
+  String get homeSetError => 'Zuhause konnte nicht gespeichert werden';
+
+  @override
   String get searchHint => 'Wohin?';
 
   @override

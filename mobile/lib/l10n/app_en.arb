@@ -76,6 +76,16 @@
   "onboarding3Headline": "Paint on the desktop, ride with your phone",
   "onboarding3Body": "You can use beebeebike right away anonymously. With a free account you can paint faster on beebeebike.com in the browser — your ratings sync to the phone automatically.",
 
+  "settingsSetHome": "Set home",
+  "settingsChangeHome": "Change home",
+  "homeSheetSetHome": "Set home",
+  "searchPickHomeTitle": "Pick home location",
+  "homeSetSuccess": "Home set to {label}",
+  "@homeSetSuccess": {
+    "placeholders": { "label": { "type": "String" } }
+  },
+  "homeSetError": "Couldn't set home",
+
   "searchHint": "Where to?",
   "searchSavedPlaces": "Saved places",
   "searchSectionQuick": "Quick",

@@ -15,8 +15,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 final _geocodeApiProvider =
     Provider<GeocodeApi>((ref) => GeocodeApi(ref.watch(dioProvider)));
 
+enum SearchMode { route, pickHome }
+
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({super.key, this.mode = SearchMode.route});
+
+  final SearchMode mode;
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -27,6 +31,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final List<GeocodeResult> _results = [];
   Timer? _debounce;
   bool _loading = false;
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -59,7 +64,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
-  void _selectLocation(Location location) {
+  Future<void> _selectLocation(Location location) async {
+    if (widget.mode == SearchMode.pickHome) {
+      if (_saving) return;
+      final messenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
+      final l10n = AppLocalizations.of(context)!;
+      setState(() => _saving = true);
+      try {
+        await ref.read(homeLocationProvider.notifier).save(location);
+      } on Object catch (_) {
+        if (mounted) setState(() => _saving = false);
+        messenger.showSnackBar(SnackBar(content: Text(l10n.homeSetError)));
+        return;
+      }
+      navigator.pop(location);
+      return;
+    }
     Navigator.of(context).pop(location);
   }
 
@@ -78,50 +99,73 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         foregroundColor: BbbColors.ink,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: TextField(
-          controller: _controller,
-          autofocus: true,
-          style: BbbText.body(),
-          decoration: InputDecoration(
-            hintText: l10n.searchHint,
-            hintStyle: BbbText.body().copyWith(color: BbbColors.inkFaint),
-            border: InputBorder.none,
-          ),
-          onChanged: _onChanged,
-          onSubmitted: (value) {
-            _debounce?.cancel();
-            if (value.trim().isNotEmpty) unawaited(_search(value.trim()));
-          },
-        ),
+        title: widget.mode == SearchMode.pickHome
+            ? Text(l10n.searchPickHomeTitle, style: BbbText.cardTitle())
+            : TextField(
+                controller: _controller,
+                autofocus: true,
+                style: BbbText.body(),
+                decoration: InputDecoration(
+                  hintText: l10n.searchHint,
+                  hintStyle: BbbText.body().copyWith(color: BbbColors.inkFaint),
+                  border: InputBorder.none,
+                ),
+                onChanged: _onChanged,
+                onSubmitted: (value) {
+                  _debounce?.cancel();
+                  if (value.trim().isNotEmpty) unawaited(_search(value.trim()));
+                },
+              ),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [
-          _SectionHeader(l10n.searchSectionQuick.toUpperCase()),
-          _SearchRow(
-            icon: Icons.my_location,
-            title: l10n.locationCurrent,
-            onTap: () => _selectLocation(Location(
-              id: 'gps',
-              name: l10n.locationCurrent,
-              label: l10n.locationCurrent,
-              lng: 0,
-              lat: 0,
-            )),
-          ),
-          if (homeLocation != null)
+          if (widget.mode == SearchMode.pickHome)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+              child: TextField(
+                controller: _controller,
+                autofocus: true,
+                style: BbbText.body(),
+                decoration: InputDecoration(
+                  hintText: l10n.searchHint,
+                  hintStyle: BbbText.body().copyWith(color: BbbColors.inkFaint),
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: _onChanged,
+                onSubmitted: (value) {
+                  _debounce?.cancel();
+                  if (value.trim().isNotEmpty) unawaited(_search(value.trim()));
+                },
+              ),
+            )
+          else ...[
+            _SectionHeader(l10n.searchSectionQuick.toUpperCase()),
             _SearchRow(
-              icon: Icons.home_outlined,
-              title: l10n.settingsHome,
-              subtitle: homeLocation.label.isNotEmpty
-                  ? homeLocation.label
-                  : null,
-              onTap: () => _selectLocation(homeLocation),
+              icon: Icons.my_location,
+              title: l10n.locationCurrent,
+              onTap: () => _selectLocation(Location(
+                id: 'gps',
+                name: l10n.locationCurrent,
+                label: l10n.locationCurrent,
+                lng: 0,
+                lat: 0,
+              )),
             ),
-          const _SectionDivider(),
+            if (homeLocation != null)
+              _SearchRow(
+                icon: Icons.home_outlined,
+                title: l10n.settingsHome,
+                subtitle: homeLocation.label.isNotEmpty
+                    ? homeLocation.label
+                    : null,
+                onTap: () => _selectLocation(homeLocation),
+              ),
+            const _SectionDivider(),
+          ],
           if (hasQuery)
             ..._buildResultsSection(l10n)
-          else
+          else if (widget.mode != SearchMode.pickHome)
             ..._buildRecentSection(history),
         ],
       ),

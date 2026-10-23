@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:beebeebike/app.dart';
 import 'package:beebeebike/l10n/generated/app_localizations.dart';
+import 'package:beebeebike/models/location.dart';
 import 'package:beebeebike/providers/auth_provider.dart';
 import 'package:beebeebike/providers/cobblestone_avoidance_provider.dart';
 import 'package:beebeebike/providers/location_provider.dart';
 import 'package:beebeebike/screens/legal_document_screen.dart';
 import 'package:beebeebike/screens/login_screen.dart';
 import 'package:beebeebike/screens/register_screen.dart';
+import 'package:beebeebike/screens/search_screen.dart';
 import 'package:beebeebike/services/error_reporter.dart';
 import 'package:beebeebike/theme/tokens.dart';
 import 'package:beebeebike/theme/typography.dart';
@@ -113,18 +115,8 @@ class _AccountSection extends ConsumerWidget {
             ],
           ),
         ),
-        if (home != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.settingsHome, style: BbbText.label()),
-                const SizedBox(height: 2),
-                Text(home.label, style: BbbText.monoSub()),
-              ],
-            ),
-          ),
+        if (loggedIn)
+          _SetHomeRow(home: home),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
           child: _AuthButton(loggedIn: loggedIn),
@@ -508,6 +500,62 @@ class _CreditLink extends StatefulWidget {
 
   @override
   State<_CreditLink> createState() => _CreditLinkState();
+}
+
+class _SetHomeRow extends StatelessWidget {
+  const _SetHomeRow({required this.home});
+
+  final Location? home;
+
+  Future<void> _onTap(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final saved = await Navigator.of(context).push<Location>(
+      MaterialPageRoute<Location>(
+        builder: (_) => const SearchScreen(mode: SearchMode.pickHome),
+      ),
+    );
+    if (saved != null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.homeSetSuccess(saved.label))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final hasHome = home != null;
+    return InkWell(
+      onTap: () => _onTap(context),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+        child: Row(
+          children: [
+            const Icon(Icons.home_outlined,
+                size: 20, color: BbbColors.inkMuted),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hasHome ? l10n.settingsChangeHome : l10n.settingsSetHome,
+                    style: BbbText.label(),
+                  ),
+                  if (hasHome) ...[
+                    const SizedBox(height: 2),
+                    Text(home!.label, style: BbbText.monoSub()),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: BbbColors.inkFaint),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _CreditLinkState extends State<_CreditLink> {

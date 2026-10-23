@@ -13,7 +13,7 @@ services:
     restart: unless-stopped
 
   graphhopper:
-    image: israelhikingmap/graphhopper:latest
+    image: israelhikingmap/graphhopper:latest@sha256:845087f96492ef6c97a16a690b1dccf7608a2c56e7e6e433b2c34d1521b0ab19
     container_name: beebeebike-graphhopper
     entrypoint:
       - "./graphhopper.sh"
@@ -33,7 +33,7 @@ services:
     restart: unless-stopped
 
   tiles:
-    image: versatiles/versatiles-frontend:latest-alpine
+    image: versatiles/versatiles-frontend:v5.4.0-alpine@sha256:efda5c400b1091f6d308c9e5a4613301b56ab7e821081819f740e99c9b079e79
     container_name: beebeebike-tiles
     ports:
       - "8080:8080"

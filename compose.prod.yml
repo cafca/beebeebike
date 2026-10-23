@@ -42,7 +42,7 @@ services:
     restart: unless-stopped
 
   tiles:
-    image: versatiles/versatiles-frontend:latest-alpine
+    image: versatiles/versatiles-frontend:v5.4.0-alpine@sha256:efda5c400b1091f6d308c9e5a4613301b56ab7e821081819f740e99c9b079e79
     container_name: beebeebike-tiles
     ports:
       - "127.0.0.1:${TILES_HOST_PORT}:8080"

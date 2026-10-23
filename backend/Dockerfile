@@ -24,6 +24,11 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM debian:bookworm-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+# Distrust roots that cross-signed the compromised eMudhra intermediates
+# (Oct 2026); fail the build if they are still in the system store.
+RUN sed -i -E 's#^(mozilla/(emSign_ECC_Root_CA_-_G3|Comodo_AAA_Services_root)\.crt)$#!\1#' /etc/ca-certificates.conf \
+    && update-ca-certificates --fresh >/dev/null \
+    && ! ls /etc/ssl/certs | grep -qE 'emSign_ECC_Root_CA_-_G3|Comodo_AAA_Services_root'
 COPY --from=backend-builder /usr/local/bin/beebeebike-backend /usr/local/bin/
 COPY --from=backend-builder /usr/local/bin/undo_bench /usr/local/bin/
 COPY --from=web-builder /app/web/dist /app/web/dist
